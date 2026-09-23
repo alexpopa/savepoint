@@ -8,6 +8,9 @@ import type { Plugin } from "vite";
 const localUserId = "local_seedy";
 const localEmail = "seedy@sites.test";
 const localFullName = "Seedy";
+const secondLocalUserId = "local_player2";
+const secondLocalEmail = "player2@sites.test";
+const secondLocalFullName = "Player Two";
 const localCookieName = "__sites_local_auth";
 const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
 const localAddresses = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
@@ -105,13 +108,14 @@ export function sites({ mockAuth = true } = {}): Plugin {
         const signIn = url.pathname === "/signin-with-chatgpt";
         const signOut = url.pathname === "/signout-with-chatgpt";
         if (!signIn && !signOut) {
-          if (signInCookies.length === 1 && signInCookies[0] === "1") {
-            setHeader(request, "oai-authenticated-user-id", localUserId);
-            setHeader(request, "oai-authenticated-user-email", localEmail);
+          if (signInCookies.length === 1 && ["1", "2"].includes(signInCookies[0])) {
+            const secondUser = signInCookies[0] === "2";
+            setHeader(request, "oai-authenticated-user-id", secondUser ? secondLocalUserId : localUserId);
+            setHeader(request, "oai-authenticated-user-email", secondUser ? secondLocalEmail : localEmail);
             setHeader(
               request,
               "oai-authenticated-user-full-name",
-              localFullName,
+              secondUser ? secondLocalFullName : localFullName,
             );
             setHeader(
               request,
@@ -163,7 +167,7 @@ export function sites({ mockAuth = true } = {}): Plugin {
         );
         response.setHeader(
           "Set-Cookie",
-          `${localCookieName}=${signIn ? "1" : ""}; Path=/; ${
+          `${localCookieName}=${signIn ? (url.searchParams.get("user") === "2" ? "2" : "1") : ""}; Path=/; ${
             signOut ? "Max-Age=0; " : ""
           }HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}`,
         );

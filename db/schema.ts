@@ -1,4 +1,26 @@
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+
+export const accounts = sqliteTable("accounts", {
+  userId: text("user_id").primaryKey(),
+  email: text("email").notNull(),
+  displayName: text("display_name").notNull(),
+  isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
+}, (table) => [uniqueIndex("idx_accounts_email").on(table.email)]);
+
+export const friendships = sqliteTable("friendships", {
+  userLow: text("user_low").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  userHigh: text("user_high").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  requesterId: text("requester_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  status: text("status", { enum: ["pending", "accepted"] }).notNull().default("pending"),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userLow, table.userHigh] }),
+  index("idx_friendships_user_high").on(table.userHigh),
+  check("ck_friendship_pair", sql`${table.userLow} < ${table.userHigh}`),
+  check("ck_friendship_requester", sql`${table.requesterId} = ${table.userLow} OR ${table.requesterId} = ${table.userHigh}`),
+  check("ck_friendship_status", sql`${table.status} IN ('pending', 'accepted')`),
+]);
 
 export const libraryItems = sqliteTable("library_items", {
   id: integer("id").primaryKey({ autoIncrement: true }),

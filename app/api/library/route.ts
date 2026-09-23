@@ -1,14 +1,16 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { getDb } from "../../../db";
 import { libraryItems } from "../../../db/schema";
 import { getIgdbGame } from "../../../lib/igdb";
 import { isSameOriginWrite } from "../../../lib/request-security";
+import { ensureAccount } from "../../../lib/social";
 
 export async function GET() {
   const user = await getChatGPTUser();
   if (!user) return Response.json({ error: "Sign in to view your library." }, { status: 401 });
   try {
+    await ensureAccount(user);
     const rows = await getDb().select().from(libraryItems).where(eq(libraryItems.userId, user.userId)).orderBy(desc(libraryItems.addedAt));
     return Response.json({ games: rows.map((row) => ({ id: row.id, igdbId: row.igdbId, name: row.name, coverUrl: row.coverUrl, releaseYear: row.releaseYear, platforms: JSON.parse(row.platformsJson) as string[] })) }, { headers: { "cache-control": "private, no-store" } });
   } catch { return Response.json({ error: "Your library is temporarily unavailable." }, { status: 503 }); }
@@ -19,6 +21,7 @@ export async function POST(request: Request) {
   if (!user) return Response.json({ error: "Sign in to add games." }, { status: 401 });
   if (!isSameOriginWrite(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   try {
+    await ensureAccount(user);
     const payload = await request.json() as { igdbId?: number };
     const igdbId = Number(payload.igdbId);
     if (!Number.isSafeInteger(igdbId) || igdbId < 1) return Response.json({ error: "Choose a valid game from IGDB." }, { status: 400 });

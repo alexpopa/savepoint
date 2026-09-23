@@ -12,13 +12,18 @@ From the repository root:
 1. Copy `.dev.vars.example` to `.dev.vars` and replace both placeholders. The Cloudflare Vite runtime reads these values as server-side bindings. `.dev.vars` is ignored by Git.
 2. Run `npm run install:ci` to install the locked dependencies.
 3. Run `npm run build` to produce `dist/server/wrangler.json`, which the local D1 migration command uses.
-4. Apply the checked-in migration to local D1:
+4. Apply the checked-in migrations to local D1 in order:
 
    ```sh
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_marvelous_wolverine.sql
+   node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_bored_rage.sql
    ```
 
-5. Run `npm run dev`. In the default **portable** profile, visit `http://localhost:5173/signin-with-chatgpt?return_to=/` to sign in as the simulated local user (`seedy@sites.test`). The browser gets a local, HTTP-only cookie; the local Vite plugin supplies authentication headers to the app. This is only a development simulation.
+   For a database that already has `0000`, run only the `0001` command.
+
+5. Run `npm run dev`. In the default **portable** profile, visit `http://localhost:5173/signin-with-chatgpt?return_to=/` to sign in as `seedy@sites.test`. To exercise friend requests, use `http://localhost:5173/signin-with-chatgpt?user=2&return_to=/` in a separate browser profile for `player2@sites.test`. The browser gets a local, HTTP-only cookie; the local Vite plugin supplies authentication headers to the app. This is only a development simulation.
+
+The top search bar opens `/search?q=...` and searches both IGDB games and accounts already created in local D1. To find the second simulated player, first open Savepoint while signed in as that player, then search their name or email text from the first browser profile. Search results do not show account email addresses or private library items. A friend request can be sent by player ID from search results or a profile; accepting it in the second profile unlocks that player's private library.
 
 Local D1 state is stored under `.wrangler/state`. Keep the `--persist-to .wrangler/state` argument when applying migrations so the migration and app use the same local database. The runtime may also create `.sites-runtime/`, `.next/`, `.vinext/`, and `dist/`; these are generated or local state.
 
@@ -42,10 +47,10 @@ Local D1 state is stored under `.wrangler/state`. Keep the `--persist-to .wrangl
 4. Apply each new migration to local D1 using the command above with its actual filename substituted for `drizzle/0000_marvelous_wolverine.sql`.
 5. Verify the affected API flow and update [architecture.md](architecture.md) if the data model or behavior changed.
 
-The current table is `library_items`; the unique index on `(user_id, igdb_id)` prevents a user from saving the same IGDB game twice. `added_at` is a Unix timestamp in milliseconds. `platforms_json` stores a JSON array of platform names.
+The tables are `library_items`, `accounts`, and `friendships`. The unique index on `(user_id, igdb_id)` prevents duplicate saved games. `accounts.is_public` defaults to false, and account records are created on first app use. `friendships` stores one canonical row per user pair, with a requester and `pending` or `accepted` status. `added_at` and `created_at` are Unix timestamps in milliseconds. `platforms_json` stores a JSON array of platform names.
 
 ## Hosted configuration
 
-`.openai/hosting.json` requests a D1 binding named `DB`; `db/index.ts` uses that binding. Set `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` as Site secrets in the hosting environment. Never put the secret in browser code or a public file. Ensure the hosted D1 database has the checked-in migrations applied before using the library. The build copies the migrations to `dist/.openai/drizzle/`, but this repository does not define a hosted migration command.
+`.openai/hosting.json` requests a D1 binding named `DB`; `db/index.ts` uses that binding. Set `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` as Site secrets in the hosting environment. Never put the secret in browser code or a public file. Ensure the hosted D1 database has all checked-in migrations applied before using the library. The build copies the migrations to `dist/.openai/drizzle/`, but this repository does not define a hosted migration command.
 
 Authentication in the hosted environment must provide the `oai-authenticated-user-id` and `oai-authenticated-user-email` request headers through the trusted platform layer. The local simulated sign-in is implemented only in the development Vite plugin.
