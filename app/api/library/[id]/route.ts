@@ -1,11 +1,11 @@
 import { and, eq } from "drizzle-orm";
-import { getChatGPTUser } from "../../../chatgpt-auth";
+import { getCurrentUser } from "../../../auth";
 import { getDb } from "../../../../db";
 import { libraryItems } from "../../../../db/schema";
 import { isSameOriginWrite } from "../../../../lib/request-security";
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
-  const user = await getChatGPTUser();
+  const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to remove games." }, { status: 401 });
   if (!isSameOriginWrite(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   const id = Number((await context.params).id);

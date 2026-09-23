@@ -6,7 +6,29 @@ export const accounts = sqliteTable("accounts", {
   email: text("email").notNull(),
   displayName: text("display_name").notNull(),
   isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
-}, (table) => [uniqueIndex("idx_accounts_email").on(table.email)]);
+  passwordHash: text("password_hash"),
+  emailVerifiedAt: integer("email_verified_at"),
+}, (table) => [uniqueIndex("idx_accounts_email_login").on(table.email).where(sql`${table.passwordHash} IS NOT NULL`)]);
+
+export const sessions = sqliteTable("sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  expiresAt: integer("expires_at").notNull(),
+}, (table) => [index("idx_sessions_user_id").on(table.userId), index("idx_sessions_expires_at").on(table.expiresAt)]);
+
+export const loginAttempts = sqliteTable("login_attempts", {
+  emailHash: text("email_hash").primaryKey(),
+  attempts: integer("attempts").notNull(),
+  windowStart: integer("window_start").notNull(),
+});
+
+export const authTokens = sqliteTable("auth_tokens", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  purpose: text("purpose", { enum: ["verify", "reset"] }).notNull(),
+  createdAt: integer("created_at").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+}, (table) => [uniqueIndex("idx_auth_tokens_user_purpose").on(table.userId, table.purpose), index("idx_auth_tokens_expires_at").on(table.expiresAt)]);
 
 export const friendships = sqliteTable("friendships", {
   userLow: text("user_low").notNull().references(() => accounts.userId, { onDelete: "cascade" }),

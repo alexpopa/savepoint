@@ -1,8 +1,6 @@
-import { getChatGPTUser } from "../../../chatgpt-auth";
 import { searchIgdb } from "../../../../lib/igdb";
 
 export async function GET(request: Request) {
-  if (!(await getChatGPTUser())) return Response.json({ error: "Sign in to search games." }, { status: 401 });
   const query = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   if (query.length < 2 || query.length > 100) return Response.json({ error: "Search must be between 2 and 100 characters." }, { status: 400 });
   try { return Response.json({ games: await searchIgdb(query) }, { headers: { "cache-control": "private, no-store" } }); }

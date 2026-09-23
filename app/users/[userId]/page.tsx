@@ -4,7 +4,7 @@ import { Gamepad2 } from "lucide-react";
 import SiteHeader from "../../site-header";
 import FriendButton from "../../friend-button";
 import { ChallengeSections, GameChallenges } from "../../challenges";
-import { requireChatGPTUser } from "../../chatgpt-auth";
+import { requireUser } from "../../auth";
 import { getDb } from "../../../db";
 import { accounts, libraryItems } from "../../../db/schema";
 import { receivedChallenges } from "../../../lib/challenges";
@@ -14,11 +14,11 @@ export const dynamic = "force-dynamic";
 
 export default async function UserLibraryPage({ params }: { params: Promise<{ userId: string }> }) {
   const targetId = (await params).userId;
-  const user = await requireChatGPTUser(`/users/${encodeURIComponent(targetId)}`);
+  const user = await requireUser(`/users/${encodeURIComponent(targetId)}`);
   await ensureAccount(user);
   if (targetId === user.userId) redirect("/profile");
   const [target] = await getDb().select().from(accounts).where(eq(accounts.userId, targetId));
-  if (!target) notFound();
+  if (!target?.passwordHash || !target.emailVerifiedAt) notFound();
   const friendship = await getFriendship(user.userId, targetId);
   const canView = target.isPublic || friendship?.status === "accepted";
   const [games, challengeRows] = canView ? await Promise.all([

@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getCurrentUser } from "../../auth";
 import { getDb } from "../../../db";
 import { libraryItems } from "../../../db/schema";
 import { getIgdbGame } from "../../../lib/igdb";
@@ -7,7 +7,7 @@ import { isSameOriginWrite } from "../../../lib/request-security";
 import { ensureAccount } from "../../../lib/social";
 
 export async function GET() {
-  const user = await getChatGPTUser();
+  const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to view your library." }, { status: 401 });
   try {
     await ensureAccount(user);
@@ -17,7 +17,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to add games." }, { status: 401 });
   if (!isSameOriginWrite(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   try {

@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getCurrentUser } from "../../auth";
 import { getDb } from "../../../db";
 import { challenges, libraryItems } from "../../../db/schema";
 import { receivedChallenges, sentChallenges } from "../../../lib/challenges";
@@ -7,7 +7,7 @@ import { isSameOriginWrite } from "../../../lib/request-security";
 import { ensureAccount, getFriendship, privateResponse } from "../../../lib/social";
 
 export async function GET(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to view challenges." }, { status: 401 });
   try {
     const scope = new URL(request.url).searchParams.get("scope");
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to create challenges." }, { status: 401 });
   if (!isSameOriginWrite(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   let payload: unknown;

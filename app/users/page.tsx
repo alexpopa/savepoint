@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { eq } from "drizzle-orm";
-import { requireChatGPTUser } from "../chatgpt-auth";
+import { and, eq, isNotNull } from "drizzle-orm";
+import { requireUser } from "../auth";
 import { getDb } from "../../db";
 import { accounts } from "../../db/schema";
 import { ensureAccount, getSocialState } from "../../lib/social";
@@ -10,10 +10,10 @@ import { accountDisplayName } from "../../lib/social";
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
-  const user = await requireChatGPTUser("/users");
+  const user = await requireUser("/users");
   await ensureAccount(user);
   const [publicAccounts, relations] = await Promise.all([
-    getDb().select().from(accounts).where(eq(accounts.isPublic, true)),
+    getDb().select().from(accounts).where(and(eq(accounts.isPublic, true), isNotNull(accounts.passwordHash), isNotNull(accounts.emailVerifiedAt))),
     getSocialState(user.userId),
   ]);
   const visible = new Map<string, { userId: string; displayName: string; email: string; isPublic: boolean }>();

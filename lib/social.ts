@@ -1,7 +1,7 @@
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, isNotNull, or } from "drizzle-orm";
 import { getDb } from "../db";
 import { accounts, friendships, libraryItems } from "../db/schema";
-import type { ChatGPTUser } from "../app/chatgpt-auth";
+import type { AppUser } from "../app/auth";
 
 export const privateResponse = { "cache-control": "private, no-store" };
 
@@ -11,18 +11,10 @@ export function accountDisplayName(account: { displayName: string; email: string
     : account.displayName;
 }
 
-export async function ensureAccount(user: ChatGPTUser) {
-  const email = user.email.trim().toLowerCase();
+export async function ensureAccount(user: AppUser) {
   const db = getDb();
-  await db.insert(accounts).values({
-    userId: user.userId,
-    email,
-    displayName: user.fullName?.trim() || user.email,
-  }).onConflictDoUpdate({
-    target: accounts.userId,
-    set: { email, displayName: user.fullName?.trim() || user.email },
-  });
   const [account] = await db.select().from(accounts).where(eq(accounts.userId, user.userId));
+  if (!account || !account.passwordHash || !account.emailVerifiedAt) throw new Error("Verified email account not found.");
   return account;
 }
 
@@ -49,7 +41,7 @@ export async function getSocialState(userId: string) {
   );
   const otherIds = relations.map((row) => row.userLow === userId ? row.userHigh : row.userLow);
   const people = otherIds.length
-    ? await db.select().from(accounts).where(or(...otherIds.map((id) => eq(accounts.userId, id))))
+    ? await db.select().from(accounts).where(and(isNotNull(accounts.passwordHash), isNotNull(accounts.emailVerifiedAt), or(...otherIds.map((id) => eq(accounts.userId, id)))))
     : [];
   const byId = new Map(people.map((person) => [person.userId, person]));
   return relations.flatMap((row) => {

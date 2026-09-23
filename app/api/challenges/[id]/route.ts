@@ -1,5 +1,5 @@
 import { eq, inArray, sql } from "drizzle-orm";
-import { getChatGPTUser } from "../../../chatgpt-auth";
+import { getCurrentUser } from "../../../auth";
 import { getDb } from "../../../../db";
 import { challenges } from "../../../../db/schema";
 import { isComplete, receivedChallenges } from "../../../../lib/challenges";
@@ -10,7 +10,7 @@ type Context = { params: Promise<{ id: string }> };
 type Action = "confirm" | "unconfirm" | "decline" | "favorite" | "unfavorite" | "move_up" | "move_down";
 
 export async function PATCH(request: Request, context: Context) {
-  const user = await getChatGPTUser();
+  const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to update challenges." }, { status: 401 });
   if (!isSameOriginWrite(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   const id = Number((await context.params).id);

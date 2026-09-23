@@ -1,5 +1,5 @@
 import { and, eq, ne } from "drizzle-orm";
-import { getChatGPTUser } from "../../../chatgpt-auth";
+import { getCurrentUser } from "../../../auth";
 import { getDb } from "../../../../db";
 import { friendships } from "../../../../db/schema";
 import { isSameOriginWrite } from "../../../../lib/request-security";
@@ -8,7 +8,7 @@ import { pairWhere, privateResponse } from "../../../../lib/social";
 type Context = { params: Promise<{ userId: string }> };
 
 export async function PATCH(request: Request, context: Context) {
-  const user = await getChatGPTUser();
+  const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to manage friend requests." }, { status: 401 });
   if (!isSameOriginWrite(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   const targetId = (await context.params).userId;
@@ -28,7 +28,7 @@ export async function PATCH(request: Request, context: Context) {
 }
 
 export async function DELETE(request: Request, context: Context) {
-  const user = await getChatGPTUser();
+  const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to manage friends." }, { status: 401 });
   if (!isSameOriginWrite(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   const targetId = (await context.params).userId;

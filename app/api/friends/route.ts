@@ -1,12 +1,12 @@
-import { eq } from "drizzle-orm";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { and, eq, isNotNull } from "drizzle-orm";
+import { getCurrentUser } from "../../auth";
 import { getDb } from "../../../db";
 import { accounts, friendships } from "../../../db/schema";
 import { isSameOriginWrite } from "../../../lib/request-security";
 import { ensureAccount, getSocialState, pairFor, privateResponse } from "../../../lib/social";
 
 export async function GET() {
-  const user = await getChatGPTUser();
+  const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to view friends." }, { status: 401 });
   try {
     await ensureAccount(user);
@@ -15,7 +15,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to send friend requests." }, { status: 401 });
   if (!isSameOriginWrite(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   let payload: unknown;
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   try {
     await ensureAccount(user);
     const db = getDb();
-    const [target] = await db.select().from(accounts).where(targetId ? eq(accounts.userId, targetId) : eq(accounts.email, email));
+    const [target] = await db.select().from(accounts).where(and(isNotNull(accounts.passwordHash), isNotNull(accounts.emailVerifiedAt), targetId ? eq(accounts.userId, targetId) : eq(accounts.email, email)));
     if (!target) return Response.json({ error: "No RGBoner account was found." }, { status: 404 });
     if (target.userId === user.userId) return Response.json({ error: "You cannot send yourself a friend request." }, { status: 400 });
     const result = await db.insert(friendships).values({ ...pairFor(user.userId, target.userId), requesterId: user.userId, status: "pending", createdAt: Date.now() }).onConflictDoNothing().returning();
