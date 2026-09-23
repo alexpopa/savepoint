@@ -2,6 +2,8 @@
 
 RGBoner is a video game library for players with verified email and password accounts. Visitors can search games and players before signing in; an account is required to save games, add friends, and use personal features. Use the search bar in the top navigation to find IGDB games and RGBoner players on one results page. Save games, connect with players, and choose whether your profile is public or private. Profiles start private; accepted friends can view each other's libraries and challenges. Friends can add challenges to games in each other's libraries. Game details come from IGDB, while accounts, friendships, collections, and challenges live in Cloudflare D1.
 
+This source repository is [`alexpopa/savepoint`](https://github.com/alexpopa/savepoint). It builds the RGBoner Site at [retrogameboner.com](https://retrogameboner.com); the local checkout directory may have a different name.
+
 The interface follows a clean retro RGB direction: the pixel wordmark anchors a dark, sharp-edged layout while game artwork keeps its original rendering style. See the visual style guide before changing the UI.
 
 ## Start here

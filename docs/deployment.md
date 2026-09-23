@@ -1,6 +1,6 @@
 # Deploy RGBoner with Sites
 
-This runbook covers publishing this repository as a ChatGPT Site. It is a Vinext/Cloudflare Worker app with a Sites-managed D1 database and its own email account system. Use [Development and setup](development.md) for local preview and local database commands, and [Architecture](architecture.md) for the app's authentication and data model. The [Sites guide](https://learn.chatgpt.com/docs/sites) describes the current Sites product workflow.
+This runbook covers publishing the [`alexpopa/savepoint`](https://github.com/alexpopa/savepoint) repository as the RGBoner ChatGPT Site at [retrogameboner.com](https://retrogameboner.com). The local checkout directory may be named differently. The Site is a Vinext/Cloudflare Worker app with a Sites-managed D1 database and its own email account system. Use [Development and setup](development.md) for local preview and local database commands, and [Architecture](architecture.md) for the app's authentication and data model. The [Sites guide](https://learn.chatgpt.com/docs/sites) describes the current Sites product workflow.
 
 ## What the deployment needs
 

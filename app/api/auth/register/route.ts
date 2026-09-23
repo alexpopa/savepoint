@@ -25,7 +25,8 @@ export async function POST(request: Request) {
     await db.insert(accounts).values({ userId, email, displayName, passwordHash: await hashPassword(body.password) });
     await issueAuthToken(request, userId, email, "verify");
     return Response.json({ message: "Check your email for a verification link before signing in." }, { status: 201, headers: privateResponse });
-  } catch {
+  } catch (error) {
+    console.error("POST /api/auth/register failed", error instanceof Error ? error.stack ?? error.message : error);
     return Response.json({ error: "Could not create the account. Please try again." }, { status: 503, headers: privateResponse });
   }
 }
