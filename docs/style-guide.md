@@ -73,6 +73,8 @@ Use one prominent accent action per region. A colored state also needs a visible
 | Header | Let the wordmark lead. Keep search and navigation visually quieter, with clear boundaries and focus. |
 | Game card | Artwork first, then title and compact metadata. Keep save/remove actions easy to distinguish and reach. |
 | Player card | Treat player identity and friendship state as text and structure, not only a colored indicator. |
+| Challenge card | Show Pending, Completed, or Declined in text alongside a restrained edge color. Completed uses the action green, pending uses the readable info blue, and favorites sit in a labeled group at the top of each profile section. Keep title and description readable and confirmations explicit. |
+| Challenge form | Use a focused modal dialog with labeled title and description fields, a clear cancel action, and inline errors. |
 | Search and filters | Make the selected filter obvious through fill/border **and** its label or checked state. Keep result types separated. |
 | Settings and forms | Use straightforward field labels, inline help, and explicit success/error messages. Keep the same panel and action language as the library. |
 | Empty/loading/error states | Be concise and useful. Use a small accent at most; avoid a full-screen arcade animation. |

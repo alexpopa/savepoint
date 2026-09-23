@@ -7,5 +7,5 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const user = await requireChatGPTUser("/");
   await ensureAccount(user);
-  return <Library email={user.email} />;
+  return <Library email={user.email} userId={user.userId} />;
 }

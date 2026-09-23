@@ -17,9 +17,10 @@ From the repository root:
    ```sh
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_marvelous_wolverine.sql
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_bored_rage.sql
+   node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0002_brave_wallop.sql
    ```
 
-   For a database that already has `0000`, run only the `0001` command.
+   For an existing database, run only the migrations that have not yet been applied. `0002` adds challenges.
 
 5. Run `npm run dev`. In the default **portable** profile, visit `http://localhost:5173/signin-with-chatgpt?return_to=/` to sign in as `seedy@sites.test`. To exercise friend requests, use `http://localhost:5173/signin-with-chatgpt?user=2&return_to=/` in a separate browser profile for `player2@sites.test`. The browser gets a local, HTTP-only cookie; the local Vite plugin supplies authentication headers to the app. This is only a development simulation.
 
@@ -47,10 +48,10 @@ Local D1 state is stored under `.wrangler/state`. Keep the `--persist-to .wrangl
 4. Apply each new migration to local D1 using the command above with its actual filename substituted for `drizzle/0000_marvelous_wolverine.sql`.
 5. Verify the affected API flow and update [architecture.md](architecture.md) if the data model or behavior changed.
 
-The tables are `library_items`, `accounts`, and `friendships`. The unique index on `(user_id, igdb_id)` prevents duplicate saved games. `accounts.is_public` defaults to false, and account records are created on first app use. `friendships` stores one canonical row per user pair, with a requester and `pending` or `accepted` status. `added_at` and `created_at` are Unix timestamps in milliseconds. `platforms_json` stores a JSON array of platform names.
+The tables are `library_items`, `accounts`, `friendships`, and `challenges`. The unique index on `(user_id, igdb_id)` prevents duplicate saved games. `accounts.is_public` defaults to false, and account records are created on first app use. `friendships` stores one canonical row per user pair, with a requester and `pending` or `accepted` status. `challenges` stores the recipient, creator, IGDB game ID, a snapshot of the game name and cover, title, description, each participant's confirmation, recipient decline, favorite, and manual order. It does not reference a library row, so removing a game preserves its challenges. `added_at` and `created_at` are Unix timestamps in milliseconds. `platforms_json` stores IGDB platform names as catalog metadata; the library currently saves one entry per IGDB game.
 
 ## Hosted configuration
 
-`.openai/hosting.json` requests a D1 binding named `DB`; `db/index.ts` uses that binding. Set `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` as Site secrets in the hosting environment. Never put the secret in browser code or a public file. Ensure the hosted D1 database has all checked-in migrations applied before using the library. The build copies the migrations to `dist/.openai/drizzle/`, but this repository does not define a hosted migration command.
+Use [Deploy RGBoner with Sites](deployment.md) for the release steps, Site secrets, audience settings, production migrations, verification, and recovery. `.openai/hosting.json` requests a logical D1 binding named `DB`; `db/index.ts` uses that binding. The build copies checked-in Drizzle migrations to `dist/.openai/drizzle/`, and Sites applies pending migrations to hosted D1 during publication before uploading the Worker. Local Wrangler migration commands above do not update hosted D1.
 
-Authentication in the hosted environment must provide the `oai-authenticated-user-id` and `oai-authenticated-user-email` request headers through the trusted platform layer. The local simulated sign-in is implemented only in the development Vite plugin.
+The hosted Site needs `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` as Site secrets. Authentication in the hosted environment must provide the `oai-authenticated-user-id` and `oai-authenticated-user-email` request headers through the trusted platform layer. The local simulated sign-in is implemented only in the development Vite plugin.

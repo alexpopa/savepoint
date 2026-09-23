@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Search, Settings, Users } from "lucide-react";
+import { LogOut, Search, Settings, UserRound, Users } from "lucide-react";
 
 const glyphs = {
   R: ["01110", "10001", "10001", "11110", "10100", "10010", "10001"],
@@ -44,6 +44,7 @@ export default function SiteHeader({ email, query = "" }: { email: string; query
     </form>
     <nav className="header-actions" aria-label="Main navigation">
       <Link className="header-nav-link" href="/">My library</Link>
+      <Link className="icon-button" aria-label="My profile" title="My profile" href="/profile"><UserRound size={18}/></Link>
       <Link className="icon-button" aria-label="Browse players" title="Browse players" href="/users"><Users size={18}/></Link>
       <Link className="icon-button" aria-label="Settings and friends" title="Settings and friends" href="/settings"><Settings size={18}/></Link>
       <span className="account-avatar" title={email}>{email.charAt(0).toUpperCase()}</span>

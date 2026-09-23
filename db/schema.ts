@@ -32,3 +32,24 @@ export const libraryItems = sqliteTable("library_items", {
   platformsJson: text("platforms_json").notNull().default("[]"),
   addedAt: integer("added_at").notNull(),
 }, (table) => [uniqueIndex("idx_library_user_game").on(table.userId, table.igdbId)]);
+
+export const challenges = sqliteTable("challenges", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  recipientId: text("recipient_id").notNull().references(() => accounts.userId),
+  creatorId: text("creator_id").notNull().references(() => accounts.userId),
+  igdbId: integer("igdb_id").notNull(),
+  gameName: text("game_name").notNull(),
+  gameCoverUrl: text("game_cover_url"),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  createdAt: integer("created_at").notNull(),
+  creatorConfirmed: integer("creator_confirmed", { mode: "boolean" }).notNull().default(false),
+  recipientConfirmed: integer("recipient_confirmed", { mode: "boolean" }).notNull().default(false),
+  declinedAt: integer("declined_at"),
+  isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+}, (table) => [
+  index("idx_challenges_recipient_game").on(table.recipientId, table.igdbId),
+  index("idx_challenges_creator").on(table.creatorId),
+  check("ck_challenge_other_player", sql`${table.creatorId} <> ${table.recipientId}`),
+]);
