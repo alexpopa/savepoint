@@ -25,7 +25,7 @@ From the repository root:
 
    For an existing database, run only the migrations that have not yet been applied. `0002` adds challenges; `0003` adds email passwords and sessions; `0004` adds sign-in attempt tracking; `0005` adds email verification and reset tokens.
 
-5. Run `npm run dev` and visit `http://localhost:5173/`. Visitors land on search; choose **Sign in** to create an email account with a display name and a password of at least 12 characters. Open the verification link from the development server log, then sign in. To exercise friend requests, create a second verified email account in another browser profile. The app sets an HTTP-only session cookie and stores its token hash in local D1.
+5. Run `npm run dev` and visit `http://localhost:5173/`. Visitors land on search; choose **Sign in → Create an account** or visit `http://localhost:5173/login` directly. Enter a display name, email, and password of at least 12 characters. Open the verification link from the development server log, then sign in. To exercise friend requests, create a second verified email account in another browser profile. The app sets an HTTP-only session cookie and stores its token hash in local D1.
 
 The top search bar opens `/search?q=...` for visitors and signed-in players. It searches IGDB games and email accounts already created in local D1. Signed-out visitors can match player display names; email-text matching and friendship state require sign-in. Search results do not show account email addresses or private library items. A friend request can be sent by player ID from search results or a profile; accepting it in the second profile unlocks that player's private library.
 

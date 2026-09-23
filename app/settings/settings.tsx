@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
@@ -84,5 +83,5 @@ export default function Settings({ email: signedInEmail }: { email: string }) {
 }
 
 function PersonRow({ person, actions }: { person: Person; actions: React.ReactNode }) {
-  return <div className="person-row"><div><Link className="inline-link" href={`/users/${encodeURIComponent(person.userId)}`}>{person.displayName}</Link><p>{person.email}</p></div><div className="person-actions">{actions}</div></div>;
+  return <div className="person-row"><div><a className="inline-link" href={`/users/${encodeURIComponent(person.userId)}`}>{person.displayName}</a><p>{person.email}</p></div><div className="person-actions">{actions}</div></div>;
 }

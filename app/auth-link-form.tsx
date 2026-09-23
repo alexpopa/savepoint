@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { BrandWordmark } from "./site-header";
 
 export default function AuthLinkForm({ mode, token }: { mode: "verify" | "reset"; token: string }) {
@@ -33,7 +32,7 @@ export default function AuthLinkForm({ mode, token }: { mode: "verify" | "reset"
   }
 
   return <main className="auth-page"><div className="auth-shell">
-    <Link className="auth-brand" href="/" aria-label="RGBoner home"><BrandWordmark /></Link>
+    <a className="auth-brand" href="/" aria-label="RGBoner home"><BrandWordmark /></a>
     <section className="auth-card" aria-labelledby="auth-title">
       <p className="eyebrow">PLAYER ACCOUNT</p>
       <h1 id="auth-title">{mode === "verify" ? "Verify your email" : "Choose a new password"}</h1>
@@ -45,7 +44,7 @@ export default function AuthLinkForm({ mode, token }: { mode: "verify" | "reset"
         {mode === "reset" && <label>New password<input name="password" type="password" autoComplete="new-password" minLength={12} maxLength={128} required /></label>}
         <button type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "verify" ? "Verify email" : "Change password"}</button>
       </form>}
-      <p className="auth-switch"><Link href="/login">Back to sign in</Link></p>
+      <p className="auth-switch"><a href="/login">Back to sign in</a></p>
     </section>
   </div></main>;
 }

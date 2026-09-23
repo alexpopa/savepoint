@@ -37,7 +37,7 @@ Requires Node.js 22.13 or newer, npm, and Twitch developer credentials for IGDB.
 
    Apply only the migrations that your local database has not yet received.
 
-4. Run `npm run dev` and open `http://localhost:5173/`. Search as a visitor, then choose **Sign in** to create an account. Open the verification link printed in the development server log before signing in. Create a second account in another browser profile to test friendship flows.
+4. Run `npm run dev` and open `http://localhost:5173/`. Search as a visitor, then choose **Sign in → Create an account**, or open `/login` directly. Enter a display name, email, and password of at least 12 characters. Open the verification link printed in the development server log before signing in. Create a second account in another browser profile to test friendship flows.
 
 Use the top search bar to find games or players, including players with private profiles. You can send a friend request from a search result or player profile without knowing their email; private games and challenges remain hidden until the request is accepted. On a friend's saved game, choose **Add challenge** to enter a title and description. The game and your profile both show its pending or completed state. Open **My profile** to confirm, decline, favorite, and rank challenges. Visit **Settings & friends** to change visibility or send a request by email. **Browse players** lists public profiles and profiles shared by accepted friends. Only signed-in players can browse other profiles.
 

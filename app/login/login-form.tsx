@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { BrandWordmark } from "../site-header";
 
 export default function LoginForm({ returnTo }: { returnTo: string }) {
@@ -40,7 +39,7 @@ export default function LoginForm({ returnTo }: { returnTo: string }) {
 
   return <main className="auth-page">
     <div className="auth-shell">
-      <Link className="auth-brand" href="/" aria-label="RGBoner home"><BrandWordmark /></Link>
+      <a className="auth-brand" href="/" aria-label="RGBoner home"><BrandWordmark /></a>
       <section className="auth-card" aria-labelledby="auth-title">
         <p className="eyebrow">PLAYER ACCOUNT</p>
         <h1 id="auth-title">{mode === "login" ? "Welcome back" : mode === "register" ? "Create an account" : mode === "reset" ? "Reset your password" : "Verify your email"}</h1>

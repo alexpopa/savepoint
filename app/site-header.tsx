@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { LogOut, Search, Settings, UserRound, Users } from "lucide-react";
 
 const glyphs = {
@@ -36,7 +35,7 @@ export function BrandWordmark() {
 
 export default function SiteHeader({ email, query = "" }: { email?: string; query?: string }) {
   return <header className="topbar">
-    <Link className="brand" href="/" aria-label="RGBoner home"><BrandWordmark /></Link>
+    <a className="brand" href="/" aria-label="RGBoner home"><BrandWordmark /></a>
     <form className="header-search" action="/search" role="search">
       <Search size={18} aria-hidden="true"/>
       <input type="search" name="q" defaultValue={query} minLength={2} maxLength={100} required aria-label="Search games and players" placeholder="Search games and players"/>
@@ -44,13 +43,13 @@ export default function SiteHeader({ email, query = "" }: { email?: string; quer
     </form>
     <nav className="header-actions" aria-label="Main navigation">
       {email ? <>
-        <Link className="header-nav-link" href="/">My library</Link>
-        <Link className="icon-button" aria-label="My profile" title="My profile" href="/profile"><UserRound size={18}/></Link>
-        <Link className="icon-button" aria-label="Browse players" title="Browse players" href="/users"><Users size={18}/></Link>
-        <Link className="icon-button" aria-label="Settings and friends" title="Settings and friends" href="/settings"><Settings size={18}/></Link>
+        <a className="header-nav-link" href="/">My library</a>
+        <a className="icon-button" aria-label="My profile" title="My profile" href="/profile"><UserRound size={18}/></a>
+        <a className="icon-button" aria-label="Browse players" title="Browse players" href="/users"><Users size={18}/></a>
+        <a className="icon-button" aria-label="Settings and friends" title="Settings and friends" href="/settings"><Settings size={18}/></a>
         <span className="account-avatar" title={email}>{email.charAt(0).toUpperCase()}</span>
         <form action="/api/auth/logout" method="post"><button className="icon-button" type="submit" aria-label="Sign out" title="Sign out"><LogOut size={18}/></button></form>
-      </> : <Link className="header-nav-link guest-signin" href={`/login?return_to=${encodeURIComponent(query ? `/search?q=${encodeURIComponent(query)}` : "/search")}`}>Sign in</Link>}
+      </> : <a className="header-nav-link guest-signin" href={`/login?return_to=${encodeURIComponent(query ? `/search?q=${encodeURIComponent(query)}` : "/search")}`}>Sign in</a>}
     </nav>
   </header>;
 }
