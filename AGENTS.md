@@ -13,4 +13,6 @@ Read [README.md](README.md), [docs/development.md](docs/development.md), and [do
 
 ## Keep the docs current
 
-When changing an API, authentication rule, environment variable, database schema, local command, or hosting binding, update the relevant document in the same change. Add migrations for schema changes and document how to apply them. Keep secrets out of documentation and browser code. Do not edit generated `dist/`, `.next/`, `.vinext/`, or `.wrangler/` output as source.
+For every completed app change, update the relevant documentation in the same change so it describes the app's current behavior and setup. Add new explanations where needed, revise outdated ones, and remove instructions that no longer apply. Keep `README.md` as the entry point, `docs/development.md` as the setup and database guide, and `docs/architecture.md` as the behavior and API guide. Do not add dated change entries; Git records history.
+
+Add migrations for schema changes and document how to apply them. Keep secrets out of documentation and browser code. Do not edit generated `dist/`, `.next/`, `.vinext/`, or `.wrangler/` output as source. A change is complete only after its documentation is accurate.
