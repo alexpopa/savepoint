@@ -1,0 +1,61 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../vendor/shadcn-tailwind-4.13.0.css";
+
+:root { color-scheme: dark; --background:#111512; --foreground:#f0f1ec; --muted:#969b91; --line:#2e342e; --surface:#191e1a; --green:#c5f36a; }
+@theme inline { --color-background:var(--background); --color-foreground:var(--foreground); --font-sans:Arial,Helvetica,sans-serif; }
+* { box-sizing:border-box }
+html,body { min-height:100%; margin:0 }
+body { background:var(--background); color:var(--foreground); font-family:Arial,Helvetica,sans-serif; }
+button,input { font:inherit }
+button,a { -webkit-tap-highlight-color:transparent }
+a { color:inherit; text-decoration:none }
+.library-page { min-height:100vh;background:#111512 }
+.topbar { height:76px;border-bottom:1px solid #282e29;display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100vw - 1120px)/2)) }
+.account { display:flex;align-items:center;gap:11px;color:#b9beb3;font-size:14px }
+.account-avatar { width:32px;height:32px;background:#303a2b;color:var(--green);display:grid;place-items:center;border-radius:50%;font-weight:700 }
+.icon-button { width:36px;height:36px;border:0;border-radius:8px;background:transparent;color:#a7ada3;display:grid;place-items:center;cursor:pointer }
+.icon-button:hover { background:#262d27;color:var(--green) }
+.library-wrap { width:min(1120px,calc(100% - 48px));margin:0 auto;padding:65px 0 28px }
+.page-heading { display:flex;justify-content:space-between;align-items:end;margin-bottom:36px }
+.page-heading h1 { font-size:44px;margin-bottom:11px }
+.page-heading .subcopy { margin:0;font-size:16px }
+.game-count { display:flex;align-items:center;gap:11px;border-left:1px solid #394038;padding-left:17px;color:#9ca294;font-size:10px;font-weight:700;line-height:1.45;letter-spacing:.12em }
+.game-count strong { color:var(--green);font-size:25px;font-weight:500;letter-spacing:-.04em }
+.search-box { height:60px;border:1px solid #414940;border-radius:10px;background:#1a201b;display:flex;align-items:center;gap:14px;padding:0 8px 0 19px;color:#a9b09f;margin-bottom:46px }
+.search-box:focus-within { border-color:#90ad62;box-shadow:0 0 0 3px #c5f36a14 }
+.search-box input { background:transparent;border:0;outline:0;color:#f0f1ec;flex:1;min-width:40px;font-size:16px }
+.search-box input::placeholder { color:#777f73 }
+.search-box button { border:0;background:#c5f36a;color:#1a2015;height:42px;padding:0 15px;border-radius:7px;display:flex;align-items:center;gap:9px;font-weight:700;cursor:pointer }
+.search-box button:disabled { opacity:.65;cursor:default }
+.section-title { display:flex;justify-content:space-between;align-items:end;margin:0 0 17px }
+.section-title .eyebrow { margin-bottom:8px;font-size:11px }
+.section-title h2 { margin:0;font-size:24px;letter-spacing:-.04em;font-weight:600 }
+.collection-title { margin-top:45px }
+.sort-label { display:flex;align-items:center;gap:8px;color:#9ca294;font-size:13px;padding:7px 0 }
+.game-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px }
+.game-card { min-width:0;min-height:88px;border:1px solid #2e352e;background:#191e1a;border-radius:10px;padding:10px;display:flex;align-items:center;gap:12px;position:relative }
+.game-cover { width:49px;height:66px;flex:none;border-radius:5px;overflow:hidden;background:#282e29 }
+.game-cover img { width:100%;height:100%;object-fit:cover }
+.cover-fallback { height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#77806f;gap:2px }
+.cover-fallback span {font-size:12px;font-weight:700;color:#bfc5b7}
+.game-info { min-width:0;flex:1;padding-right:4px }
+.game-info h3 { font-size:14px;line-height:1.3;margin:0 0 6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+.game-info p { font-size:12px;color:#92998d;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+.add-button,.remove-button { width:34px;height:34px;flex:none;border:1px solid #3a4438;background:#242c24;color:#c5f36a;border-radius:7px;display:grid;place-items:center;cursor:pointer }
+.add-button:hover,.remove-button:hover { background:#313d30 }
+.add-button:disabled { cursor:default;color:#e1e8d9;background:#30382f }
+.remove-button { border:0;background:transparent;color:#81897e;width:30px;height:30px }
+.remove-button:hover { color:#eaa79c;background:#342624 }
+.text-button { border:0;background:transparent;color:#a8b194;display:flex;align-items:center;gap:5px;cursor:pointer;padding:5px }
+.empty-state { min-height:245px;border:1px dashed #394138;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;color:#92998d }
+.empty-icon { color:var(--green);width:52px;height:52px;border:1px solid #58634b;border-radius:14px;display:grid;place-items:center;margin-bottom:17px;background:#c5f36a0c }
+.empty-state h2 { color:#e9ebe4;font-size:18px;margin:0 0 7px;font-weight:600 }
+.empty-state p { margin:0;font-size:14px }
+.results-section { padding-bottom:3px;border-bottom:1px solid #2a302b }
+.notice { border-radius:7px;padding:12px 14px;display:flex;gap:9px;align-items:center;margin:-27px 0 30px;font-size:14px }
+.notice.error { color:#ffc1b9;background:#371f1f;border:1px solid #63312d }
+.page-footer { display:flex;justify-content:space-between;color:#737b70;border-top:1px solid #292f2a;padding-top:20px;margin-top:44px;font-size:12px }
+.page-footer span:last-child { font-size:10px;letter-spacing:.12em }
+@media(max-width:920px) { .game-grid { grid-template-columns:repeat(2,minmax(0,1fr)) } }
+@media(max-width:560px) { .topbar { height:66px;padding:0 20px }.account { gap:8px }.account>span:nth-child(2) { max-width:135px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }.library-wrap { width:calc(100% - 36px);padding-top:43px }.page-heading h1 { font-size:36px }.page-heading { margin-bottom:25px }.search-box { height:55px;margin-bottom:36px;padding-left:13px;gap:9px }.search-box button { width:43px;overflow:hidden;font-size:0;justify-content:center;padding:0 }.search-box button svg { flex:none }.game-grid { grid-template-columns:1fr }.game-count { padding-left:12px;gap:8px }.collection-title { margin-top:35px }.page-footer { gap:14px;line-height:1.5 }.page-footer span:last-child { text-align:right } }
