@@ -54,7 +54,7 @@ export default function SearchResults({ query }: { query: string }) {
   const showGames = tab !== "players";
   const done = !loadingGames && !loadingPlayers;
   return <div className="library-wrap search-wrap">
-    <p className="eyebrow"><Search size={14}/> DISCOVER SAVEPOINT</p>
+    <p className="eyebrow"><Search size={14}/> DISCOVER RGBONER</p>
     <h1>Search</h1>
     <p className="subcopy">Find games to save and players to connect with.</p>
     {!valid ? <div className="empty-state"><Search size={28}/><h2>Search games and players</h2><p>Enter at least two characters in the search bar above.</p></div> : <>

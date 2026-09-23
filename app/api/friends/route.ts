@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     await ensureAccount(user);
     const db = getDb();
     const [target] = await db.select().from(accounts).where(targetId ? eq(accounts.userId, targetId) : eq(accounts.email, email));
-    if (!target) return Response.json({ error: "No Savepoint account was found." }, { status: 404 });
+    if (!target) return Response.json({ error: "No RGBoner account was found." }, { status: 404 });
     if (target.userId === user.userId) return Response.json({ error: "You cannot send yourself a friend request." }, { status: 400 });
     const result = await db.insert(friendships).values({ ...pairFor(user.userId, target.userId), requesterId: user.userId, status: "pending", createdAt: Date.now() }).onConflictDoNothing().returning();
     if (!result.length) return Response.json({ error: "A friend request or friendship already exists." }, { status: 409 });

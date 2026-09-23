@@ -1,11 +1,14 @@
-# Savepoint
+# RGBoner
 
-Savepoint is a video game library for signed-in players. Use the search bar in the top navigation to find IGDB games and Savepoint players on one results page. Save games, connect with players, and choose whether your library is public or private. Libraries start private; accepted friends can view each other's libraries. Game details come from IGDB, while accounts, friendships, and collections live in Cloudflare D1.
+RGBoner is a video game library for signed-in players. Use the search bar in the top navigation to find IGDB games and RGBoner players on one results page. Save games, connect with players, and choose whether your library is public or private. Libraries start private; accepted friends can view each other's libraries. Game details come from IGDB, while accounts, friendships, and collections live in Cloudflare D1.
+
+The interface follows a clean retro RGB direction: the pixel wordmark anchors a dark, sharp-edged layout while game artwork keeps its original rendering style. See the visual style guide before changing the UI.
 
 ## Start here
 
 - [Local setup and database workflow](docs/development.md)
 - [Architecture, request flow, and API](docs/architecture.md)
+- [Visual style guide for RGBoner](docs/style-guide.md)
 - [Instructions for future agents](AGENTS.md)
 
 ## Quick local run

@@ -16,7 +16,7 @@ Browser UI -> /api/friends      -> db/index.ts -> Cloudflare D1
 Browser -> /search, /users, and /users/:id -> db/index.ts -> Cloudflare D1
 ```
 
-The app uses Next.js App Router components through Vinext, Vite, and the Cloudflare runtime. `app/page.tsx` is dynamically rendered and passes the signed-in email to the client component in `app/library.tsx`. The shared header in `app/site-header.tsx` submits searches to `/search?q=...` from every app page. The results page fetches IGDB games, Savepoint players, and the current user's saved games independently; its All, Games, and Players filters keep those result types distinct. Players include private accounts, library visibility, and the current friendship state, but search responses omit their email addresses and library items. The library component loads saved games and calls the remove endpoint; the results page calls the add endpoint. `/settings` controls account visibility and friend requests. `/users` lists public accounts and accepted friends. `/users/:id` renders another player's library only after checking public visibility or accepted friendship, and lets a viewer request friendship when needed. `app/globals.css` contains the page styling.
+The app uses Next.js App Router components through Vinext, Vite, and the Cloudflare runtime. `app/page.tsx` is dynamically rendered and passes the signed-in email to the client component in `app/library.tsx`. The shared header in `app/site-header.tsx` submits searches to `/search?q=...` from every app page and displays the RGBoner pixel wordmark, with red R, green G, and blue Boner. The results page fetches IGDB games, RGBoner players, and the current user's saved games independently; its All, Games, and Players filters keep those result types distinct. Players include private accounts, library visibility, and the current friendship state, but search responses omit their email addresses and library items. The library component loads saved games and calls the remove endpoint; the results page calls the add endpoint. `/settings` controls account visibility and friend requests. `/users` lists public accounts and accepted friends. `/users/:id` renders another player's library only after checking public visibility or accepted friendship, and lets a viewer request friendship when needed. `app/globals.css` contains the shared semantic color tokens and responsive styling for all these screens; [the visual style guide](style-guide.md) sets the design rules for future changes.
 
 ## Authentication and ownership
 
@@ -31,14 +31,14 @@ Every owner library query includes the authenticated `userId`. Deletes match bot
 | Route | Behavior |
 | --- | --- |
 | `GET /api/igdb/search?q=...` | Search IGDB for 2–100 character queries; return up to 30 serialized games. Requires sign-in. |
-| `GET /api/players/search?q=...` | Search existing Savepoint accounts by display name or email text for 2–100 character queries; return up to 30 other players with display label, library visibility, and friendship state. Private accounts are included, but email addresses and library items are omitted. Requires sign-in. |
+| `GET /api/players/search?q=...` | Search existing RGBoner accounts by display name or email text for 2–100 character queries; return up to 30 other players with display label, library visibility, and friendship state. Private accounts are included, but email addresses and library items are omitted. Requires sign-in. |
 | `GET /api/library` | Return the current user's saved games, newest first. Requires sign-in. |
 | `POST /api/library` | Accept `{ "igdbId": number }`, fetch that game from IGDB on the server, and save its details. Duplicate user/game pairs are ignored by the unique index. Requires sign-in and same-origin write. |
 | `DELETE /api/library/:id` | Remove one saved row belonging to the current user. Requires sign-in and same-origin write. |
 | `GET /api/account` | Return the signed-in user's account visibility and friend/request lists. Creates an account with private visibility on first use. |
 | `PATCH /api/account` | Accept `{ "isPublic": boolean }` to update only the current user's library visibility. Requires sign-in and same-origin write. |
 | `GET /api/friends` | Return accepted friendships and pending incoming/outgoing requests. Requires sign-in. |
-| `POST /api/friends` | Accept `{ "email": string }` or `{ "userId": string }` to request friendship with an existing Savepoint account. The latter supports search results and profiles without exposing the target email. Requires sign-in and same-origin write. |
+| `POST /api/friends` | Accept `{ "email": string }` or `{ "userId": string }` to request friendship with an existing RGBoner account. The latter supports search results and profiles without exposing the target email. Requires sign-in and same-origin write. |
 | `PATCH /api/friends/:userId` | Accept `{ "action": "accept" }` for an incoming pending request. Requires sign-in and same-origin write. |
 | `DELETE /api/friends/:userId` | Decline or cancel a pending request, or remove an accepted friendship. Requires sign-in and same-origin write. |
 

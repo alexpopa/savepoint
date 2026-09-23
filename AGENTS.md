@@ -1,6 +1,8 @@
-# Working on Savepoint
+# Working on RGBoner
 
 Read [README.md](README.md), [docs/development.md](docs/development.md), and [docs/architecture.md](docs/architecture.md) before changing behavior or setup. The implementation remains the source of truth when documentation and code disagree.
+
+Before any visual or styling change, read [docs/style-guide.md](docs/style-guide.md) and inspect the current wordmark in `app/site-header.tsx` and favicon in `public/favicon.svg`. Follow the guide's brand, imagery, accessibility, and review rules. Preserve the logo's glyphs and RGB colors unless the user explicitly requests a brand change. Keep the guide current when visual decisions change.
 
 ## Key locations
 
