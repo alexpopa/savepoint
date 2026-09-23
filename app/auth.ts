@@ -8,7 +8,8 @@ export type AppUser = { userId: string; email: string; displayName: string };
 
 const cookieName = "rgboner_session";
 const sessionLengthMs = 30 * 24 * 60 * 60 * 1000;
-const passwordIterations = 210_000;
+// The Worker runtime rejects PBKDF2 iteration counts above 100,000.
+const passwordIterations = 100_000;
 const encoder = new TextEncoder();
 
 function hex(bytes: Uint8Array): string {
