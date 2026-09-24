@@ -153,13 +153,9 @@ button:disabled { cursor: default; }
 .game-info p { margin: 0; color: var(--rgb-muted); font-size: 0.8125rem; line-height: 1.5; overflow-wrap: anywhere; }
 .game-platform-label, .game-owned-label { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; margin-top: 8px; color: var(--rgb-action); font-size: 0.8125rem; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
 .game-platform-label { color: var(--rgb-ink); }
-.library-card-actions { display: flex; flex-direction: column; gap: 6px; }
-.add-button, .remove-button, .edit-button { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-panel-raised); color: var(--rgb-ink); }
+.add-button { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-panel-raised); color: var(--rgb-ink); }
 .add-button:hover:not(:disabled) { border-color: var(--rgb-action); color: var(--rgb-action); }
 .add-button:disabled { color: var(--rgb-action); border-color: var(--rgb-rule); }
-.edit-button:hover { border-color: var(--rgb-info); color: var(--rgb-info); }
-.remove-button { color: var(--rgb-muted); }
-.remove-button:hover { border-color: var(--rgb-danger); color: var(--rgb-danger); }
 .text-button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 5px 8px; border: 0; background: transparent; color: var(--rgb-info); }
 .text-button:hover { text-decoration: underline; }
 
@@ -374,8 +370,6 @@ button:disabled { cursor: default; }
 .game-dialog-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
 .game-dialog-section-heading .eyebrow { margin-bottom: 5px; }
 .game-dialog-section-heading h3 { margin-bottom: 0; }
-.game-dialog-edit-link, .game-dialog-back { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 7px 10px; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-panel-raised); color: var(--rgb-ink); font-size: 0.875rem; font-weight: 700; }
-.game-dialog-edit-link:hover, .game-dialog-back:hover { border-color: var(--rgb-info); }
 .game-dialog-help { margin: 12px 0 18px; color: var(--rgb-muted); font-size: 0.875rem; }
 .platform-list { border: 1px solid var(--rgb-rule); border-radius: 3px; }
 .platform-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 10px 14px; border-top: 1px solid var(--rgb-rule); background: var(--rgb-panel-raised); }
@@ -390,7 +384,6 @@ button:disabled { cursor: default; }
 .platform-unowned { color: var(--rgb-muted); font-size: 0.8125rem; }
 .game-dialog-signin { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 16px; padding: 9px 16px; border: 1px solid var(--rgb-action); border-radius: 3px; background: var(--rgb-action); color: var(--rgb-black); font-size: 0.875rem; font-weight: 700; }
 .game-dialog-signin:hover { background: #51f461; }
-.game-dialog-back { margin-top: 16px; }
 .game-dialog-error { margin: 18px 32px 0; padding: 10px 14px; border: 1px solid var(--rgb-danger); color: #ffd5d2; font-size: 0.875rem; }
 .game-dialog-credit { margin: 0; padding: 22px 32px; color: var(--rgb-muted); font-size: 0.75rem; }
 @media (max-width: 650px) {

@@ -71,8 +71,8 @@ Use one prominent accent action per region. A colored state also needs a visible
 | Component | Visual direction |
 | --- | --- |
 | Header | Let the wordmark lead. Keep search and the account control visually quieter, with clear boundaries and focus. Put signed-in navigation and sign out in the account dropdown; show guests a direct, understated Sign in link in the same area. Keep the search form available at narrow widths. |
-| Game card | Artwork first, then title and compact metadata. The artwork/title area opens a full game file; keep the quick save, edit, and remove controls separate and reachable. Show the selected platform on every library copy. |
-| Game file dialog | Use a large, unobstructed cover, readable IGDB metadata, and a complete platform list. Keep platform actions in labeled rows; show saved, current, and unavailable states in words as well as color. A small RGB edge detail may echo the wordmark without coloring the artwork. |
+| Game card | Artwork first, then title and compact metadata. The artwork/title area opens a full game file. Show the selected platform on every library copy. |
+| Game file dialog | Use a large, unobstructed cover, readable IGDB metadata, and a complete platform list. Keep platform actions in labeled rows; show saved, current, and unavailable states in words as well as color. Library copies can be added or removed in the same platform list. A small RGB edge detail may echo the wordmark without coloring the artwork. |
 | Player card | Treat player identity and friendship state as text and structure, not only a colored indicator. |
 | Challenge card | Show Pending, Completed, or Declined in text alongside a restrained edge color. Completed uses the action green, pending uses the readable info blue, and favorites sit in a labeled group at the top of each profile section. Keep title and description readable and confirmations explicit. |
 | Challenge form | Use a focused modal dialog with labeled title and description fields, a clear cancel action, and inline errors. |

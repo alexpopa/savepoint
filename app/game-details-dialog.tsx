@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, Check, Gamepad2, LoaderCircle, Pencil, Plus, Trash2, X } from "lucide-react";
+import { CalendarDays, Check, Gamepad2, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 import type { CatalogGame, SavedGame } from "../lib/game-types";
 
 type Props = {
@@ -9,22 +9,18 @@ type Props = {
   saved: SavedGame[];
   signedIn: boolean;
   loginPath?: string;
-  editItem?: SavedGame | null;
-  initialEdit?: boolean;
   onClose: () => void;
   onAdd?: (platformId: number) => Promise<void>;
   onRemove?: (id: number) => Promise<void>;
-  onEdit?: (id: number, platformId: number) => Promise<void>;
 };
 
-export default function GameDetailsDialog({ game, saved, signedIn, loginPath, editItem, initialEdit = false, onClose, onAdd, onRemove, onEdit }: Props) {
+export default function GameDetailsDialog({ game, saved, signedIn, loginPath, onClose, onAdd, onRemove }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [details, setDetails] = useState<CatalogGame>(game);
   const [loading, setLoading] = useState(true);
   const [detailError, setDetailError] = useState("");
   const [actionError, setActionError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState(initialEdit);
 
   useEffect(() => {
     const element = dialog.current;
@@ -70,12 +66,8 @@ export default function GameDetailsDialog({ game, saved, signedIn, loginPath, ed
         {([ ["Genres", details.genres], ["Game modes", details.gameModes], ["Perspectives", details.perspectives], ["Themes", details.themes], ["Developers", details.developers], ["Publishers", details.publishers] ] as [string, string[] | undefined][]).filter(([, values]) => values?.length).map(([label, values]) => <div key={label}><span>{label}</span><strong>{values?.join(" · ")}</strong></div>)}
         {details.rating !== null && details.rating !== undefined && <div><span>IGDB rating</span><strong>{details.rating} / 100{details.ratingCount ? ` · ${details.ratingCount} ratings` : ""}</strong></div>}
       </div>
-      <section className="game-dialog-platforms" aria-labelledby="game-dialog-platforms-title"><div className="game-dialog-section-heading"><div><p className="eyebrow">YOUR COLLECTION</p><h3 id="game-dialog-platforms-title">{editing ? "Edit platform" : "Platforms"}</h3></div>{editItem && !editing && <button type="button" className="game-dialog-edit-link" onClick={() => setEditing(true)}><Pencil size={16}/> Edit this copy</button>}</div>
-        {!platformsReady ? <p className="game-dialog-loading">{loading ? <><LoaderCircle className="spin" size={16}/> Loading platform choices…</> : "Platform choices are temporarily unavailable."}</p> : editing && editItem ? <><p className="game-dialog-help">Choose the platform for your copy of {details.name}. Platforms already in your library are unavailable.</p><div className="platform-list">{options.filter((option) => option.id !== 0).map((option) => {
-          const occupied = saved.some((item) => item.id !== editItem.id && item.platformId === option.id);
-          const current = editItem.platformId === option.id;
-          return <div className="platform-row" key={option.id}><span className="platform-row-name">{option.name}</span><button type="button" disabled={busy || occupied || current} className="platform-action" onClick={() => { if (onEdit) void run(() => onEdit(editItem.id, option.id)).then((success) => { if (success) setEditing(false); }); }}>{current ? <><Check size={15}/> Current</> : occupied ? "Already saved" : busy ? "Saving…" : "Choose"}</button></div>;
-        })}</div>{options[0]?.id === 0 && <p className="game-dialog-help">IGDB does not list a platform for this game yet.</p>}<button className="game-dialog-back" type="button" onClick={() => setEditing(false)}>Back to game details</button></> : <><p className="game-dialog-help">{signedIn ? "Add each platform you own. Saved copies can be removed here." : "Sign in to add a platform to your library."}</p><div className="platform-list">{displayOptions.map((option) => {
+      <section className="game-dialog-platforms" aria-labelledby="game-dialog-platforms-title"><div className="game-dialog-section-heading"><div><p className="eyebrow">YOUR COLLECTION</p><h3 id="game-dialog-platforms-title">Platforms</h3></div></div>
+        {!platformsReady ? <p className="game-dialog-loading">{loading ? <><LoaderCircle className="spin" size={16}/> Loading platform choices…</> : "Platform choices are temporarily unavailable."}</p> : <><p className="game-dialog-help">{signedIn ? "Add each platform you own. Saved copies can be removed here." : "Sign in to add a platform to your library."}</p><div className="platform-list">{displayOptions.map((option) => {
           const owned = saved.find((item) => item.platformId === option.id);
           return <div className="platform-row" key={option.id}><span className="platform-row-name">{option.name}{owned && <small><Check size={13}/> In your library</small>}</span>{signedIn ? owned ? <button type="button" className="platform-action is-remove" disabled={busy} onClick={() => onRemove && void run(() => onRemove(owned.id))}><Trash2 size={15}/> Remove</button> : <button type="button" className="platform-action is-add" disabled={busy} onClick={() => onAdd && void run(() => onAdd(option.id))}><Plus size={15}/> Add</button> : <span className="platform-unowned">Available</span>}</div>;
         })}</div>{!signedIn && <a className="game-dialog-signin" href={loginPath}><Plus size={16}/> Sign in to build your library</a>}</>}
