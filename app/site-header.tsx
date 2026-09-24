@@ -34,10 +34,11 @@ export function BrandWordmark() {
   </svg>;
 }
 
-export default function SiteHeader({ email, query = "" }: { email?: string; query?: string }) {
+export default function SiteHeader({ email, query = "", platformId = null }: { email?: string; query?: string; platformId?: number | null }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const signInHref = `/login?return_to=${encodeURIComponent(query ? `/search?q=${encodeURIComponent(query)}` : "/search")}`;
+  const returnTo = query ? `/search?q=${encodeURIComponent(query)}${platformId ? `&platform=${platformId}` : ""}` : "/search";
+  const signInHref = `/login?return_to=${encodeURIComponent(returnTo)}`;
 
   useEffect(() => {
     if (!menuOpen) return;

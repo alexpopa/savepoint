@@ -18,7 +18,10 @@ type IgdbGame = {
   screenshots?: { image_id?: string }[];
 };
 
+export type IgdbPlatform = { id: number; name: string };
+
 let cachedToken: { value: string; expiresAt: number } | null = null;
+let cachedPlatforms: { value: IgdbPlatform[]; expiresAt: number } | null = null;
 
 async function getToken() {
   const clientId = env.IGDB_CLIENT_ID;
@@ -33,16 +36,16 @@ async function getToken() {
   return data.access_token;
 }
 
-async function request(query: string): Promise<IgdbGame[]> {
+async function request<T>(endpoint: "games" | "platforms", query: string): Promise<T[]> {
   const clientId = env.IGDB_CLIENT_ID!;
   const token = await getToken();
-  const response = await fetch("https://api.igdb.com/v4/games", {
+  const response = await fetch(`https://api.igdb.com/v4/${endpoint}`, {
     method: "POST",
     headers: { "Client-ID": clientId, Authorization: `Bearer ${token}`, Accept: "application/json", "content-type": "text/plain" },
     body: query,
   });
   if (!response.ok) throw new Error(response.status === 429 ? "IGDB is busy. Please wait a moment and try again." : "IGDB search is unavailable right now.");
-  return await response.json() as IgdbGame[];
+  return await response.json() as T[];
 }
 
 function serialize(game: IgdbGame) {
@@ -69,13 +72,21 @@ function serialize(game: IgdbGame) {
   };
 }
 
-export async function searchIgdb(query: string) {
+export async function searchIgdb(query: string, platformId?: number) {
   const safe = query.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-  const rows = await request(`search "${safe}"; fields id,name,first_release_date,cover.image_id,platforms.id,platforms.name; limit 30;`);
+  const platformFilter = platformId === undefined ? "" : `where platforms = ${platformId}; `;
+  const rows = await request<IgdbGame>("games", `search "${safe}"; ${platformFilter}fields id,name,first_release_date,cover.image_id,platforms.id,platforms.name; limit 30;`);
   return rows.map(serialize);
 }
 
+export async function listIgdbPlatforms(): Promise<IgdbPlatform[]> {
+  if (cachedPlatforms && cachedPlatforms.expiresAt > Date.now()) return cachedPlatforms.value;
+  const platforms = await request<IgdbPlatform>("platforms", "fields id,name; sort name asc; limit 500;");
+  cachedPlatforms = { value: platforms.filter((platform) => Number.isSafeInteger(platform.id) && platform.id > 0 && platform.name), expiresAt: Date.now() + 24 * 60 * 60 * 1000 };
+  return cachedPlatforms.value;
+}
+
 export async function getIgdbGame(id: number) {
-  const rows = await request(`fields id,name,first_release_date,cover.image_id,platforms.id,platforms.name,summary,storyline,genres.name,game_modes.name,player_perspectives.name,themes.name,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,total_rating,total_rating_count,screenshots.image_id; where id = ${id}; limit 1;`);
+  const rows = await request<IgdbGame>("games", `fields id,name,first_release_date,cover.image_id,platforms.id,platforms.name,summary,storyline,genres.name,game_modes.name,player_perspectives.name,themes.name,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,total_rating,total_rating_count,screenshots.image_id; where id = ${id}; limit 1;`);
   return rows[0] ? serialize(rows[0]) : null;
 }
