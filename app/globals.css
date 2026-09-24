@@ -91,6 +91,8 @@ button:disabled { cursor: default; }
 .header-search button:hover { background: #51f461; }
 .header-search button:focus-visible { outline-offset: 3px; }
 .header-actions { display: flex; align-items: center; flex: none; margin-left: auto; }
+.header-signin { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 10px; color: var(--rgb-muted); font-size: 0.9375rem; }
+.header-signin:hover { color: var(--rgb-ink); text-decoration: underline; text-decoration-color: var(--rgb-action); text-underline-offset: 5px; }
 .account-menu { position: relative; }
 .account-menu-trigger { display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 48px; min-height: 48px; padding: 0 7px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: var(--rgb-muted); }
 .account-menu-trigger:hover, .account-menu-trigger[aria-expanded="true"] { border-color: var(--rgb-control-edge); background: var(--rgb-panel); color: var(--rgb-ink); }

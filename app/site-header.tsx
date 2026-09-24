@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Gamepad2, LogIn, LogOut, Search, Settings, UserRound, Users } from "lucide-react";
+import { ChevronDown, Gamepad2, LogOut, Search, Settings, UserRound, Users } from "lucide-react";
 
 const glyphs = {
   R: ["01110", "10001", "10001", "11110", "10100", "10010", "10001"],
@@ -72,7 +72,8 @@ export default function SiteHeader({ email, query = "", platformIds = [] }: { em
       <button type="submit" aria-label="Search"><Search size={17}/></button>
     </form>
     <div className="header-actions">
-      <div
+      {!email && <a className="header-signin" href={signInHref}>Sign in</a>}
+      {email && <div
         className="account-menu"
         ref={menuRef}
         onBlur={(event) => {
@@ -92,18 +93,16 @@ export default function SiteHeader({ email, query = "", platformIds = [] }: { em
         </button>
         {menuOpen && <div className="account-menu-panel">
           <nav className="account-menu-nav" aria-label="Account navigation">
-            {email ? <>
-              <a className="account-menu-link" href="/" onClick={() => setMenuOpen(false)}><Gamepad2 size={18} aria-hidden="true"/>My library</a>
-              <a className="account-menu-link" href="/profile" onClick={() => setMenuOpen(false)}><UserRound size={18} aria-hidden="true"/>My profile</a>
-              <a className="account-menu-link" href="/users" onClick={() => setMenuOpen(false)}><Users size={18} aria-hidden="true"/>Browse players</a>
-              <a className="account-menu-link" href="/settings" onClick={() => setMenuOpen(false)}><Settings size={18} aria-hidden="true"/>Settings &amp; friends</a>
-              <form className="account-menu-signout" action="/api/auth/logout" method="post">
-                <button className="account-menu-link" type="submit"><LogOut size={18} aria-hidden="true"/>Sign out</button>
-              </form>
-            </> : <a className="account-menu-link" href={signInHref} onClick={() => setMenuOpen(false)}><LogIn size={18} aria-hidden="true"/>Sign in</a>}
+            <a className="account-menu-link" href="/" onClick={() => setMenuOpen(false)}><Gamepad2 size={18} aria-hidden="true"/>My library</a>
+            <a className="account-menu-link" href="/profile" onClick={() => setMenuOpen(false)}><UserRound size={18} aria-hidden="true"/>My profile</a>
+            <a className="account-menu-link" href="/users" onClick={() => setMenuOpen(false)}><Users size={18} aria-hidden="true"/>Browse players</a>
+            <a className="account-menu-link" href="/settings" onClick={() => setMenuOpen(false)}><Settings size={18} aria-hidden="true"/>Settings &amp; friends</a>
+            <form className="account-menu-signout" action="/api/auth/logout" method="post">
+              <button className="account-menu-link" type="submit"><LogOut size={18} aria-hidden="true"/>Sign out</button>
+            </form>
           </nav>
         </div>}
-      </div>
+      </div>}
     </div>
   </header>;
 }
