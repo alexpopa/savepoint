@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut, Search, Settings, UserRound, Users } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, Gamepad2, LogIn, LogOut, Search, Settings, UserRound, Users } from "lucide-react";
 
 const glyphs = {
   R: ["01110", "10001", "10001", "11110", "10100", "10010", "10001"],
@@ -34,6 +35,32 @@ export function BrandWordmark() {
 }
 
 export default function SiteHeader({ email, query = "" }: { email?: string; query?: string }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const signInHref = `/login?return_to=${encodeURIComponent(query ? `/search?q=${encodeURIComponent(query)}` : "/search")}`;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setMenuOpen(false);
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuRef.current?.querySelector<HTMLButtonElement>(".account-menu-trigger")?.focus();
+      }
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen]);
+
   return <header className="topbar">
     <a className="brand" href="/" aria-label="RGBoner home"><BrandWordmark /></a>
     <form className="header-search" action="/search" role="search">
@@ -41,15 +68,39 @@ export default function SiteHeader({ email, query = "" }: { email?: string; quer
       <input type="search" name="q" defaultValue={query} minLength={2} maxLength={100} required aria-label="Search games and players" placeholder="Search games and players"/>
       <button type="submit" aria-label="Search"><Search size={17}/></button>
     </form>
-    <nav className="header-actions" aria-label="Main navigation">
-      {email ? <>
-        <a className="header-nav-link" href="/">My library</a>
-        <a className="icon-button" aria-label="My profile" title="My profile" href="/profile"><UserRound size={18}/></a>
-        <a className="icon-button" aria-label="Browse players" title="Browse players" href="/users"><Users size={18}/></a>
-        <a className="icon-button" aria-label="Settings and friends" title="Settings and friends" href="/settings"><Settings size={18}/></a>
-        <span className="account-avatar" title={email}>{email.charAt(0).toUpperCase()}</span>
-        <form action="/api/auth/logout" method="post"><button className="icon-button" type="submit" aria-label="Sign out" title="Sign out"><LogOut size={18}/></button></form>
-      </> : <a className="header-nav-link guest-signin" href={`/login?return_to=${encodeURIComponent(query ? `/search?q=${encodeURIComponent(query)}` : "/search")}`}>Sign in</a>}
-    </nav>
+    <div className="header-actions">
+      <div
+        className="account-menu"
+        ref={menuRef}
+        onBlur={(event) => {
+          if (!(event.relatedTarget instanceof Node) || !menuRef.current?.contains(event.relatedTarget)) setMenuOpen(false);
+        }}
+      >
+        <button
+          className="account-menu-trigger"
+          type="button"
+          aria-label="Account menu"
+          aria-expanded={menuOpen}
+          title="Account menu"
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <UserRound size={21} aria-hidden="true"/>
+          <ChevronDown size={14} aria-hidden="true"/>
+        </button>
+        {menuOpen && <div className="account-menu-panel">
+          <nav className="account-menu-nav" aria-label="Account navigation">
+            {email ? <>
+              <a className="account-menu-link" href="/" onClick={() => setMenuOpen(false)}><Gamepad2 size={18} aria-hidden="true"/>My library</a>
+              <a className="account-menu-link" href="/profile" onClick={() => setMenuOpen(false)}><UserRound size={18} aria-hidden="true"/>My profile</a>
+              <a className="account-menu-link" href="/users" onClick={() => setMenuOpen(false)}><Users size={18} aria-hidden="true"/>Browse players</a>
+              <a className="account-menu-link" href="/settings" onClick={() => setMenuOpen(false)}><Settings size={18} aria-hidden="true"/>Settings &amp; friends</a>
+              <form className="account-menu-signout" action="/api/auth/logout" method="post">
+                <button className="account-menu-link" type="submit"><LogOut size={18} aria-hidden="true"/>Sign out</button>
+              </form>
+            </> : <a className="account-menu-link" href={signInHref} onClick={() => setMenuOpen(false)}><LogIn size={18} aria-hidden="true"/>Sign in</a>}
+          </nav>
+        </div>}
+      </div>
+    </div>
   </header>;
 }
