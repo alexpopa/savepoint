@@ -8,7 +8,10 @@ export const accounts = sqliteTable("accounts", {
   isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
   passwordHash: text("password_hash"),
   emailVerifiedAt: integer("email_verified_at"),
-}, (table) => [uniqueIndex("idx_accounts_email_login").on(table.email).where(sql`${table.passwordHash} IS NOT NULL`)]);
+}, (table) => [
+  uniqueIndex("idx_accounts_email_login").on(table.email).where(sql`${table.passwordHash} IS NOT NULL`),
+  uniqueIndex("idx_accounts_display_name_login").on(sql`lower(${table.displayName})`).where(sql`${table.passwordHash} IS NOT NULL`),
+]);
 
 export const sessions = sqliteTable("sessions", {
   tokenHash: text("token_hash").primaryKey(),

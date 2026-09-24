@@ -3,6 +3,7 @@ import { getCurrentUser } from "../../../auth";
 import { getDb } from "../../../../db";
 import { accounts, friendships } from "../../../../db/schema";
 import { accountDisplayName, ensureAccount, privateResponse } from "../../../../lib/social";
+import { profilePath } from "../../../../lib/profile-path";
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
     const byId = new Map(relations.map((row) => [row.userLow === user?.userId ? row.userHigh : row.userLow, row]));
     return Response.json({ players: rows.map((row) => {
       const relation = byId.get(row.userId);
-      return { userId: row.userId, displayName: accountDisplayName(row), isPublic: row.isPublic,
+      return { userId: row.userId, displayName: accountDisplayName(row), profilePath: profilePath(row), isPublic: row.isPublic,
         relationship: relation ? { status: relation.status, direction: relation.requesterId === user?.userId ? "outgoing" : "incoming" } : null };
     }) }, { headers: privateResponse });
   } catch {

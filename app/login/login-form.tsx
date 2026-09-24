@@ -50,7 +50,7 @@ export default function LoginForm({ returnTo }: { returnTo: string }) {
           {mode === "register" && <label>Display name<input name="displayName" type="text" autoComplete="nickname" maxLength={80} required /></label>}
           <label>Email<input name="email" type="email" autoComplete="email" maxLength={320} required /></label>
           {(mode === "login" || mode === "register") && <label>Password<input name="password" type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={mode === "register" ? 12 : undefined} maxLength={128} required /></label>}
-          {mode === "register" && <p className="auth-hint">Use at least 12 characters. You’ll need to verify your email before signing in.</p>}
+          {mode === "register" && <p className="auth-hint">Choose a unique display name for your profile link. Use at least 12 characters for your password; you’ll need to verify your email before signing in.</p>}
           <button type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "login" ? "Sign in" : mode === "register" ? "Create account" : mode === "reset" ? "Send reset link" : "Send verification link"}</button>
         </form>
         <p className="auth-switch">{mode === "login" ? "New to RGBoner?" : "Already have an account?"} <button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setMessage(""); }}>{mode === "login" ? "Create an account" : "Sign in"}</button></p>

@@ -6,7 +6,7 @@ import FriendButton, { type Relationship } from "../friend-button";
 import GameDetailsDialog from "../game-details-dialog";
 import type { CatalogGame, SavedGame } from "../../lib/game-types";
 
-type Player = { userId: string; displayName: string; isPublic: boolean; relationship: Relationship };
+type Player = { userId: string; displayName: string; profilePath: string; isPublic: boolean; relationship: Relationship };
 type Tab = "all" | "games" | "players";
 type Platform = { id: number; name: string };
 
@@ -155,10 +155,10 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
       {actionError && <div className="notice error search-notice" role="alert">{actionError}</div>}
       {showPlayers && <section className="search-group" aria-labelledby="players-heading"><div className="search-group-heading"><div><p className="eyebrow">COMMUNITY</p><h2 id="players-heading">Players</h2></div><span>{loadingPlayers ? "Searching…" : `${players.length} found`}</span></div>
         {loadingPlayers ? <div className="search-loading"><LoaderCircle className="spin" size={18}/> Searching players…</div> : playersError ? <div className="search-empty" role="alert">{playersError}</div> : players.length ? <div className="search-player-list">{players.map((player) => {
-          const profilePath = `/users/${encodeURIComponent(player.userId)}`;
+          const playerProfilePath = player.profilePath;
           return <article className="search-player" key={player.userId}>
-            <a href={signedIn ? profilePath : `/login?return_to=${encodeURIComponent(profilePath)}`} className="search-player-main"><span className="account-avatar">{player.displayName.charAt(0).toUpperCase()}</span><span><strong>{player.displayName}</strong><small>{player.isPublic ? "Public library" : player.relationship?.status === "accepted" ? "Private library · Friend" : "Private library"}</small></span></a>
-            <div className="search-player-actions"><a className="view-profile" href={signedIn ? profilePath : `/login?return_to=${encodeURIComponent(profilePath)}`}>{signedIn ? "View profile" : "Sign in to view"}</a>{signedIn ? <FriendButton userId={player.userId} initialRelationship={player.relationship}/> : <a className="friend-button" href={loginPath}><UserPlus size={16}/> Sign in to add friend</a>}</div>
+            <a href={signedIn ? playerProfilePath : `/login?return_to=${encodeURIComponent(playerProfilePath)}`} className="search-player-main"><span className="account-avatar">{player.displayName.charAt(0).toUpperCase()}</span><span><strong>{player.displayName}</strong><small>{player.isPublic ? "Public library" : player.relationship?.status === "accepted" ? "Private library · Friend" : "Private library"}</small></span></a>
+            <div className="search-player-actions"><a className="view-profile" href={signedIn ? playerProfilePath : `/login?return_to=${encodeURIComponent(playerProfilePath)}`}>{signedIn ? "View profile" : "Sign in to view"}</a>{signedIn ? <FriendButton userId={player.userId} initialRelationship={player.relationship}/> : <a className="friend-button" href={loginPath}><UserPlus size={16}/> Sign in to add friend</a>}</div>
           </article>;
         })}</div> : <div className="search-empty">No players matched “{query}”.</div>}
       </section>}

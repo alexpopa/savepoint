@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `idx_accounts_display_name_login` ON `accounts` (lower("display_name")) WHERE "accounts"."password_hash" IS NOT NULL;

@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import SiteHeader from "../site-header";
+import { profilePath } from "../../lib/profile-path";
 
 type Account = { userId: string; email: string; displayName: string; isPublic: boolean };
 type Person = { userId: string; displayName: string; email: string; isPublic: boolean; status: "pending" | "accepted"; direction: "incoming" | "outgoing" };
@@ -72,7 +73,7 @@ export default function Settings({ email: signedInEmail }: { email: string }) {
       {error && <div className="notice error settings-notice" role="alert">{error}</div>}
       {notice && <div className="notice success settings-notice" role="status">{notice}</div>}
       {!account ? <p className="muted"><LoaderCircle className="spin" size={18}/> Loading account…</p> : <>
-        <section className="settings-card"><h2>Library visibility</h2><p>Your library starts private. Friends can always see it. Public libraries can be viewed by anyone signed in to RGBoner.</p><div className="visibility-options"><button type="button" className={!account.isPublic ? "selected" : ""} disabled={busy} onClick={() => void changeVisibility(false)} aria-pressed={!account.isPublic}>Private</button><button type="button" className={account.isPublic ? "selected" : ""} disabled={busy} onClick={() => void changeVisibility(true)} aria-pressed={account.isPublic}>Public</button></div><p className="muted">Your profile link: <code>/users/{encodeURIComponent(account.userId)}</code></p></section>
+        <section className="settings-card"><h2>Library visibility</h2><p>Your library starts private. Friends can always see it. Public libraries can be viewed by anyone signed in to RGBoner.</p><div className="visibility-options"><button type="button" className={!account.isPublic ? "selected" : ""} disabled={busy} onClick={() => void changeVisibility(false)} aria-pressed={!account.isPublic}>Private</button><button type="button" className={account.isPublic ? "selected" : ""} disabled={busy} onClick={() => void changeVisibility(true)} aria-pressed={account.isPublic}>Public</button></div><p className="muted">Your profile link: <a className="inline-link" href={profilePath(account)}>{profilePath(account)}</a></p></section>
         <section className="settings-card"><h2>Send a friend request</h2><p>Enter the email address they use for RGBoner. They need to have opened RGBoner at least once.</p><form className="friend-form" onSubmit={(event) => void sendRequest(event)}><input type="email" aria-label="Friend's email address" placeholder="player@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required/><button disabled={busy || !email.trim()}>Send request</button></form></section>
         <section className="settings-card"><h2>Incoming requests <span className="small-count">{incoming.length}</span></h2>{incoming.length ? incoming.map((person) => <PersonRow key={person.userId} person={person} actions={<><button disabled={busy} onClick={() => void act(person, "accept")}>Accept</button><button className="secondary" disabled={busy} onClick={() => void act(person, "remove")}>Decline</button></>}/>) : <p className="muted">No incoming requests.</p>}</section>
         <section className="settings-card"><h2>Friends <span className="small-count">{friends.length}</span></h2>{friends.length ? friends.map((person) => <PersonRow key={person.userId} person={person} actions={<button className="secondary" disabled={busy} onClick={() => void act(person, "remove")}>Remove</button>}/>) : <p className="muted">No friends yet.</p>}</section>
@@ -83,5 +84,5 @@ export default function Settings({ email: signedInEmail }: { email: string }) {
 }
 
 function PersonRow({ person, actions }: { person: Person; actions: React.ReactNode }) {
-  return <div className="person-row"><div><a className="inline-link" href={`/users/${encodeURIComponent(person.userId)}`}>{person.displayName}</a><p>{person.email}</p></div><div className="person-actions">{actions}</div></div>;
+  return <div className="person-row"><div><a className="inline-link" href={profilePath(person)}>{person.displayName}</a><p>{person.email}</p></div><div className="person-actions">{actions}</div></div>;
 }
