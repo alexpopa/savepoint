@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { Gamepad2 } from "lucide-react";
 import SiteHeader from "../../site-header";
@@ -8,17 +8,24 @@ import { requireUser } from "../../auth";
 import { getDb } from "../../../db";
 import { accounts, libraryItems } from "../../../db/schema";
 import { receivedChallenges } from "../../../lib/challenges";
+import { profilePath } from "../../../lib/profile-path";
 import { accountDisplayName, ensureAccount, getFriendship, serializeGame } from "../../../lib/social";
 
 export const dynamic = "force-dynamic";
 
 export default async function UserLibraryPage({ params }: { params: Promise<{ userId: string }> }) {
-  const targetId = (await params).userId;
-  const user = await requireUser(`/users/${encodeURIComponent(targetId)}`);
+  const routeSegment = (await params).userId;
+  let profileName: string;
+  try { profileName = decodeURIComponent(routeSegment); } catch { notFound(); }
+  const user = await requireUser(`/users/${encodeURIComponent(profileName)}`);
   await ensureAccount(user);
-  if (targetId === user.userId) redirect("/profile");
-  const [target] = await getDb().select().from(accounts).where(eq(accounts.userId, targetId));
+  const db = getDb();
+  const [namedAccount] = await db.select().from(accounts).where(and(sql`lower(${accounts.displayName}) = lower(${profileName})`, isNotNull(accounts.passwordHash), isNotNull(accounts.emailVerifiedAt)));
+  const [target] = namedAccount ? [namedAccount] : await db.select().from(accounts).where(eq(accounts.userId, profileName));
   if (!target?.passwordHash || !target.emailVerifiedAt) notFound();
+  const targetId = target.userId;
+  if (targetId === user.userId) redirect("/profile");
+  if (!namedAccount && profilePath(target) !== `/users/${encodeURIComponent(profileName)}`) redirect(profilePath(target));
   const friendship = await getFriendship(user.userId, targetId);
   const canView = target.isPublic || friendship?.status === "accepted";
   const [games, challengeRows] = canView ? await Promise.all([
