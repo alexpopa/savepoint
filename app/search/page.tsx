@@ -5,12 +5,12 @@ import { ensureAccount } from "../../lib/social";
 
 export const dynamic = "force-dynamic";
 
-export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string; platform?: string }> }) {
+export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string; platform?: string | string[] }> }) {
   const params = await searchParams;
   const query = (params.q ?? "").trim();
-  const requestedPlatformId = params.platform ? Number(params.platform) : null;
-  const initialPlatformId = requestedPlatformId !== null && Number.isSafeInteger(requestedPlatformId) && requestedPlatformId > 0 ? requestedPlatformId : null;
+  const requestedPlatformIds = Array.isArray(params.platform) ? params.platform : params.platform ? [params.platform] : [];
+  const initialPlatformIds = [...new Set(requestedPlatformIds.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0))];
   const user = await getCurrentUser();
   if (user) await ensureAccount(user);
-  return <main className="library-page"><SiteHeader email={user?.email} query={query} platformId={initialPlatformId}/><SearchResults key={query} query={query} signedIn={Boolean(user)} initialPlatformId={initialPlatformId}/></main>;
+  return <main className="library-page"><SiteHeader email={user?.email} query={query} platformIds={initialPlatformIds}/><SearchResults key={query} query={query} signedIn={Boolean(user)} initialPlatformIds={initialPlatformIds}/></main>;
 }

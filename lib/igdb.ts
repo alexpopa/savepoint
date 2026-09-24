@@ -72,9 +72,9 @@ function serialize(game: IgdbGame) {
   };
 }
 
-export async function searchIgdb(query: string, platformId?: number) {
+export async function searchIgdb(query: string, platformIds: number[] = []) {
   const safe = query.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-  const platformFilter = platformId === undefined ? "" : `where platforms = ${platformId}; `;
+  const platformFilter = platformIds.length === 0 ? "" : `where platforms = (${platformIds.join(",")}); `;
   const rows = await request<IgdbGame>("games", `search "${safe}"; ${platformFilter}fields id,name,first_release_date,cover.image_id,platforms.id,platforms.name; limit 30;`);
   return rows.map(serialize);
 }

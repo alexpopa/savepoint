@@ -76,7 +76,7 @@ Use one prominent accent action per region. A colored state also needs a visible
 | Player card | Treat player identity and friendship state as text and structure, not only a colored indicator. |
 | Challenge card | Show Pending, Completed, or Declined in text alongside a restrained edge color. Completed uses the action green, pending uses the readable info blue, and favorites sit in a labeled group at the top of each profile section. Keep title and description readable and confirmations explicit. |
 | Challenge form | Use a focused modal dialog with labeled title and description fields, a clear cancel action, and inline errors. |
-| Search and filters | Make the selected filter obvious through fill/border **and** its label or checked state. Keep result types separated. Guests may search; saving a game or adding a friend sends them to sign-in. |
+| Search and filters | Make the selected filter obvious through fill/border **and** its label or checked state. Multi-select filters use clearly labeled checkboxes, and active filters have a visible clear action outside their dropdown. Keep result types separated. Guests may search; saving a game or adding a friend sends them to sign-in. |
 | Settings and forms | Use straightforward field labels, inline help, and explicit success/error messages. Keep the same panel and action language as the library. |
 | Email sign-in | Keep the wordmark above a single readable form panel. Label every field, show errors and confirmation beside the form, and use the shared action, border, and focus colors. Verification and password reset use the same panel. |
 | Empty/loading/error states | Be concise and useful. Use a small accent at most; avoid a full-screen arcade animation. |
