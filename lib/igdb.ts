@@ -5,7 +5,17 @@ type IgdbGame = {
   name: string;
   first_release_date?: number;
   cover?: { image_id?: string };
-  platforms?: { name: string }[];
+  platforms?: { id: number; name: string }[];
+  summary?: string;
+  storyline?: string;
+  genres?: { name: string }[];
+  game_modes?: { name: string }[];
+  player_perspectives?: { name: string }[];
+  themes?: { name: string }[];
+  involved_companies?: { company?: { name: string }; developer?: boolean; publisher?: boolean }[];
+  total_rating?: number;
+  total_rating_count?: number;
+  screenshots?: { image_id?: string }[];
 };
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
@@ -36,22 +46,36 @@ async function request(query: string): Promise<IgdbGame[]> {
 }
 
 function serialize(game: IgdbGame) {
+  const platformOptions = [...new Map((game.platforms ?? []).filter((platform) => Number.isSafeInteger(platform.id) && platform.name).map((platform) => [platform.id, { id: platform.id, name: platform.name }])).values()];
   return {
     igdbId: game.id,
     name: game.name,
     coverUrl: game.cover?.image_id ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${game.cover.image_id}.jpg` : null,
     releaseYear: game.first_release_date ? new Date(game.first_release_date * 1000).getUTCFullYear() : null,
-    platforms: (game.platforms ?? []).map((platform) => platform.name),
+    platforms: platformOptions.map((platform) => platform.name),
+    platformOptions,
+    releaseDate: game.first_release_date ? new Date(game.first_release_date * 1000).toISOString().slice(0, 10) : null,
+    summary: game.summary ?? null,
+    storyline: game.storyline ?? null,
+    genres: (game.genres ?? []).map((genre) => genre.name),
+    gameModes: (game.game_modes ?? []).map((mode) => mode.name),
+    perspectives: (game.player_perspectives ?? []).map((perspective) => perspective.name),
+    themes: (game.themes ?? []).map((theme) => theme.name),
+    developers: (game.involved_companies ?? []).filter((entry) => entry.developer).flatMap((entry) => entry.company?.name ? [entry.company.name] : []),
+    publishers: (game.involved_companies ?? []).filter((entry) => entry.publisher).flatMap((entry) => entry.company?.name ? [entry.company.name] : []),
+    rating: typeof game.total_rating === "number" ? Math.round(game.total_rating) : null,
+    ratingCount: game.total_rating_count ?? null,
+    screenshotUrls: (game.screenshots ?? []).filter((shot) => shot.image_id).slice(0, 3).map((shot) => `https://images.igdb.com/igdb/image/upload/t_screenshot_big/${shot.image_id}.jpg`),
   };
 }
 
 export async function searchIgdb(query: string) {
   const safe = query.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-  const rows = await request(`search "${safe}"; fields id,name,first_release_date,cover.image_id,platforms.name; limit 30;`);
+  const rows = await request(`search "${safe}"; fields id,name,first_release_date,cover.image_id,platforms.id,platforms.name; limit 30;`);
   return rows.map(serialize);
 }
 
 export async function getIgdbGame(id: number) {
-  const rows = await request(`fields id,name,first_release_date,cover.image_id,platforms.name; where id = ${id}; limit 1;`);
+  const rows = await request(`fields id,name,first_release_date,cover.image_id,platforms.id,platforms.name,summary,storyline,genres.name,game_modes.name,player_perspectives.name,themes.name,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,total_rating,total_rating_count,screenshots.image_id; where id = ${id}; limit 1;`);
   return rows[0] ? serialize(rows[0]) : null;
 }

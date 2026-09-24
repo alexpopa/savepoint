@@ -52,8 +52,10 @@ export const libraryItems = sqliteTable("library_items", {
   coverUrl: text("cover_url"),
   releaseYear: integer("release_year"),
   platformsJson: text("platforms_json").notNull().default("[]"),
+  platformId: integer("platform_id").notNull().default(0),
+  platformName: text("platform_name"),
   addedAt: integer("added_at").notNull(),
-}, (table) => [uniqueIndex("idx_library_user_game").on(table.userId, table.igdbId)]);
+}, (table) => [uniqueIndex("idx_library_user_game_platform").on(table.userId, table.igdbId, table.platformId)]);
 
 export const challenges = sqliteTable("challenges", {
   id: integer("id").primaryKey({ autoIncrement: true }),

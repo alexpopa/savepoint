@@ -71,7 +71,8 @@ Use one prominent accent action per region. A colored state also needs a visible
 | Component | Visual direction |
 | --- | --- |
 | Header | Let the wordmark lead. Keep search and navigation visually quieter, with clear boundaries and focus. On guest pages, keep search and sign-in available at narrow widths. |
-| Game card | Artwork first, then title and compact metadata. Keep save/remove actions easy to distinguish and reach. |
+| Game card | Artwork first, then title and compact metadata. The artwork/title area opens a full game file; keep the quick save, edit, and remove controls separate and reachable. Show the selected platform on every library copy. |
+| Game file dialog | Use a large, unobstructed cover, readable IGDB metadata, and a complete platform list. Keep platform actions in labeled rows; show saved, current, and unavailable states in words as well as color. A small RGB edge detail may echo the wordmark without coloring the artwork. |
 | Player card | Treat player identity and friendship state as text and structure, not only a colored indicator. |
 | Challenge card | Show Pending, Completed, or Declined in text alongside a restrained edge color. Completed uses the action green, pending uses the readable info blue, and favorites sit in a labeled group at the top of each profile section. Keep title and description readable and confirmations explicit. |
 | Challenge form | Use a focused modal dialog with labeled title and description fields, a clear cancel action, and inline errors. |

@@ -51,6 +51,7 @@ The repository's migration order is:
 4. `drizzle/0003_bumpy_blink.sql` — email password hashes and sessions; retains earlier accounts as dormant records.
 5. `drizzle/0004_exotic_morph.sql` — per-email sign-in attempt tracking.
 6. `drizzle/0005_amusing_pretty_boy.sql` — email verification timestamp and expiring, hashed verification/reset tokens.
+7. `drizzle/0006_tired_mister_fear.sql` — selected platform fields and unique `(user_id, igdb_id, platform_id)` library index; existing entries become “Platform not set” until edited.
 
 When a Sites version containing new Drizzle migrations is published, Sites applies and records each pending migration against its hosted D1 database **before** uploading the Worker. No separate hosted `wrangler d1 execute` command is part of this repository's Sites release flow. A new Site starts with an empty hosted database; publishing does not copy local `.wrangler/state` records into it.
 

@@ -67,5 +67,7 @@ export function serializeGame(row: typeof libraryItems.$inferSelect) {
     coverUrl: row.coverUrl,
     releaseYear: row.releaseYear,
     platforms: JSON.parse(row.platformsJson) as string[],
+    platformId: row.platformId,
+    platformName: row.platformName,
   };
 }

@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { Check, Gamepad2, LoaderCircle, Plus, Search, UserPlus, Users } from "lucide-react";
 import FriendButton, { type Relationship } from "../friend-button";
+import GameDetailsDialog from "../game-details-dialog";
+import type { CatalogGame, SavedGame } from "../../lib/game-types";
 
-type Game = { igdbId: number; name: string; coverUrl: string | null; releaseYear: number | null; platforms: string[] };
 type Player = { userId: string; displayName: string; isPublic: boolean; relationship: Relationship };
 type Tab = "all" | "games" | "players";
 
@@ -17,9 +18,10 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 
 export default function SearchResults({ query, signedIn }: { query: string; signedIn: boolean }) {
   const [tab, setTab] = useState<Tab>("all");
-  const [games, setGames] = useState<Game[]>([]);
+  const [games, setGames] = useState<CatalogGame[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [saved, setSaved] = useState<Set<number>>(new Set());
+  const [saved, setSaved] = useState<SavedGame[]>([]);
+  const [selectedGame, setSelectedGame] = useState<CatalogGame | null>(null);
   const [busyGame, setBusyGame] = useState<number | null>(null);
   const [gamesError, setGamesError] = useState("");
   const [playersError, setPlayersError] = useState("");
@@ -31,21 +33,31 @@ export default function SearchResults({ query, signedIn }: { query: string; sign
     if (query.length < 2 || query.length > 100) return;
     let active = true;
     const q = encodeURIComponent(query);
-    void api<{ games: Game[] }>(`/api/igdb/search?q=${q}`).then((data) => { if (active) setGames(data.games); })
+    void api<{ games: CatalogGame[] }>(`/api/igdb/search?q=${q}`).then((data) => { if (active) setGames(data.games); })
       .catch((error) => { if (active) setGamesError(error.message); }).finally(() => { if (active) setLoadingGames(false); });
     void api<{ players: Player[] }>(`/api/players/search?q=${q}`).then((data) => { if (active) setPlayers(data.players); })
       .catch((error) => { if (active) setPlayersError(error.message); }).finally(() => { if (active) setLoadingPlayers(false); });
-    if (signedIn) void api<{ games: Game[] }>("/api/library").then((data) => { if (active) setSaved(new Set(data.games.map((game) => game.igdbId))); }).catch(() => {});
+    if (signedIn) void api<{ games: SavedGame[] }>("/api/library").then((data) => { if (active) setSaved(data.games); }).catch(() => {});
     return () => { active = false; };
   }, [query, signedIn]);
 
-  async function addGame(game: Game) {
+  async function refreshSaved() {
+    const data = await api<{ games: SavedGame[] }>("/api/library");
+    setSaved(data.games);
+  }
+
+  async function addGame(game: CatalogGame, platformId: number) {
     setBusyGame(game.igdbId); setActionError("");
     try {
-      await api("/api/library", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ igdbId: game.igdbId }) });
-      setSaved((current) => new Set(current).add(game.igdbId));
-    } catch (error) { setActionError(error instanceof Error ? error.message : "Could not add game."); }
+      await api("/api/library", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ igdbId: game.igdbId, platformId }) });
+      await refreshSaved();
+    } catch (error) { setActionError(error instanceof Error ? error.message : "Could not add game."); throw error; }
     finally { setBusyGame(null); }
+  }
+
+  async function removeGame(id: number) {
+    await api(`/api/library/${id}`, { method: "DELETE" });
+    await refreshSaved();
   }
 
   const valid = query.length >= 2 && query.length <= 100;
@@ -73,9 +85,18 @@ export default function SearchResults({ query, signedIn }: { query: string; sign
         })}</div> : <div className="search-empty">No players matched “{query}”.</div>}
       </section>}
       {showGames && <section className="search-group" aria-labelledby="games-heading"><div className="search-group-heading"><div><p className="eyebrow">IGDB CATALOG</p><h2 id="games-heading">Games</h2></div><span>{loadingGames ? "Searching…" : `${games.length} found`}</span></div>
-        {loadingGames ? <div className="search-loading"><LoaderCircle className="spin" size={18}/> Searching games…</div> : gamesError ? <div className="search-empty" role="alert">{gamesError}</div> : games.length ? <div className="game-grid">{games.map((game) => <article className="game-card result-card" key={game.igdbId}><div className="game-cover">{game.coverUrl ? <img src={game.coverUrl} alt={`${game.name} cover`} loading="lazy"/> : <div className="cover-fallback"><Gamepad2 size={25}/></div>}</div><div className="game-info"><h3>{game.name}</h3><p>{[game.releaseYear, game.platforms.slice(0, 2).join(" · ")].filter(Boolean).join(" · ") || "Release year unknown"}</p></div>{signedIn ? <button type="button" className="add-button" aria-label={saved.has(game.igdbId) ? `${game.name} is in your library` : `Add ${game.name} to your library`} title={saved.has(game.igdbId) ? "In your library" : "Add to library"} disabled={saved.has(game.igdbId) || busyGame === game.igdbId} onClick={() => void addGame(game)}>{busyGame === game.igdbId ? <LoaderCircle className="spin" size={18}/> : saved.has(game.igdbId) ? <Check size={18}/> : <Plus size={18}/>}</button> : <a className="add-button" href={loginPath} aria-label={`Sign in to add ${game.name} to your library`} title="Sign in to add to library"><Plus size={18}/></a>}</article>)}</div> : <div className="search-empty">No games matched “{query}”.</div>}
+        {loadingGames ? <div className="search-loading"><LoaderCircle className="spin" size={18}/> Searching games…</div> : gamesError ? <div className="search-empty" role="alert">{gamesError}</div> : games.length ? <div className="game-grid">{games.map((game) => {
+          const owned = saved.filter((item) => item.igdbId === game.igdbId);
+          const onlyPlatform = game.platformOptions.length === 1 ? game.platformOptions[0].id : game.platformOptions.length === 0 ? 0 : null;
+          const quickAdd = signedIn && onlyPlatform !== null && !owned.some((item) => item.platformId === onlyPlatform);
+          return <article className="game-card result-card" key={game.igdbId}>
+            <button className="game-card-open" type="button" onClick={() => setSelectedGame(game)} aria-label={`View details and platforms for ${game.name}`}><div className="game-cover">{game.coverUrl ? <img src={game.coverUrl} alt="" loading="lazy"/> : <div className="cover-fallback"><Gamepad2 size={25}/></div>}</div><div className="game-info"><h3>{game.name}</h3><p>{[game.releaseYear, game.platforms.slice(0, 2).join(" · ")].filter(Boolean).join(" · ") || "Release year unknown"}</p>{owned.length > 0 && <span className="game-owned-label"><Check size={13}/> {owned.length} {owned.length === 1 ? "platform" : "platforms"} saved</span>}</div></button>
+            {quickAdd ? <button type="button" className="add-button" aria-label={`Add ${game.name} to your library`} title="Add to library" disabled={busyGame === game.igdbId} onClick={() => void addGame(game, onlyPlatform).catch(() => {})}>{busyGame === game.igdbId ? <LoaderCircle className="spin" size={18}/> : <Plus size={18}/>}</button> : <button type="button" className="add-button" aria-label={`View ${game.name} platforms and library options`} title="View platforms" onClick={() => setSelectedGame(game)}>{owned.length ? <Check size={18}/> : <Plus size={18}/>}</button>}
+          </article>;
+        })}</div> : <div className="search-empty">No games matched “{query}”.</div>}
       </section>}
       {done && !gamesError && !playersError && games.length === 0 && players.length === 0 && <p className="search-tip">Try a shorter name or a different spelling.</p>}
     </>}
+    {selectedGame && <GameDetailsDialog game={selectedGame} saved={saved.filter((item) => item.igdbId === selectedGame.igdbId)} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelectedGame(null)} onAdd={(platformId) => addGame(selectedGame, platformId)} onRemove={removeGame}/>}
   </div>;
 }

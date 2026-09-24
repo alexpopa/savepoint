@@ -4,11 +4,12 @@ RGBoner is a video game library for players with verified email and password acc
 
 This source repository is [`alexpopa/savepoint`](https://github.com/alexpopa/savepoint). It builds the RGBoner Site at [retrogameboner.com](https://retrogameboner.com); the local checkout directory may have a different name.
 
-The interface follows a clean retro RGB direction: the pixel wordmark anchors a dark, sharp-edged layout while game artwork keeps its original rendering style. See the visual style guide before changing the UI.
+The interface follows a clean retro RGB direction: the pixel wordmark anchors a dark, sharp-edged layout while game artwork keeps its original rendering style. Search cards open a larger game file with IGDB details and the full platform list. Save a separate copy for each platform you own; games with only one listed platform can be added directly from search. Existing library copies have an **Edit platform** action. See the visual style guide before changing the UI.
 
 ## Start here
 
 - [Local setup and database workflow](docs/development.md)
+- [Current local test accounts](docs/local-test-accounts.md)
 - [Deploy with Sites](docs/deployment.md)
 - [Architecture, request flow, and API](docs/architecture.md)
 - [Visual style guide for RGBoner](docs/style-guide.md)
@@ -35,6 +36,7 @@ Requires Node.js 22.13 or newer, npm, and Twitch developer credentials for IGDB.
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0003_bumpy_blink.sql
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0004_exotic_morph.sql
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0005_amusing_pretty_boy.sql
+   node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0006_tired_mister_fear.sql
    ```
 
    Apply only the migrations that your local database has not yet received.

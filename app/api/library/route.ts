@@ -1,10 +1,10 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { getCurrentUser } from "../../auth";
 import { getDb } from "../../../db";
 import { libraryItems } from "../../../db/schema";
 import { getIgdbGame } from "../../../lib/igdb";
 import { isSameOriginWrite } from "../../../lib/request-security";
-import { ensureAccount } from "../../../lib/social";
+import { ensureAccount, serializeGame } from "../../../lib/social";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -12,7 +12,7 @@ export async function GET() {
   try {
     await ensureAccount(user);
     const rows = await getDb().select().from(libraryItems).where(eq(libraryItems.userId, user.userId)).orderBy(desc(libraryItems.addedAt));
-    return Response.json({ games: rows.map((row) => ({ id: row.id, igdbId: row.igdbId, name: row.name, coverUrl: row.coverUrl, releaseYear: row.releaseYear, platforms: JSON.parse(row.platformsJson) as string[] })) }, { headers: { "cache-control": "private, no-store" } });
+    return Response.json({ games: rows.map(serializeGame) }, { headers: { "cache-control": "private, no-store" } });
   } catch { return Response.json({ error: "Your library is temporarily unavailable." }, { status: 503 }); }
 }
 
@@ -22,13 +22,22 @@ export async function POST(request: Request) {
   if (!isSameOriginWrite(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   try {
     await ensureAccount(user);
-    const payload = await request.json() as { igdbId?: number };
-    const igdbId = Number(payload.igdbId);
-    if (!Number.isSafeInteger(igdbId) || igdbId < 1) return Response.json({ error: "Choose a valid game from IGDB." }, { status: 400 });
+    const payload = await request.json() as { igdbId?: unknown; platformId?: unknown };
+    const igdbId = payload?.igdbId;
+    if (typeof igdbId !== "number" || !Number.isSafeInteger(igdbId) || igdbId < 1) return Response.json({ error: "Choose a valid game from IGDB." }, { status: 400 });
     const game = await getIgdbGame(igdbId);
     if (!game) return Response.json({ error: "That game is not available in IGDB." }, { status: 404 });
-    await getDb().insert(libraryItems).values({ userId: user.userId, igdbId: game.igdbId, name: game.name, coverUrl: game.coverUrl, releaseYear: game.releaseYear, platformsJson: JSON.stringify(game.platforms), addedAt: Date.now() }).onConflictDoNothing();
-    return Response.json({ ok: true }, { status: 201 });
+    const requested = payload.platformId;
+    const platformId = game.platformOptions.length === 0 && requested === undefined ? 0 : game.platformOptions.length === 1 && requested === undefined ? game.platformOptions[0].id : requested;
+    if (typeof platformId !== "number" || !Number.isSafeInteger(platformId) || (platformId !== 0 && !game.platformOptions.some((platform) => platform.id === platformId)) || (platformId === 0 && game.platformOptions.length > 0))
+      return Response.json({ error: "Choose an available platform for this game." }, { status: 400 });
+    const platformName = game.platformOptions.find((platform) => platform.id === platformId)?.name ?? "Platform not listed";
+    const db = getDb();
+    const [existing] = await db.select({ id: libraryItems.id }).from(libraryItems).where(and(eq(libraryItems.userId, user.userId), eq(libraryItems.igdbId, igdbId), eq(libraryItems.platformId, platformId)));
+    if (existing) return Response.json({ error: "This platform is already in your library." }, { status: 409 });
+    const [inserted] = await db.insert(libraryItems).values({ userId: user.userId, igdbId: game.igdbId, name: game.name, coverUrl: game.coverUrl, releaseYear: game.releaseYear, platformsJson: JSON.stringify(game.platforms), platformId, platformName, addedAt: Date.now() }).onConflictDoNothing().returning({ id: libraryItems.id });
+    if (!inserted) return Response.json({ error: "This platform is already in your library." }, { status: 409 });
+    return Response.json({ ok: true, id: inserted.id }, { status: 201 });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Could not add the game." }, { status: 503 });
   }
