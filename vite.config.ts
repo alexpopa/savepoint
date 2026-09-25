@@ -12,6 +12,11 @@ const { d1, r2 } = hostingConfig;
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 const managedLinux = readExecutionProfile() === "managed-linux";
+const tailscaleServeHost = process.env.TAILSCALE_SERVE_HOST?.trim();
+const allowedHosts = [
+  ...(managedLinux ? ["terminal.local"] : []),
+  ...(tailscaleServeHost ? [tailscaleServeHost] : []),
+];
 
 const localBindingConfig = {
   main: "vinext/server/fetch-handler",
@@ -52,7 +57,8 @@ export default defineConfig(async () => {
 
   return {
     server: {
-      ...(managedLinux ? { host: "0.0.0.0", allowedHosts: ["terminal.local"] } : {}),
+      ...(managedLinux ? { host: "0.0.0.0" } : {}),
+      ...(allowedHosts.length ? { allowedHosts } : {}),
       ...(isCodexSeatbeltSandbox ? { watch: { useFsEvents: false, usePolling: true } } : {}),
     },
     plugins: [
