@@ -13,6 +13,12 @@ Before any visual or styling change, read [docs/style-guide.md](docs/style-guide
 - `db/schema.ts` and `drizzle/`: D1 schema and migrations.
 - `vite.config.ts`, `build/sites-vite-plugin.ts`, and `.openai/hosting.json`: local runtime, simulated sign-in, and hosting binding configuration.
 
+## Local run commands
+
+- For local preview, refresh, restart, or “redeploy locally” requests, use `npm run dev` and the documented URL `http://localhost:5173/`.
+- `npm run build` followed by `npm run start` serves the built Worker through local Wrangler. Use that runner only when the user explicitly asks to run the built Worker; do not infer it from “redeploy locally.”
+- If a local server is already running, reuse or restart the project’s dev server rather than starting a second runner.
+
 ## Keep the docs current
 
 For every completed app change, update the relevant documentation in the same change so it describes the app's current behavior and setup. Add new explanations where needed, revise outdated ones, and remove instructions that no longer apply. Keep `README.md` as the entry point, `docs/development.md` as the setup and database guide, and `docs/architecture.md` as the behavior and API guide. Do not add dated change entries; Git records history.

@@ -47,6 +47,23 @@ Local D1 state is stored under `.wrangler/state`. Keep the `--persist-to .wrangl
 
 `scripts/execution-profile.mjs` reads the ignored `.sites-runtime/execution-profile.json`. A missing file means `portable`. The `managed-linux` profile uses a different build and development runner. Both profiles use the same D1-backed email authentication.
 
+### Open the local preview on a phone with Tailscale
+
+With the development Mac and phone connected to the same tailnet, configure Tailscale Serve to proxy the local Vite server:
+
+```sh
+tailscale serve --bg 127.0.0.1:5173
+tailscale serve status
+```
+
+Use the HTTPS host shown by `tailscale serve status` as `TAILSCALE_SERVE_HOST` when starting the app. Specify only the hostname, without a scheme or port:
+
+```sh
+TAILSCALE_SERVE_HOST="machine-name.tailnet.ts.net" npm run dev -- --hostname 127.0.0.1
+```
+
+Replace `machine-name.tailnet.ts.net` with the host shown by `tailscale serve status`. Open the HTTPS address from that command on the phone. The app must keep running, and Vite allows only that explicitly configured tailnet hostname. Tailscale Serve keeps the preview available within the tailnet.
+
 ## Database changes
 
 1. Edit `db/schema.ts`.
@@ -55,7 +72,7 @@ Local D1 state is stored under `.wrangler/state`. Keep the `--persist-to .wrangl
 4. Apply each new migration to local D1 using the command above with its actual filename substituted for `drizzle/0000_marvelous_wolverine.sql`.
 5. Verify the affected API flow and update [architecture.md](architecture.md) if the data model or behavior changed.
 
-The tables are `library_items`, `accounts`, `sessions`, `login_attempts`, `auth_tokens`, `friendships`, and `challenges`. The unique index on `(user_id, igdb_id, platform_id)` prevents saving the same game twice on one platform while allowing separate platform copies. Email and display-name unique indexes apply to email accounts (rows with a password hash); display-name uniqueness uses SQLite `lower(display_name)`, which folds ASCII case. Existing email accounts with duplicate names under that rule must be renamed before applying `0007`, or the index creation will fail. Check with `SELECT lower(display_name), count(*) FROM accounts WHERE password_hash IS NOT NULL GROUP BY lower(display_name) HAVING count(*) > 1;`. `accounts.is_public` defaults to false, and email account records are created at registration but cannot sign in or appear in player search until verified. `auth_tokens` stores hashed, expiring, single-use verification and password reset links. `friendships` stores one canonical row per user pair, with a requester and `pending` or `accepted` status. `challenges` stores the recipient, creator, IGDB game ID, a snapshot of the game name and cover, title, description, each participant's confirmation, recipient decline, favorite, and manual order. It does not reference a library row, so removing a game preserves its challenges. `added_at` and `created_at` are Unix timestamps in milliseconds. `platform_id` and `platform_name` identify the chosen IGDB platform; `platforms_json` keeps the catalog list of platform names. Platform ID `0` marks a legacy row without a choice or a game for which IGDB lists no platform.
+The tables are `library_items`, `accounts`, `sessions`, `login_attempts`, `auth_tokens`, `friendships`, and `challenges`. The unique index on `(user_id, igdb_id, platform_id)` prevents saving the same game twice on one platform while allowing separate platform copies. Email and display-name unique indexes apply to email accounts (rows with a password hash); display-name uniqueness uses SQLite `lower(display_name)`, which folds ASCII case. Existing email accounts with duplicate names under that rule must be renamed before applying `0007`, or the index creation will fail. Check with `SELECT lower(display_name), count(*) FROM accounts WHERE password_hash IS NOT NULL GROUP BY lower(display_name) HAVING count(*) > 1;`. `accounts.is_public` defaults to false, and email account records are created at registration but cannot sign in or appear in player search until verified. `auth_tokens` stores hashed, expiring, single-use verification and password reset links. `friendships` stores one canonical row per user pair, with a requester and `pending` or `accepted` status. `challenges` stores the recipient, creator, IGDB game ID, a snapshot of the game name and cover, title, description, each participant's confirmation, a legacy recipient decline timestamp, favorite, and manual order. New challenges have no decline action; only the challenged player can permanently remove one. It does not reference a library row, so removing a game preserves its challenges. `added_at` and `created_at` are Unix timestamps in milliseconds. `platform_id` and `platform_name` identify the chosen IGDB platform; `platforms_json` keeps the catalog list of platform names. Platform ID `0` marks a legacy row without a choice or a game for which IGDB lists no platform.
 
 ## Hosted configuration
 
