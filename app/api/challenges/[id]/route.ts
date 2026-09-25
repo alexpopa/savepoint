@@ -35,7 +35,7 @@ export async function PATCH(request: Request, context: Context) {
         break;
       case "favorite":
       case "unfavorite":
-        if (!isRecipient) return Response.json({ error: "Only the recipient can rank challenges." }, { status: 403 });
+        if (!isRecipient) return Response.json({ error: "Only the recipient can favorite challenges." }, { status: 403 });
         await db.update(challenges).set({ isFavorite: action === "favorite" }).where(eq(challenges.id, id));
         break;
       case "move_up":
@@ -44,7 +44,8 @@ export async function PATCH(request: Request, context: Context) {
         const all = await receivedChallenges(user.userId);
         const current = all.find((item) => item.id === id);
         if (!current) return Response.json({ error: "Challenge not found." }, { status: 404 });
-        const peers = all.filter((item) => isComplete(item) === isComplete(current) && item.isFavorite === current.isFavorite);
+        if (!current.isFavorite) return Response.json({ error: "Favorite this challenge before ranking it." }, { status: 409 });
+        const peers = all.filter((item) => item.isFavorite && isComplete(item) === isComplete(current));
         const index = peers.findIndex((item) => item.id === id);
         const other = peers[index + (action === "move_up" ? -1 : 1)];
         if (!other) return Response.json({ ok: true }, { headers: privateResponse });
