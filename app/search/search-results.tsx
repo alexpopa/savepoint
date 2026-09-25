@@ -23,6 +23,7 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
   const [platformMenuOpen, setPlatformMenuOpen] = useState(false);
   const [platformSearch, setPlatformSearch] = useState("");
   const platformFilterRef = useRef<HTMLDivElement>(null);
+  const platformSearchRef = useRef<HTMLInputElement>(null);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loadingPlatforms, setLoadingPlatforms] = useState(true);
   const [platformsError, setPlatformsError] = useState("");
@@ -163,10 +164,8 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
           </article>;
         })}</div> : <div className="search-empty">No players matched “{query}”.</div>}
       </section>}
-      {showGames && <section className="search-group" aria-labelledby="games-heading" aria-busy={loadingGames}><div className="search-group-heading"><div><p className="eyebrow">IGDB CATALOG</p><h2 id="games-heading">Games</h2></div><div className="search-group-tools">
-        <div ref={platformFilterRef} className={`search-platform-filter${platformIds.length ? " active" : ""}`} onBlur={(event) => {
-          if (!(event.relatedTarget instanceof Node) || !platformFilterRef.current?.contains(event.relatedTarget)) setPlatformMenuOpen(false);
-        }}>
+      {showGames && <section className="search-group" aria-labelledby="games-heading" aria-busy={loadingGames}><div className="search-group-heading"><div><p className="eyebrow">IGDB CATALOG</p><div className="search-games-title"><h2 id="games-heading">Games</h2><span className="search-results-count" role="status">{loadingGames ? "Searching…" : `${games.length} results`}</span></div></div><div className="search-group-tools">
+        <div ref={platformFilterRef} className={`search-platform-filter${platformIds.length ? " active" : ""}`}>
           <span id="platform-filter-label">Platform</span>
           <button type="button" className="platform-filter-trigger" aria-labelledby="platform-filter-label platform-filter-value" aria-expanded={platformMenuOpen} aria-controls="platform-filter-options" disabled={loadingPlatforms || Boolean(platformsError)} onClick={() => {
             if (!platformMenuOpen) setPlatformSearch("");
@@ -175,14 +174,12 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
             <span id="platform-filter-value">{loadingPlatforms ? "Loading platforms…" : platformsError ? "Unavailable" : platformIds.length ? `${platformIds.length} selected` : "All platforms"}</span><ChevronDown size={16} aria-hidden="true"/>
           </button>
           {platformMenuOpen && <div className="platform-filter-menu" id="platform-filter-options" role="group" aria-label="Filter games by platform">
-            <div className="platform-filter-search"><Search size={16} aria-hidden="true"/><input type="search" autoFocus aria-label="Search platforms" placeholder="Search platforms" value={platformSearch} onChange={(event) => setPlatformSearch(event.target.value)}/></div>
+            <div className="platform-filter-search"><Search size={16} aria-hidden="true"/><input ref={platformSearchRef} type="search" autoFocus aria-label="Search platforms" placeholder="Search platforms" value={platformSearch} onChange={(event) => setPlatformSearch(event.target.value)}/>{platformIds.length > 0 && <button className="platform-filter-clear" type="button" aria-label="Clear selected platforms" title="Clear selected platforms" onClick={() => { changePlatforms([]); platformSearchRef.current?.focus(); }}><X size={16} aria-hidden="true"/></button>}</div>
             <div className="platform-filter-options" role="group" aria-label="Platform options">
               {filteredPlatforms.length ? filteredPlatforms.map((platform) => <label className="platform-filter-option" key={platform.id}><input type="checkbox" checked={platformIds.includes(platform.id)} onChange={() => togglePlatform(platform.id)}/><span>{platform.name}</span></label>) : <p className="platform-filter-empty" role="status">No platforms found.</p>}
             </div>
           </div>}
         </div>
-        {platformIds.length > 0 && <button className="clear-platform-filter" type="button" onClick={() => changePlatforms([])}><X size={15} aria-hidden="true"/> Remove filter</button>}
-        <span className="search-results-count">{loadingGames ? "Searching…" : `${games.length} shown`}</span>
       </div></div>
         {platformsError && <p className="search-platform-error" role="status">Platform filter unavailable right now.</p>}
         {loadingGames && games.length === 0 ? <div className="search-loading"><LoaderCircle className="spin" size={18}/> Searching games…</div> : gamesError ? <div className="search-empty" role="alert">{gamesError}</div> : games.length ? <div className={`game-grid${loadingGames ? " is-updating" : ""}`} inert={loadingGames}>{games.map((game) => {
