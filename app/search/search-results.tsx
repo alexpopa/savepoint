@@ -93,7 +93,6 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
       const nextPlatformIds = [...new Set(values.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0))];
       setLoadingGames(true);
       setGamesError("");
-      setGames([]);
       setPlatformIds(nextPlatformIds);
     }
     window.addEventListener("popstate", syncPlatformFromUrl);
@@ -104,7 +103,6 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
     const normalized = [...new Set(nextPlatformIds)].sort((a, b) => a - b);
     setLoadingGames(true);
     setGamesError("");
-    setGames([]);
     setPlatformIds(normalized);
     const url = new URL(window.location.href);
     url.searchParams.delete("platform");
@@ -187,7 +185,7 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
         <span className="search-results-count">{loadingGames ? "Searching…" : `${games.length} shown`}</span>
       </div></div>
         {platformsError && <p className="search-platform-error" role="status">Platform filter unavailable right now.</p>}
-        {loadingGames ? <div className="search-loading"><LoaderCircle className="spin" size={18}/> Searching games…</div> : gamesError ? <div className="search-empty" role="alert">{gamesError}</div> : games.length ? <div className="game-grid">{games.map((game) => {
+        {loadingGames && games.length === 0 ? <div className="search-loading"><LoaderCircle className="spin" size={18}/> Searching games…</div> : gamesError ? <div className="search-empty" role="alert">{gamesError}</div> : games.length ? <div className={`game-grid${loadingGames ? " is-updating" : ""}`} inert={loadingGames}>{games.map((game) => {
           const owned = saved.filter((item) => item.igdbId === game.igdbId);
           const onlyPlatform = game.platformOptions.length === 1 ? game.platformOptions[0].id : game.platformOptions.length === 0 ? 0 : null;
           const quickAdd = signedIn && onlyPlatform !== null && !owned.some((item) => item.platformId === onlyPlatform);

@@ -139,6 +139,7 @@ button:disabled { cursor: default; }
 .sort-label { color: var(--rgb-muted); font-size: 0.875rem; white-space: nowrap; }
 
 .game-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.game-grid.is-updating { opacity: 0.55; }
 .game-card { display: flex; align-items: center; gap: 16px; min-width: 0; min-height: 132px; padding: 14px; border: 1px solid var(--rgb-rule); border-radius: 4px; background: var(--rgb-panel); }
 .game-card:hover { border-color: var(--rgb-control-edge); }
 .game-card:focus-within { border-color: var(--rgb-focus); }
