@@ -1,6 +1,7 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "../db";
 import { accounts, challenges } from "../db/schema";
+import { profilePath } from "./profile-path";
 import { accountDisplayName } from "./social";
 
 export type Challenge = {
@@ -9,6 +10,8 @@ export type Challenge = {
   creatorId: string;
   recipientName: string;
   creatorName: string;
+  recipientProfilePath: string;
+  creatorProfilePath: string;
   igdbId: number;
   gameName: string;
   gameCoverUrl: string | null;
@@ -39,12 +42,15 @@ async function decorate(rows: (typeof challenges.$inferSelect)[]): Promise<Chall
   ));
   const people = batches.flat();
   const names = new Map(people.map((person) => [person.userId, accountDisplayName(person)]));
+  const profilePaths = new Map(people.map((person) => [person.userId, profilePath(person)]));
   return rows.map((row) => ({
     id: row.id,
     recipientId: row.recipientId,
     creatorId: row.creatorId,
     recipientName: names.get(row.recipientId) ?? "Player",
     creatorName: names.get(row.creatorId) ?? "Player",
+    recipientProfilePath: profilePaths.get(row.recipientId) ?? `/users/${encodeURIComponent(row.recipientId)}`,
+    creatorProfilePath: profilePaths.get(row.creatorId) ?? `/users/${encodeURIComponent(row.creatorId)}`,
     igdbId: row.igdbId,
     gameName: row.gameName,
     gameCoverUrl: row.gameCoverUrl,

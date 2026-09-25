@@ -1,20 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Flag, Plus, Star, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Flag, Gamepad2, Plus, Star, X } from "lucide-react";
 import type { Challenge } from "../lib/challenges";
 
 type Game = { igdbId: number; name: string };
 
 function completed(row: Challenge) { return row.creatorConfirmed && row.recipientConfirmed && !row.declined; }
-
-function status(row: Challenge) {
-  if (row.declined) return "Declined";
-  if (completed(row)) return "Completed · confirmed by both";
-  if (row.creatorConfirmed) return `Pending · awaiting ${row.recipientName}`;
-  if (row.recipientConfirmed) return `Pending · awaiting ${row.creatorName}`;
-  return "Pending · awaiting both confirmations";
-}
 
 async function patch(id: number, action: string) {
   const response = await fetch(`/api/challenges/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
@@ -23,23 +15,34 @@ async function patch(id: number, action: string) {
   window.location.reload();
 }
 
-function ChallengeCard({ row, viewerId, ownerControls = false, moveUp = false, moveDown = false, showGame = false }: { row: Challenge; viewerId: string; ownerControls?: boolean; moveUp?: boolean; moveDown?: boolean; showGame?: boolean }) {
+function ChallengeCard({ row, viewerId, ownerControls = false, moveUp = false, moveDown = false }: { row: Challenge; viewerId: string; ownerControls?: boolean; moveUp?: boolean; moveDown?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [coverUnavailable, setCoverUnavailable] = useState(false);
   const isRecipient = viewerId === row.recipientId;
   const isCreator = viewerId === row.creatorId;
   const myConfirmed = isRecipient ? row.recipientConfirmed : row.creatorConfirmed;
+  const isComplete = completed(row);
+  const cardStatus = row.declined ? "Declined" : isComplete ? "" : "Pending";
   async function act(action: string) {
     setBusy(true); setError("");
     try { await patch(row.id, action); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not update the challenge."); setBusy(false); }
   }
   return <article className={`challenge-card ${row.declined ? "is-declined" : completed(row) ? "is-complete" : "is-pending"} ${row.isFavorite ? "is-favorite" : ""}`}>
-    <div className="challenge-card-top"><span className="challenge-status">{completed(row) ? <Check size={15}/> : <Flag size={15}/>} {status(row)}</span>{row.isFavorite && !row.declined && <span className="challenge-favorite"><Star size={14} fill="currentColor"/> Favorite</span>}</div>
-    <h3>{row.title}</h3>
-    {showGame && <p className="challenge-game">{row.gameName}</p>}
-    <p className="challenge-description">{row.description}</p>
-    <p className="challenge-byline">{isRecipient ? `From ${row.creatorName}` : `For ${row.recipientName}`}</p>
+    {(cardStatus || row.isFavorite && !row.declined) && <div className="challenge-card-top">{cardStatus && <span className="challenge-status"><Flag size={15} aria-hidden="true"/> {cardStatus}</span>}{row.isFavorite && !row.declined && <span className="challenge-favorite"><Star size={14} fill="currentColor" aria-hidden="true"/> Favorite</span>}</div>}
+    <div className="challenge-card-main">
+      <div className="challenge-game-cover">
+        {row.gameCoverUrl && !coverUnavailable
+          ? <img src={row.gameCoverUrl} alt={`${row.gameName} cover`} loading="lazy" onError={() => setCoverUnavailable(true)}/>
+          : <div className="cover-fallback challenge-cover-fallback"><Gamepad2 size={25} aria-hidden="true"/><span>{row.gameName.slice(0, 1)}</span></div>}
+      </div>
+      <div className="challenge-card-content">
+        <p className="challenge-game-title">{row.gameName}</p>
+        <h3>{row.title}</h3>
+        <p className="challenge-byline">{isCreator ? "For" : "From"} <a className="inline-link" href={isCreator ? row.recipientProfilePath : row.creatorProfilePath}>{isCreator ? row.recipientName : row.creatorName}</a></p>
+      </div>
+    </div>
     {!row.declined && (isRecipient || isCreator) && <div className="challenge-actions">
       <button type="button" disabled={busy} onClick={() => void act(myConfirmed ? "unconfirm" : "confirm")}>{myConfirmed ? "Undo my confirmation" : "Mark complete"}</button>
       {isRecipient && <button type="button" className="subtle-danger" disabled={busy} onClick={() => void act("decline")}>{completed(row) ? "Remove" : "Decline"}</button>}
@@ -89,13 +92,13 @@ function ChallengeComposer({ game, recipientId, onClose }: { game: Game; recipie
   </form></dialog>;
 }
 
-export function ChallengeSections({ rows, viewerId, ownerControls = false, title = "Challenges", showGame = true }: { rows: Challenge[]; viewerId: string; ownerControls?: boolean; title?: string; showGame?: boolean }) {
+export function ChallengeSections({ rows, viewerId, ownerControls = false, title = "Challenges" }: { rows: Challenge[]; viewerId: string; ownerControls?: boolean; title?: string }) {
   const active = rows.filter((row) => !row.declined);
   const pending = active.filter((row) => !completed(row));
   const done = active.filter(completed);
   const declined = rows.filter((row) => row.declined);
   function cards(items: Challenge[]) {
-    return <div className="challenge-grid">{items.map((row, index) => <ChallengeCard key={row.id} row={row} viewerId={viewerId} ownerControls={ownerControls} moveUp={index > 0} moveDown={index < items.length - 1} showGame={showGame}/>)}</div>;
+    return <div className="challenge-grid">{items.map((row, index) => <ChallengeCard key={row.id} row={row} viewerId={viewerId} ownerControls={ownerControls} moveUp={index > 0} moveDown={index < items.length - 1}/>)}</div>;
   }
   function section(label: string, items: Challenge[]) {
     const favorites = items.filter((row) => row.isFavorite);
