@@ -21,6 +21,7 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
   const [tab, setTab] = useState<Tab>("all");
   const [platformIds, setPlatformIds] = useState<number[]>(initialPlatformIds);
   const [platformMenuOpen, setPlatformMenuOpen] = useState(false);
+  const [platformSearch, setPlatformSearch] = useState("");
   const platformFilterRef = useRef<HTMLDivElement>(null);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loadingPlatforms, setLoadingPlatforms] = useState(true);
@@ -139,6 +140,8 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
   const showGames = tab !== "players";
   const done = !loadingGames && !loadingPlayers;
   const selectedPlatforms = platforms.filter((platform) => platformIds.includes(platform.id));
+  const normalizedPlatformSearch = platformSearch.trim().toLowerCase();
+  const filteredPlatforms = platforms.filter((platform) => platform.name.toLowerCase().includes(normalizedPlatformSearch));
   const returnParams = new URLSearchParams({ q: query });
   platformIds.forEach((id) => returnParams.append("platform", String(id)));
   const returnTo = `/search?${returnParams.toString()}`;
@@ -167,11 +170,17 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
           if (!(event.relatedTarget instanceof Node) || !platformFilterRef.current?.contains(event.relatedTarget)) setPlatformMenuOpen(false);
         }}>
           <span id="platform-filter-label">Platform</span>
-          <button type="button" className="platform-filter-trigger" aria-labelledby="platform-filter-label platform-filter-value" aria-expanded={platformMenuOpen} aria-controls="platform-filter-options" disabled={loadingPlatforms || Boolean(platformsError)} onClick={() => setPlatformMenuOpen((open) => !open)}>
+          <button type="button" className="platform-filter-trigger" aria-labelledby="platform-filter-label platform-filter-value" aria-expanded={platformMenuOpen} aria-controls="platform-filter-options" disabled={loadingPlatforms || Boolean(platformsError)} onClick={() => {
+            if (!platformMenuOpen) setPlatformSearch("");
+            setPlatformMenuOpen(!platformMenuOpen);
+          }}>
             <span id="platform-filter-value">{loadingPlatforms ? "Loading platforms…" : platformsError ? "Unavailable" : platformIds.length ? `${platformIds.length} selected` : "All platforms"}</span><ChevronDown size={16} aria-hidden="true"/>
           </button>
           {platformMenuOpen && <div className="platform-filter-menu" id="platform-filter-options" role="group" aria-label="Filter games by platform">
-            {platforms.map((platform) => <label className="platform-filter-option" key={platform.id}><input type="checkbox" checked={platformIds.includes(platform.id)} onChange={() => togglePlatform(platform.id)}/><span>{platform.name}</span></label>)}
+            <div className="platform-filter-search"><Search size={16} aria-hidden="true"/><input type="search" autoFocus aria-label="Search platforms" placeholder="Search platforms" value={platformSearch} onChange={(event) => setPlatformSearch(event.target.value)}/></div>
+            <div className="platform-filter-options" role="group" aria-label="Platform options">
+              {filteredPlatforms.length ? filteredPlatforms.map((platform) => <label className="platform-filter-option" key={platform.id}><input type="checkbox" checked={platformIds.includes(platform.id)} onChange={() => togglePlatform(platform.id)}/><span>{platform.name}</span></label>) : <p className="platform-filter-empty" role="status">No platforms found.</p>}
+            </div>
           </div>}
         </div>
         {platformIds.length > 0 && <button className="clear-platform-filter" type="button" onClick={() => changePlatforms([])}><X size={15} aria-hidden="true"/> Remove filter</button>}
