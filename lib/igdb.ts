@@ -216,7 +216,7 @@ export async function refreshIgdbGameCover(id: number, fallback?: Omit<GameCover
   const current = byTitle ?? byId;
   const result = current ? { found: true as const, coverUrl: gameCoverUrl(current), catalogIgdbId: current.id } : { found: false as const };
   recentCoverRefreshes.set(id, { result, expiresAt: now + 10 * 60 * 1000 });
-  if (result.found) cachedGameCovers.set(id, { catalogIgdbId: current.id, coverUrl: result.coverUrl, expiresAt: now + (result.coverUrl ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000) });
+  if (current) cachedGameCovers.set(id, { catalogIgdbId: current.id, coverUrl: result.coverUrl, expiresAt: now + (result.coverUrl ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000) });
 
   while (recentCoverRefreshes.size > 500) {
     const oldestId = recentCoverRefreshes.keys().next().value;
