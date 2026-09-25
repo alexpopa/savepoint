@@ -12,5 +12,5 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const initialPlatformIds = [...new Set(requestedPlatformIds.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0))];
   const user = await getCurrentUser();
   if (user) await ensureAccount(user);
-  return <main className="library-page"><SiteHeader email={user?.email} query={query} platformIds={initialPlatformIds}/><SearchResults key={query} query={query} signedIn={Boolean(user)} initialPlatformIds={initialPlatformIds}/></main>;
+  return <main className="library-page"><SiteHeader email={user?.email} query={query}/><SearchResults key={query} query={query} signedIn={Boolean(user)} initialPlatformIds={initialPlatformIds}/></main>;
 }

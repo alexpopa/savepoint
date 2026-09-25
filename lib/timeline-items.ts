@@ -1,10 +1,10 @@
 export const BATCH_WINDOW = 24 * 60 * 60 * 1000;
 export type TimelinePerson = { id: string; name: string; href: string };
-export type TimelineGame = { id: number; name: string; platformName: string | null; coverUrl: string | null; addedAt: number; person: TimelinePerson };
+export type TimelineGame = { id: number; igdbId: number; name: string; releaseYear: number | null; platformName: string | null; coverUrl: string | null; addedAt: number; person: TimelinePerson };
 export type LibraryBatch = { kind: "library"; key: string; at: number; person: TimelinePerson; games: TimelineGame[] };
 export type TimelineChallenge = {
-  kind: "challenge"; key: string; at: number; createdAt: number;
-  title: string; gameName: string; coverUrl: string | null;
+  kind: "challenge"; key: string; id: number; at: number; createdAt: number;
+  title: string; description: string; gameName: string; coverUrl: string | null;
   creator: TimelinePerson; recipient: TimelinePerson;
   state: "pending" | "claimed" | "completed";
 };

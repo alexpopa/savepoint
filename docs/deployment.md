@@ -17,7 +17,7 @@ If the manifest has no `project_id`, check whether RGBoner already exists in the
 
 1. Review the source changes intended for the release, including `db/schema.ts`, every new `drizzle/*.sql` file, and `drizzle/meta/`. Keep `.dev.vars`, `.env*`, tokens, and generated `.wrangler/`, `.vinext/`, `.next/`, and `dist/` output out of source control.
 2. If the schema changed, run `npm run db:generate` before building. Review the generated SQL and commit the migration and matching Drizzle metadata with the schema change. Treat migrations already applied to a hosted database as immutable; add a new migration for later changes.
-3. From the repository root, run:
+3. After synchronizing the Site source as described below, run these commands in that Site source checkout:
 
    ```sh
    npm run install:ci
@@ -26,20 +26,32 @@ If the manifest has no `project_id`, check whether RGBoner already exists in the
    npm run build
    ```
 
-4. Check that the build produced `dist/server/index.js`, `dist/.openai/hosting.json`, and `dist/.openai/drizzle/`. The build copies the checked-in migrations into the deployment artifact. Keep this as a Worker build; a static export cannot run the authenticated API routes or D1 access.
+4. Check that the build produced `dist/server/index.js`, `dist/.openai/hosting.json`, and `dist/.openai/drizzle/`. The build copies the checked-in migrations into the deployment artifact. Keep this as a Worker build; a static export cannot run the authenticated API routes or D1 access. For a Sites release, run these commands in the Site source checkout that will be pushed and packaged, not in a different checkout.
 5. Review the proposed Site audience, the profile and challenge visibility rules, and any user-submitted challenge text before broad sharing. The app stores account emails, display names, salted password hashes, hashed session tokens, friendships, saved games, and challenge content in D1. Email verification and password reset links are single-use and expire; unverified accounts cannot sign in. Prepare visitor-facing privacy information and a support process appropriate for the intended audience. Review IGDB's terms for the planned public use of game metadata and covers. The [Sites guide](https://learn.chatgpt.com/docs/sites#understand-limits-and-unsupported-uses) says Sites does not support data or inference residency for deployed code, D1 data, artifacts, or logs.
 
 The local database under `.wrangler/state` is separate from the hosted Site database. Local migration commands in [Development and setup](development.md#local-setup) affect only local D1. Do not switch those commands to `--remote`: this repository's local Wrangler config uses a placeholder database ID, while Sites owns the hosted D1 resource.
 
 ## Configure the Site
 
-`npm run build` only creates local artifacts; it does not publish. Sites publishing is managed in ChatGPT or the Codex desktop app, not through a standalone Sites CLI. A useful request from this checkout is: “Publish RGBoner with Sites from the reviewed source. Reuse its existing Site if one is registered, set its audience to public after review, include the checked-in D1 migrations, and report the successful deployment URL.” Set secret values through Site settings separately.
+`npm run build` only creates local artifacts; it does not publish. The [Sites guide](https://learn.chatgpt.com/docs/sites#understand-projects-versions-and-deployments) describes two separate publication steps: save a version associated with its source commit and build artifact, then deploy that saved version. Use the linked-source workflow below for this repository. Set secret values through Site settings separately.
 
-1. In Codex or ChatGPT Sites, select the existing RGBoner Site or ask Sites to publish this repository as a new Site. For an existing Site, keep its `project_id` and review the audience change to public before deployment. For a new Site, register it once and save the returned `project_id` in `.openai/hosting.json` before preparing the release source.
+1. In Codex or ChatGPT Sites, select the existing RGBoner Site or ask Sites to publish this repository as a new Site. For an existing Site, keep its `project_id` and current audience. For a new Site, register it once and save the returned `project_id` in `.openai/hosting.json` before preparing the release source.
 2. In the Site's settings, add `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, and `RESEND_API_KEY` as secret runtime values. Set `AUTH_EMAIL_FROM` to the verified sender and `AUTH_PUBLIC_URL` to the HTTPS origin. Do not set `AUTH_EMAIL_MODE=console` on the hosted Site. Do not place their values in the manifest, source files, a prompt, or the deployed browser bundle. If a secret changes after deployment, deploy a saved version again so the new runtime revision takes effect.
-3. Keep access restricted while checking the first deployment. Set the audience to public when the email login flow and visitor-facing privacy information are ready. A public Sites audience does **not** make RGBoner's private player profiles public.
+3. Keep access restricted while checking the first deployment. Set the audience to public only when the email login flow and visitor-facing privacy information are ready and public access is intended. Preserve the current audience on subsequent releases unless a change is explicitly requested. A public Sites audience does **not** make RGBoner's private player profiles public.
 
-Sites owns source preparation and deployment. For local source, it associates a saved version with the exact source commit and build artifact. A saved version is a reviewable candidate; deploying that version publishes it to the selected audience. Every deployment URL is a production URL, including one with owner-only access. Ask Sites to save without deploying when you need a candidate but do not want to update the live Site.
+Every deployment URL is a production URL, including one with owner-only access. Save a version without deploying when you need a candidate but do not want to update the live Site.
+
+## Publish an update from the linked source
+
+The GitHub repository and the Sites source repository are separate remotes. Push the reviewed commit to the verified GitHub `main` first, then synchronize the exact committed source snapshot to the branch and remote returned by Sites. Do not assume that the Sites branch is named `main` or that its Git history is identical to GitHub's.
+
+1. Read `project_id` from `.openai/hosting.json`, call Sites `get_site` for that exact ID, and record the source branch, source remote, and current audience. Obtain a fresh source-repository write credential for that Site. Do not request automatic publish-on-push when using the explicit save-and-deploy steps below.
+2. Open the existing Site source in an isolated checkout by running the bundled Sites workflow in opening mode, without an `archivePath`. Keep the returned opening result as `source`; its `checkout_path` is the checkout to synchronize and build. Confirm its `.openai/hosting.json` has the same `project_id`, and that the checkout has no uncommitted changes. The opening result must contain the existing Site source tree before you continue; if setup fails or the checkout is empty, stop and fix the opening step rather than building from that empty directory.
+3. Compare the Site checkout with the exact pushed GitHub `main` snapshot. Inspect Site-only files and any differences before syncing. If the Site branch is an ancestor of the GitHub commit, a fast-forward preserves history and gives the checkout the exact GitHub tree. Otherwise, bring the committed GitHub snapshot into the Site checkout and let the Sites workflow create a normal commit on the Site branch. Preserve Site history: do not merge unrelated histories, reset, rebase, or force-push. Stop if uncommitted Site changes, unclear Site-only files, a project-ID mismatch, or a remote race makes the sync ambiguous.
+4. Run the Sites workflow again with the returned `source`, an absolute temporary `archivePath`, and the four preparation commands listed above, in order. The workflow creates a normal commit if synchronization changed the tree, pushes the source to the Site's branch without force, verifies the pushed commit, and packages the build from that checkout. Confirm the returned commit identifies the exact synchronized tree and that the archive contains the Worker entry point, `.openai/hosting.json`, and migrations.
+5. Call `save_site_version` with the exact returned `project_id`, `commit_sha`, and archive path. Then deploy that saved version with the Site's current audience and wait for a succeeded deployment. Do not deploy an unsaved build. If you requested source sync only, stop after the workflow pushes and packages the source. If you requested a saved candidate without deployment, stop after saving the version.
+
+The Sites guide documents the source-commit/version association and the separate save and deploy stages. The opening, source synchronization, and packaging steps above use the bundled Sites source workflow so the Site branch and uploaded artifact refer to the same committed snapshot.
 
 ## Production D1 migrations
 

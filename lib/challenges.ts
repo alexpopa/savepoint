@@ -26,6 +26,11 @@ export type Challenge = {
   sortOrder: number;
 };
 
+export type ChallengeDetails = Pick<Challenge,
+  "id" | "creatorId" | "recipientId" | "creatorName" | "recipientName" |
+  "creatorProfilePath" | "recipientProfilePath" | "gameName" | "gameCoverUrl" | "title" | "description"
+>;
+
 export function isComplete(challenge: Challenge) {
   return challenge.creatorConfirmed && challenge.recipientConfirmed && !challenge.declined;
 }

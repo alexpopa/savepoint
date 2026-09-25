@@ -17,5 +17,5 @@ export default async function Home() {
   } catch {
     error = true;
   }
-  return <Timeline email={user.email} items={items} error={error} />;
+  return <Timeline email={user.email} viewerId={user.userId} items={items} error={error} />;
 }

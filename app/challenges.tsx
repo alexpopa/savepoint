@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Circle, Flag, Gamepad2, Plus, Star, X } from "lucide-react";
-import type { Challenge } from "../lib/challenges";
+import type { Challenge, ChallengeDetails } from "../lib/challenges";
 
 type Game = { igdbId: number; name: string };
 
@@ -116,6 +116,14 @@ export function GameChallenges({ game, recipientId, viewerId, rows, canCreate = 
   </>;
 }
 
+export function TimelineChallengeButton({ game, recipientId }: { game: Game; recipientId: string }) {
+  const [composing, setComposing] = useState(false);
+  return <>
+    <button type="button" className="challenge-add timeline-challenge-add" aria-label={`Add a challenge for ${game.name}`} onClick={() => setComposing(true)}><Plus size={15} aria-hidden="true"/> Add challenge</button>
+    {composing && <ChallengeComposer game={game} recipientId={recipientId} onClose={() => setComposing(false)}/>}
+  </>;
+}
+
 function ChallengeComposer({ game, recipientId, onClose }: { game: Game; recipientId: string; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const title = useRef<HTMLInputElement>(null);
@@ -141,11 +149,12 @@ function ChallengeComposer({ game, recipientId, onClose }: { game: Game; recipie
   </form></dialog>;
 }
 
-function ChallengeDetailsDialog({ row, viewerId, onClose }: { row: Challenge; viewerId: string; onClose: () => void }) {
+export function ChallengeDetailsDialog({ row, viewerId, onClose }: { row: ChallengeDetails; viewerId: string; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = `challenge-details-title-${row.id}`;
   const descriptionId = `challenge-details-description-${row.id}`;
   const isCreator = viewerId === row.creatorId;
+  const isRecipient = viewerId === row.recipientId;
   const [coverUnavailable, setCoverUnavailable] = useState(false);
   useEffect(() => {
     const element = dialog.current;
@@ -168,7 +177,12 @@ function ChallengeDetailsDialog({ row, viewerId, onClose }: { row: Challenge; vi
         <h3 id={`${titleId}-description-heading`}>Description</h3>
         <p id={descriptionId}>{row.description}</p>
       </section>
-      <p className="challenge-details-byline">{isCreator ? "For" : "From"} <a className="inline-link" href={isCreator ? row.recipientProfilePath : row.creatorProfilePath}>{isCreator ? row.recipientName : row.creatorName}</a></p>
+      <p className="challenge-details-byline">{isCreator
+        ? <>For <a className="inline-link" href={row.recipientProfilePath}>{row.recipientName}</a></>
+        : isRecipient
+          ? <>From <a className="inline-link" href={row.creatorProfilePath}>{row.creatorName}</a></>
+          : <><a className="inline-link" href={row.creatorProfilePath}>{row.creatorName}</a> challenged <a className="inline-link" href={row.recipientProfilePath}>{row.recipientName}</a></>}
+      </p>
       <div className="challenge-details-actions"><button type="button" onClick={() => dialog.current?.close()}>Close</button></div>
     </div>
   </dialog>;

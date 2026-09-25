@@ -31,13 +31,13 @@ export async function getTimeline(viewerId: string) {
   ]);
   const person = (row: typeof accounts.$inferSelect) => ({ id: row.userId, name: accountDisplayName(row), href: profilePath(row) });
   const items: TimelineChallenge[] = challengeRows.map(({ challenge: row, creator, recipient }) => ({
-    kind: "challenge", key: `challenge:${row.id}`, at: row.timelineAt!, createdAt: row.createdAt,
-    title: row.title, gameName: row.gameName, coverUrl: row.gameCoverUrl,
+    kind: "challenge", key: `challenge:${row.id}`, id: row.id, at: row.timelineAt!, createdAt: row.createdAt,
+    title: row.title, description: row.description, gameName: row.gameName, coverUrl: row.gameCoverUrl,
     creator: person(creator), recipient: person(recipient),
     state: row.recipientConfirmed ? row.creatorConfirmed ? "completed" : "claimed" : "pending",
   }));
   const timeline = recentTimeline(games.map(({ game, person: owner }) => ({
-    id: game.id, name: game.name, platformName: game.platformName, coverUrl: game.coverUrl,
+    id: game.id, igdbId: game.igdbId, name: game.name, releaseYear: game.releaseYear, platformName: game.platformName, coverUrl: game.coverUrl,
     addedAt: game.addedAt, person: person(owner),
   })), items);
   // Recover legacy artwork only for the initial visible covers, keeping imports cheap.

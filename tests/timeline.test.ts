@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { batchLibraryGames, recentTimeline, BATCH_WINDOW, type TimelineGame, type TimelineChallenge } from "../lib/timeline-items.ts";
 
 const person = { id: "friend", name: "Friend", href: "/users/Friend" };
-const game = (id: number, addedAt: number, owner = person): TimelineGame => ({ id, addedAt, person: owner, name: "Game", platformName: "SNES", coverUrl: null });
+const game = (id: number, addedAt: number, owner = person): TimelineGame => ({ id, igdbId: id, addedAt, person: owner, name: "Game", releaseYear: null, platformName: "SNES", coverUrl: null });
 
 test("24-hour batches include the boundary without chaining backward", () => {
   const batches = batchLibraryGames([game(3, 0), game(2, BATCH_WINDOW), game(1, BATCH_WINDOW * 2)]);
@@ -21,7 +21,7 @@ test("a large import occupies one slot, with no truncated batch", () => {
 });
 test("limit is applied after grouping and merging challenge updates", () => {
   const games = Array.from({ length: 40 }, (_, i) => game(i, i * BATCH_WINDOW * 2));
-  const challenge: TimelineChallenge = { kind: "challenge", key: "challenge:1", at: 100 * BATCH_WINDOW, createdAt: 0, title: "Challenge", gameName: "Game", coverUrl: null, creator: person, recipient: person, state: "completed" };
+  const challenge: TimelineChallenge = { kind: "challenge", key: "challenge:1", id: 1, at: 100 * BATCH_WINDOW, createdAt: 0, title: "Challenge", description: "Description", gameName: "Game", coverUrl: null, creator: person, recipient: person, state: "completed" };
   const rows = recentTimeline(games, [challenge]);
   assert.equal(rows.length, 30);
   assert.equal(rows[0], challenge);
