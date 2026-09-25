@@ -6,12 +6,15 @@ This source repository is [`alexpopa/savepoint`](https://github.com/alexpopa/sav
 
 The interface follows a clean retro RGB direction: the pixel wordmark anchors a dark, sharp-edged layout while game artwork keeps its original rendering style. Game search can be narrowed by one or more platforms; games available on any selected platform are searched in IGDB before applying the 30-result limit. The platform dropdown contains checkboxes, and **Remove filter** clears the selection. Search cards open a larger game file with IGDB details and the full platform list. Save a separate copy for each platform you own; games with only one listed platform can be added directly from search. In My library and on another player's profile, open a game to view its details and manage your own platform copies. Public profiles recover missing covers from IGDB, including legacy rows whose stored IDs no longer resolve, and refresh saved cover URLs when an image fails to load. See the visual style guide before changing the UI.
 
+Signed-in players land on a recent friend activity timeline. Library additions are grouped per friend into rolling 24-hour batches, alongside current challenge updates. The feed shows the latest 30 entries; expand a batch to see all its games. Open **My library** under the account icon to manage your collection.
+
 ## Start here
 
 - [Local setup and database workflow](docs/development.md)
 - [Current local test accounts](docs/local-test-accounts.md)
 - [Deploy with Sites](docs/deployment.md)
 - [Architecture, request flow, and API](docs/architecture.md)
+- [Friends timeline behavior](docs/timeline-design.md)
 - [Visual style guide for RGBoner](docs/style-guide.md)
 - [Instructions for future agents](AGENTS.md)
 
@@ -38,6 +41,7 @@ Requires Node.js 22.13 or newer, npm, and Twitch developer credentials for IGDB.
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0005_amusing_pretty_boy.sql
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0006_tired_mister_fear.sql
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0007_neat_retro_girl.sql
+   node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0008_steady_paladin.sql
    ```
 
    Apply only the migrations that your local database has not yet received.

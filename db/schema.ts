@@ -71,6 +71,7 @@ export const challenges = sqliteTable("challenges", {
   description: text("description").notNull(),
   createdAt: integer("created_at").notNull(),
   creatorConfirmed: integer("creator_confirmed", { mode: "boolean" }).notNull().default(false),
+  timelineAt: integer("timeline_at"),
   recipientConfirmed: integer("recipient_confirmed", { mode: "boolean" }).notNull().default(false),
   declinedAt: integer("declined_at"),
   isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),

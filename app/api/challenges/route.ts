@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     if (relation?.status !== "accepted") return Response.json({ error: "Only friends can create challenges for each other." }, { status: 403 });
     const [game] = await getDb().select().from(libraryItems).where(and(eq(libraryItems.userId, recipientId), eq(libraryItems.igdbId, igdbId)));
     if (!game) return Response.json({ error: "That game is no longer in your friend's library." }, { status: 409 });
+    const now = Date.now();
     const [created] = await getDb().insert(challenges).values({
       recipientId,
       creatorId: user.userId,
@@ -44,7 +45,8 @@ export async function POST(request: Request) {
       gameCoverUrl: game.coverUrl,
       title,
       description,
-      createdAt: Date.now(),
+      createdAt: now,
+      timelineAt: now,
     }).returning({ id: challenges.id });
     await getDb().update(challenges).set({ sortOrder: created.id }).where(eq(challenges.id, created.id));
     return Response.json({ id: created.id }, { status: 201, headers: privateResponse });

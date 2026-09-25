@@ -30,9 +30,18 @@ export async function PATCH(request: Request, context: Context) {
     if (row.declinedAt !== null) return Response.json({ error: "This challenge was declined." }, { status: 409 });
     switch (action as Action) {
       case "confirm":
-      case "unconfirm":
-        await db.update(challenges).set(isRecipient ? { recipientConfirmed: action === "confirm" } : { creatorConfirmed: action === "confirm" }).where(eq(challenges.id, id));
+      case "unconfirm": {
+        const confirmed = action === "confirm";
+        // Evaluate against the stored flags in the same UPDATE, including concurrent confirmations.
+        const changesVisibleState = isRecipient
+          ? sql`${challenges.recipientConfirmed} <> ${confirmed}`
+          : sql`${challenges.recipientConfirmed} = 1 AND ${challenges.creatorConfirmed} <> ${confirmed}`;
+        await db.update(challenges).set({
+          ...(isRecipient ? { recipientConfirmed: confirmed } : { creatorConfirmed: confirmed }),
+          timelineAt: sql`CASE WHEN ${changesVisibleState} THEN ${Date.now()} ELSE ${challenges.timelineAt} END`,
+        }).where(eq(challenges.id, id));
         break;
+      }
       case "favorite":
       case "unfavorite":
         if (!isRecipient) return Response.json({ error: "Only the recipient can favorite challenges." }, { status: 403 });

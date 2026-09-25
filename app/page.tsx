@@ -1,7 +1,8 @@
 import { getCurrentUser } from "./auth";
 import { redirect } from "next/navigation";
-import Library from "./library";
 import { ensureAccount } from "../lib/social";
+import { getTimeline } from "../lib/timeline";
+import Timeline from "./timeline";
 
 export const dynamic = "force-dynamic";
 
@@ -9,5 +10,12 @@ export default async function Home() {
   const user = await getCurrentUser();
   if (!user) redirect("/search");
   await ensureAccount(user);
-  return <Library email={user.email} userId={user.userId} />;
+  let items: Awaited<ReturnType<typeof getTimeline>> = [];
+  let error = false;
+  try {
+    items = await getTimeline(user.userId);
+  } catch {
+    error = true;
+  }
+  return <Timeline email={user.email} items={items} error={error} />;
 }

@@ -53,6 +53,9 @@ The repository's migration order is:
 6. `drizzle/0005_amusing_pretty_boy.sql` — email verification timestamp and expiring, hashed verification/reset tokens.
 7. `drizzle/0006_tired_mister_fear.sql` — selected platform fields and unique `(user_id, igdb_id, platform_id)` library index; existing entries become “Platform not set” until edited.
 
+8. `drizzle/0007_neat_retro_girl.sql` — unique email-account display names under ASCII case folding.
+9. `drizzle/0008_steady_paladin.sql` — nullable challenge timeline timestamps; existing challenges enter the feed only after a visible state change.
+
 When a Sites version containing new Drizzle migrations is published, Sites applies and records each pending migration against its hosted D1 database **before** uploading the Worker. No separate hosted `wrangler d1 execute` command is part of this repository's Sites release flow. A new Site starts with an empty hosted database; publishing does not copy local `.wrangler/state` records into it.
 
 Review every new migration for complete, D1-compatible, bounded schema statements. Avoid seed data or large backfills in migration files. Plan schema changes so the previous live Worker can tolerate a migration that lands before its replacement. A failed publish can leave some migrations applied even if the new Worker never becomes live. Inspect the deployment failure and migration state before retrying; do not replay an applied migration or rewrite its SQL or metadata. If Sites reports a deterministic `SQLITE_*` error for a specifically failed, unapplied migration, correct that unapplied migration and publish a new version. If the applied boundary is unclear, stop and establish it before making another schema change.

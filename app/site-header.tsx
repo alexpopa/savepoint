@@ -93,7 +93,7 @@ export default function SiteHeader({ email, query = "", platformIds = [] }: { em
         </button>
         {menuOpen && <div className="account-menu-panel">
           <nav className="account-menu-nav" aria-label="Account navigation">
-            <a className="account-menu-link" href="/" onClick={() => setMenuOpen(false)}><Gamepad2 size={18} aria-hidden="true"/>My library</a>
+            <a className="account-menu-link" href="/library" onClick={() => setMenuOpen(false)}><Gamepad2 size={18} aria-hidden="true"/>My library</a>
             <a className="account-menu-link" href="/profile" onClick={() => setMenuOpen(false)}><UserRound size={18} aria-hidden="true"/>My profile</a>
             <a className="account-menu-link" href="/users" onClick={() => setMenuOpen(false)}><Users size={18} aria-hidden="true"/>Browse players</a>
             <a className="account-menu-link" href="/settings" onClick={() => setMenuOpen(false)}><Settings size={18} aria-hidden="true"/>Settings &amp; friends</a>
