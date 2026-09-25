@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Flag, Gamepad2, Plus, Star, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Circle, Flag, Gamepad2, Plus, Star, X } from "lucide-react";
 import type { Challenge } from "../lib/challenges";
 
 type Game = { igdbId: number; name: string };
@@ -12,25 +12,67 @@ async function patch(id: number, action: string) {
   const response = await fetch(`/api/challenges/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
   const result = await response.json() as { error?: string };
   if (!response.ok) throw new Error(result.error || "Could not update the challenge.");
-  window.location.reload();
 }
 
-function ChallengeCard({ row, viewerId, ownerControls = false, moveUp = false, moveDown = false }: { row: Challenge; viewerId: string; ownerControls?: boolean; moveUp?: boolean; moveDown?: boolean }) {
+function ChallengeCard({ row, viewerId, ownerControls = false, moveUp = false, moveDown = false, compact = false, onConfirmationChange }: { row: Challenge; viewerId: string; ownerControls?: boolean; moveUp?: boolean; moveDown?: boolean; compact?: boolean; onConfirmationChange?: (confirmed: boolean) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [coverUnavailable, setCoverUnavailable] = useState(false);
   const isRecipient = viewerId === row.recipientId;
   const isCreator = viewerId === row.creatorId;
-  const myConfirmed = isRecipient ? row.recipientConfirmed : row.creatorConfirmed;
-  const isComplete = completed(row);
-  const cardStatus = row.declined ? "Declined" : isComplete ? "" : "Pending";
+  const [myConfirmed, setMyConfirmed] = useState(() => isRecipient ? row.recipientConfirmed : row.creatorConfirmed);
+  const isComplete = !row.declined && (isRecipient
+    ? row.creatorConfirmed && myConfirmed
+    : isCreator
+      ? row.recipientConfirmed && myConfirmed
+      : completed(row));
+  const cardStatus = compact ? "" : row.declined ? "Declined" : isComplete ? "" : "Pending";
+  const canConfirm = (isRecipient || isCreator) && !row.declined;
+  const canRemove = isRecipient;
+  const canFavorite = isRecipient && ownerControls && !row.declined;
+  const cardState = row.declined ? "is-declined" : isComplete ? "is-complete" : "is-pending";
   async function act(action: string) {
     setBusy(true); setError("");
-    try { await patch(row.id, action); }
+    try {
+      await patch(row.id, action);
+      if (action === "confirm" || action === "unconfirm") {
+        const confirmed = action === "confirm";
+        setMyConfirmed(confirmed);
+        onConfirmationChange?.(confirmed);
+        setBusy(false);
+        return;
+      }
+      window.location.reload();
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not update the challenge."); setBusy(false); }
   }
-  return <article className={`challenge-card ${row.declined ? "is-declined" : completed(row) ? "is-complete" : "is-pending"} ${row.isFavorite ? "is-favorite" : ""}`}>
-    {(cardStatus || row.isFavorite && !row.declined) && <div className="challenge-card-top">{cardStatus && <span className="challenge-status"><Flag size={15} aria-hidden="true"/> {cardStatus}</span>}{row.isFavorite && !row.declined && <span className="challenge-favorite"><Star size={14} fill="currentColor" aria-hidden="true"/> Favorite</span>}</div>}
+  async function remove() {
+    if (!window.confirm(`Permanently delete “${row.title}” for both players? This cannot be undone.`)) return;
+    setBusy(true); setError("");
+    try {
+      const response = await fetch(`/api/challenges/${row.id}`, { method: "DELETE" });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error || "Could not delete the challenge.");
+      window.location.reload();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not delete the challenge."); setBusy(false); }
+  }
+  const tools = <div className="challenge-card-tools">
+    {canConfirm && <button type="button" className={`challenge-icon-button is-confirmation ${myConfirmed ? "is-confirmed" : ""}`} disabled={busy} aria-label={myConfirmed ? `Undo your confirmation for ${row.title}` : `Confirm ${row.title}`} aria-pressed={myConfirmed} title={myConfirmed ? "Undo confirmation" : "Confirm challenge"} onClick={() => void act(myConfirmed ? "unconfirm" : "confirm")}><Circle size={19} fill={myConfirmed ? "currentColor" : "none"} aria-hidden="true"/></button>}
+    {!compact && (canFavorite
+      ? <button type="button" className="challenge-icon-button" disabled={busy} aria-label={row.isFavorite ? `Remove ${row.title} from favorites` : `Favorite ${row.title}`} title={row.isFavorite ? "Unfavorite" : "Favorite"} onClick={() => void act(row.isFavorite ? "unfavorite" : "favorite")}><Star size={18} fill={row.isFavorite ? "currentColor" : "none"} aria-hidden="true"/></button>
+      : row.isFavorite && <span className="challenge-favorite" role="img" aria-label="Favorite"><Star size={18} fill="currentColor" aria-hidden="true"/></span>)}
+    {canRemove && <button type="button" className="challenge-icon-button is-danger" disabled={busy} aria-label={`Remove ${row.title} completely`} title="Remove challenge" onClick={() => void remove()}><X size={19} aria-hidden="true"/></button>}
+  </div>;
+  if (compact) return <article className={`challenge-list-item ${cardState}`}>
+    <h3>{row.title}</h3>
+    {(canConfirm || canRemove) && tools}
+    {error && <p className="challenge-error" role="alert">{error}</p>}
+  </article>;
+  return <article className={`challenge-card ${cardState} ${row.isFavorite ? "is-favorite" : ""}`}>
+    {(cardStatus || canConfirm || canFavorite || canRemove || row.isFavorite) && <div className="challenge-card-top">
+      {cardStatus && <span className="challenge-status"><Flag size={15} aria-hidden="true"/> {cardStatus}</span>}
+      {tools}
+    </div>}
     <div className="challenge-card-main">
       <div className="challenge-game-cover">
         {row.gameCoverUrl && !coverUnavailable
@@ -43,14 +85,9 @@ function ChallengeCard({ row, viewerId, ownerControls = false, moveUp = false, m
         <p className="challenge-byline">{isCreator ? "For" : "From"} <a className="inline-link" href={isCreator ? row.recipientProfilePath : row.creatorProfilePath}>{isCreator ? row.recipientName : row.creatorName}</a></p>
       </div>
     </div>
-    {!row.declined && (isRecipient || isCreator) && <div className="challenge-actions">
-      <button type="button" disabled={busy} onClick={() => void act(myConfirmed ? "unconfirm" : "confirm")}>{myConfirmed ? "Undo my confirmation" : "Mark complete"}</button>
-      {isRecipient && <button type="button" className="subtle-danger" disabled={busy} onClick={() => void act("decline")}>{completed(row) ? "Remove" : "Decline"}</button>}
-      {isRecipient && ownerControls && <>
-        <button type="button" disabled={busy} aria-label={row.isFavorite ? `Remove ${row.title} from favorites` : `Favorite ${row.title}`} onClick={() => void act(row.isFavorite ? "unfavorite" : "favorite")}><Star size={15} fill={row.isFavorite ? "currentColor" : "none"}/> {row.isFavorite ? "Unfavorite" : "Favorite"}</button>
-        <button type="button" disabled={busy || !moveUp} aria-label={`Move ${row.title} up`} onClick={() => void act("move_up")}><ArrowUp size={16}/></button>
-        <button type="button" disabled={busy || !moveDown} aria-label={`Move ${row.title} down`} onClick={() => void act("move_down")}><ArrowDown size={16}/></button>
-      </>}
+    {!row.declined && isRecipient && ownerControls && <div className="challenge-actions">
+      <button type="button" disabled={busy || !moveUp} aria-label={`Move ${row.title} up`} onClick={() => void act("move_up")}><ArrowUp size={16}/></button>
+      <button type="button" disabled={busy || !moveDown} aria-label={`Move ${row.title} down`} onClick={() => void act("move_down")}><ArrowDown size={16}/></button>
     </div>}
     {error && <p className="challenge-error" role="alert">{error}</p>}
   </article>;
@@ -62,7 +99,7 @@ export function GameChallenges({ game, recipientId, viewerId, rows, canCreate = 
   const visible = rows.filter((row) => row.igdbId === game.igdbId && !row.declined);
   return <div className="game-challenges">
     <div className="game-challenge-actions"><button type="button" className="challenge-link" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? <ChevronUp size={15}/> : <ChevronDown size={15}/>} Challenges ({visible.length})</button>{canCreate && <button type="button" className="challenge-add" onClick={() => setComposing(true)}><Plus size={15}/> Add challenge</button>}</div>
-    {expanded && <div className="game-challenge-list">{visible.length ? visible.map((row) => <ChallengeCard key={row.id} row={row} viewerId={viewerId}/>) : <p>No challenges for this game yet.</p>}</div>}
+    {expanded && <div className="game-challenge-list">{visible.length ? visible.map((row) => <ChallengeCard key={row.id} row={row} viewerId={viewerId} compact/>) : <p>No challenges for this game yet.</p>}</div>}
     {composing && <ChallengeComposer game={game} recipientId={recipientId} onClose={() => setComposing(false)}/>}
   </div>;
 }
@@ -93,12 +130,21 @@ function ChallengeComposer({ game, recipientId, onClose }: { game: Game; recipie
 }
 
 export function ChallengeSections({ rows, viewerId, ownerControls = false, title = "Challenges" }: { rows: Challenge[]; viewerId: string; ownerControls?: boolean; title?: string }) {
-  const active = rows.filter((row) => !row.declined);
+  const [currentRows, setCurrentRows] = useState(rows);
+  const active = currentRows.filter((row) => !row.declined);
   const pending = active.filter((row) => !completed(row));
   const done = active.filter(completed);
-  const declined = rows.filter((row) => row.declined);
+  const declined = currentRows.filter((row) => row.declined);
+  function updateConfirmation(id: number, confirmed: boolean) {
+    setCurrentRows((current) => current.map((row) => {
+      if (row.id !== id) return row;
+      if (row.recipientId === viewerId) return { ...row, recipientConfirmed: confirmed };
+      if (row.creatorId === viewerId) return { ...row, creatorConfirmed: confirmed };
+      return row;
+    }));
+  }
   function cards(items: Challenge[]) {
-    return <div className="challenge-grid">{items.map((row, index) => <ChallengeCard key={row.id} row={row} viewerId={viewerId} ownerControls={ownerControls} moveUp={index > 0} moveDown={index < items.length - 1}/>)}</div>;
+    return <div className="challenge-grid">{items.map((row, index) => <ChallengeCard key={row.id} row={row} viewerId={viewerId} ownerControls={ownerControls} moveUp={index > 0} moveDown={index < items.length - 1} onConfirmationChange={(confirmed) => updateConfirmation(row.id, confirmed)}/>)}</div>;
   }
   function section(label: string, items: Challenge[]) {
     const favorites = items.filter((row) => row.isFavorite);

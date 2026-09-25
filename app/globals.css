@@ -302,23 +302,38 @@ button:disabled { cursor: default; }
 .challenge-add { color: var(--rgb-action); }
 .game-challenge-list { display: grid; gap: 8px; padding-top: 12px; }
 .game-challenge-list > p { margin: 0 0 4px; color: var(--rgb-muted); font-size: 0.875rem; }
+.challenge-list-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; min-width: 0; padding: 8px 10px; border: 1px solid var(--rgb-rule); border-left: 3px solid var(--rgb-info); border-radius: 3px; background: var(--rgb-panel); }
+.challenge-list-item.is-complete { border-left-color: var(--rgb-action); }
+.challenge-list-item.is-declined { border-left-color: var(--rgb-muted); opacity: 0.85; }
+.challenge-list-item h3 { min-width: 0; margin: 0; font-size: 0.9375rem; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.challenge-list-item .challenge-card-tools { margin-left: 0; }
+.challenge-list-item .challenge-icon-button { width: 32px; height: 32px; }
+.challenge-list-item .challenge-error { grid-column: 1 / -1; }
 .profile-challenges { margin-bottom: 48px; }
 .profile-challenges > .section-title { margin-bottom: 28px; }
 .challenge-section { margin-bottom: 32px; }
 .challenge-section .section-title { margin-bottom: 14px; }
-.challenge-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.challenge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
 .challenge-featured { margin-bottom: 20px; padding: 16px; border: 1px solid var(--rgb-control-edge); border-radius: 4px; background: var(--rgb-panel-raised); }
 .challenge-featured > h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 1rem; }
 .challenge-card.is-favorite { border-color: var(--rgb-control-edge); }
 .challenge-section-empty { margin: 0; padding: 20px; border: 1px dashed var(--rgb-control-edge); border-radius: 4px; color: var(--rgb-muted); }
-.challenge-card { min-width: 0; padding: 16px; border: 1px solid var(--rgb-control-edge); border-left: 4px solid var(--rgb-info); border-radius: 4px; background: var(--rgb-panel); overflow-wrap: anywhere; }
+.challenge-card { position: relative; min-width: 0; padding: 16px; border: 1px solid var(--rgb-control-edge); border-left: 4px solid var(--rgb-info); border-radius: 4px; background: var(--rgb-panel); overflow-wrap: anywhere; }
 .challenge-card.is-complete { border-left-color: var(--rgb-action); }
 .challenge-card.is-declined { border-left-color: var(--rgb-muted); opacity: 0.85; }
 .challenge-card-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 12px; }
+.challenge-card-tools { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.challenge-icon-button { display: grid; place-items: center; flex: none; width: 36px; height: 36px; padding: 0; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-panel-raised); color: var(--rgb-ink); }
+.challenge-icon-button:hover:not(:disabled) { border-color: var(--rgb-ink); }
+.challenge-icon-button:disabled { opacity: 0.55; }
+.challenge-icon-button.is-confirmation { color: var(--rgb-action); }
+.challenge-icon-button.is-confirmation:hover:not(:disabled) { border-color: var(--rgb-action); }
+.challenge-icon-button.is-danger { color: var(--rgb-danger); }
+.challenge-icon-button.is-danger:hover:not(:disabled) { border-color: var(--rgb-danger); }
 .challenge-status, .challenge-favorite { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8125rem; font-weight: 700; line-height: 1.35; }
 .challenge-status { color: var(--rgb-info); }
 .is-declined .challenge-status { color: var(--rgb-muted); }
-.challenge-favorite { color: var(--rgb-ink); }
+.challenge-favorite { justify-content: center; width: 36px; height: 36px; color: var(--rgb-ink); }
 .challenge-card-main { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: start; gap: 16px; }
 .challenge-game-cover { display: grid; place-items: center; width: 88px; aspect-ratio: 3 / 4; overflow: hidden; border: 1px solid var(--rgb-rule); border-radius: 2px; background: var(--rgb-black); }
 .challenge-game-cover img { display: block; width: 100%; height: 100%; object-fit: contain; }
