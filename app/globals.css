@@ -534,13 +534,18 @@ button:disabled { cursor: default; }
 .favorite-games { margin-bottom: 40px; }
 .favorite-games-help { margin-bottom: 16px; }
 .favorite-games-grid { list-style: none; padding: 0; margin: 0; }
-.favorite-game-card { flex-direction: column; align-items: stretch; gap: 6px; }
-.favorite-game-tools { display: flex; align-items: center; justify-content: flex-end; }
-.favorite-game-card .game-cover { width: 76px; height: 106px; }
+.favorite-game-card { position: relative; align-items: stretch; }
+.favorite-game-tools { position: absolute; top: 14px; right: 14px; z-index: 1; display: flex; align-items: center; justify-content: flex-end; }
+.favorite-game-card .game-card-open { align-items: stretch; gap: 16px; min-height: 144px; }
+.favorite-game-card .game-cover { width: 100px; height: auto; min-height: 144px; align-self: stretch; }
+.favorite-game-card .game-info { display: flex; flex-direction: column; justify-content: center; }
+.favorite-game-card.has-controls .game-info { padding-top: 52px; }
 .game-favorite-action { margin: 16px 0; }
 .game-favorite-action .platform-action { max-width: 100%; white-space: normal; }
 .game-favorite-action a { color: var(--rgb-info); }
 .favorite-games .section-title { flex-wrap: wrap; }
 @media (max-width: 420px) {
-  .favorite-game-card .game-cover { width: 68px; height: 98px; }
+  .favorite-game-tools { top: 12px; right: 12px; }
+  .favorite-game-card .game-card-open { gap: 12px; }
+  .favorite-game-card .game-cover { width: 88px; min-height: 132px; }
 }

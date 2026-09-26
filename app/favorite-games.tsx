@@ -36,7 +36,7 @@ export default function FavoriteGames({ initialFavorites, canManage, isOwner = f
     <div className="section-title"><div><p className="eyebrow"><Star size={14} aria-hidden="true"/> FAVORITES</p><h2 id="favorite-games-title">Favorite games <span className="small-count">{favorites.length} / 9</span></h2></div>{isOwner && <a className="text-button" href="/search">Find games</a>}</div>
     {isOwner && <p className="subcopy favorite-games-help">Star a game in its details. Use the arrows to arrange your favorites.</p>}
     {error && <p className="notice error" role="alert">{error}</p>}
-    {favorites.length ? <ol className="game-grid favorite-games-grid" role="list">{favorites.map((game, index) => <li className="game-card favorite-game-card" key={game.id}>
+    {favorites.length ? <ol className="game-grid favorite-games-grid" role="list">{favorites.map((game, index) => <li className={`game-card favorite-game-card${canManage ? " has-controls" : ""}`} key={game.id}>
       {canManage && <div className="favorite-game-tools"><div className="challenge-rank-tools">
         <button type="button" className="challenge-icon-button" aria-label={`Move ${game.name} up`} title="Move up" disabled={busy || index === 0} onClick={() => void act(game.id, "move_up")}><ArrowUp size={17}/></button>
         <button type="button" className="challenge-icon-button" aria-label={`Move ${game.name} down`} title="Move down" disabled={busy || index === favorites.length - 1} onClick={() => void act(game.id, "move_down")}><ArrowDown size={17}/></button>
