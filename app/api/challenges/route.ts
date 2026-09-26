@@ -1,10 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { getCurrentUser } from "../../auth";
 import { getDb } from "../../../db";
-import { challenges, libraryItems } from "../../../db/schema";
+import { accounts, challenges, libraryItems } from "../../../db/schema";
 import { receivedChallenges, sentChallenges } from "../../../lib/challenges";
 import { isSameOriginWrite } from "../../../lib/request-security";
 import { ensureAccount, getFriendship, privateResponse } from "../../../lib/social";
+import { hasPermission } from "../../../lib/permissions";
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
   try {
     const scope = new URL(request.url).searchParams.get("scope");
     if (scope !== "received" && scope !== "sent") return Response.json({ error: "Invalid challenge scope." }, { status: 400 });
-    const rows = scope === "received" ? await receivedChallenges(user.userId) : await sentChallenges(user.userId);
+    const rows = scope === "received" ? await receivedChallenges(user.userId) : await sentChallenges(user.userId, hasPermission(user, false));
     return Response.json({ challenges: rows }, { headers: privateResponse });
   } catch { return Response.json({ error: "Challenges are temporarily unavailable." }, { status: 503 }); }
 }
@@ -32,8 +33,10 @@ export async function POST(request: Request) {
     return Response.json({ error: "Choose a friend and game, and enter a title and description (up to 100 and 1,000 characters)." }, { status: 400 });
   try {
     await ensureAccount(user);
+    const [recipient] = await getDb().select({ userId: accounts.userId }).from(accounts).where(and(eq(accounts.userId, recipientId), isNotNull(accounts.passwordHash), isNotNull(accounts.emailVerifiedAt)));
+    if (!recipient) return Response.json({ error: "Player not found." }, { status: 404 });
     const relation = await getFriendship(user.userId, recipientId);
-    if (relation?.status !== "accepted") return Response.json({ error: "Only friends can create challenges for each other." }, { status: 403 });
+    if (!hasPermission(user, relation?.status === "accepted")) return Response.json({ error: "Only friends can create challenges for each other." }, { status: 403 });
     const [game] = await getDb().select().from(libraryItems).where(and(eq(libraryItems.userId, recipientId), eq(libraryItems.igdbId, igdbId)));
     if (!game) return Response.json({ error: "That game is no longer in your friend's library." }, { status: 409 });
     const now = Date.now();

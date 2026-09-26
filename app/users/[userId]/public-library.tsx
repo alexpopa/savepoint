@@ -13,6 +13,7 @@ type Props = {
   viewerId: string;
   challengeRows: Challenge[];
   canCreateChallenges: boolean;
+  canManageChallenges?: boolean;
 };
 
 type PublicGame = SavedGame & { catalogIgdbId?: number };
@@ -24,7 +25,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return result as T;
 }
 
-export default function PublicLibrary({ games, recipientId, viewerId, challengeRows, canCreateChallenges }: Props) {
+export default function PublicLibrary({ games, recipientId, viewerId, challengeRows, canCreateChallenges, canManageChallenges = false }: Props) {
   const [selected, setSelected] = useState<PublicGame | null>(null);
   const [saved, setSaved] = useState<SavedGame[]>([]);
   const [coverOverrides, setCoverOverrides] = useState<Record<number, string | null>>({});
@@ -97,7 +98,7 @@ export default function PublicLibrary({ games, recipientId, viewerId, challengeR
           <div className="game-cover">{coverUrl && !unavailableCovers[game.igdbId] ? <img src={coverUrl} alt={`${game.name} cover`} loading="lazy" onError={() => void recoverCover(game.igdbId, coverUrl)}/> : <div className="cover-fallback"><Gamepad2 size={29}/><span>{game.name.slice(0, 1)}</span></div>}</div>
           <div className="game-info"><h3>{game.name}</h3><p>{game.releaseYear || "Year unknown"}</p><span className="game-platform-label"><Gamepad2 size={14}/>{game.platformName || "Platform not set"}</span></div>
         </button>
-        <GameChallenges game={game} recipientId={recipientId} viewerId={viewerId} rows={challengeRows} canCreate={canCreateChallenges}/>
+        <GameChallenges game={game} recipientId={recipientId} viewerId={viewerId} rows={challengeRows} canCreate={canCreateChallenges} canManage={canManageChallenges}/>
       </article>;
     })}</div>
     {selected && <GameDetailsDialog key={selectedCatalogId} game={{ ...selected, igdbId: selectedCatalogId!, platformOptions: [] } satisfies CatalogGame} saved={selectedCopies} signedIn onClose={() => setSelected(null)} onAdd={(platformId) => addGame(selectedCatalogId!, platformId)} onRemove={removeGame}/>}

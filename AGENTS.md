@@ -4,6 +4,12 @@ Read [README.md](README.md), [docs/development.md](docs/development.md), and [do
 
 Before any visual or styling change, read [docs/style-guide.md](docs/style-guide.md) and inspect the current wordmark in `app/site-header.tsx` and favicon in `public/favicon.svg`. Follow the guide's brand, imagery, accessibility, and review rules. Preserve the logo's glyphs and RGB colors unless the user explicitly requests a brand change. Keep the guide current when visual decisions change.
 
+## Authorization and role privacy
+
+Admins have every application permission. Use `lib/permissions.ts` for all new server-side permission checks so admin access bypasses ordinary ownership, privacy, friendship, and participant restrictions. Authentication, same-origin writes, input validation, verified-account eligibility, and database integrity still apply. Roles come only from the authenticated account's `account_roles` row, loaded by `app/auth.ts` on each request. Read [roles and permissions](docs/architecture.md#roles-and-permissions) before adding authorization or admin-specific behavior.
+
+Never expose another player's role in public responses or UI, add admin badges or special styling, or add an admin management UI or role mutation endpoint. Admins can view private profiles and still use the ordinary friend button; role access must not create a friendship. Grants and revocations require explicitly authorized, trusted D1 operations, as documented in [development](docs/development.md#roles-and-trusted-administration).
+
 ## Key locations
 
 - `app/library.tsx`: client-side search and collection UI.

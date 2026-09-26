@@ -28,9 +28,9 @@ Migration `0008_steady_paladin.sql` leaves existing challenges with a null `time
 
 ## Visibility and ordering
 
-All eligibility is checked on the server. Library additions require an accepted friendship. Challenges require at least one accepted friend; both participants must be visible to the viewer (the viewer themselves, an accepted friend, or a public profile). Both participants must have verified email accounts. A public stranger's activity alone never enters the feed. Private non-friend participants hide the entire challenge.
+All eligibility is checked on the server. Library additions require an accepted friendship. Challenges require at least one accepted friend; both participants must be visible to the viewer (the viewer themselves, an accepted friend, or a public profile). Both participants must have verified email accounts. A public stranger's activity alone never enters the feed. Private non-friend participants hide the entire challenge for regular players. Admins bypass this participant privacy restriction, while the feed still requires an actual accepted friend and verified participants.
 
-Current friendship and account visibility are rechecked on each read. Pending requests grant no access. Removing a friendship can remove activity. A private profile remains visible to accepted friends. Challenge IDs prevent duplication when both participants are friends.
+Current friendship and account visibility are rechecked on each read. Pending requests grant no access to regular players; admin profile access is independent of friendship. Removing a friendship can remove activity. A private profile remains visible to accepted friends. Challenge IDs prevent duplication when both participants are friends.
 
 After grouping, merge library batches and challenges, sort by timestamp descending with a stable type/ID tie-breaker, and take 30. The initial implementation reads eligible current records directly; revisit query limits or indexing only if measured usage warrants it. Do not truncate library rows before grouping, which would split large imports or produce incomplete batches.
 

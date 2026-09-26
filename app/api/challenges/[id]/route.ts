@@ -5,6 +5,7 @@ import { challenges } from "../../../../db/schema";
 import { isComplete, receivedChallenges } from "../../../../lib/challenges";
 import { isSameOriginWrite } from "../../../../lib/request-security";
 import { privateResponse } from "../../../../lib/social";
+import { confirmationParticipant, hasPermission } from "../../../../lib/permissions";
 
 type Context = { params: Promise<{ id: string }> };
 type Action = "confirm" | "unconfirm" | "favorite" | "unfavorite" | "move_up" | "move_down";
@@ -26,31 +27,33 @@ export async function PATCH(request: Request, context: Context) {
     if (!row) return Response.json({ error: "Challenge not found." }, { status: 404 });
     const isRecipient = row.recipientId === user.userId;
     const isCreator = row.creatorId === user.userId;
-    if (!isRecipient && !isCreator) return Response.json({ error: "Only the two participants can update this challenge." }, { status: 403 });
+    if (!hasPermission(user, isRecipient || isCreator)) return Response.json({ error: "Only the two participants can update this challenge." }, { status: 403 });
     if (row.declinedAt !== null) return Response.json({ error: "This challenge was declined." }, { status: 409 });
     switch (action as Action) {
       case "confirm":
       case "unconfirm": {
         const confirmed = action === "confirm";
+        const participant = confirmationParticipant(user, row, (payload as { participant?: unknown }).participant);
+        if (!participant) return Response.json({ error: "You cannot change that participant's confirmation." }, { status: 403 });
         // Evaluate against the stored flags in the same UPDATE, including concurrent confirmations.
-        const changesVisibleState = isRecipient
+        const changesVisibleState = participant === "recipient"
           ? sql`${challenges.recipientConfirmed} <> ${confirmed}`
           : sql`${challenges.recipientConfirmed} = 1 AND ${challenges.creatorConfirmed} <> ${confirmed}`;
         await db.update(challenges).set({
-          ...(isRecipient ? { recipientConfirmed: confirmed } : { creatorConfirmed: confirmed }),
+          ...(participant === "recipient" ? { recipientConfirmed: confirmed } : { creatorConfirmed: confirmed }),
           timelineAt: sql`CASE WHEN ${changesVisibleState} THEN ${Date.now()} ELSE ${challenges.timelineAt} END`,
         }).where(eq(challenges.id, id));
         break;
       }
       case "favorite":
       case "unfavorite":
-        if (!isRecipient) return Response.json({ error: "Only the recipient can favorite challenges." }, { status: 403 });
+        if (!hasPermission(user, isRecipient)) return Response.json({ error: "Only the recipient can favorite challenges." }, { status: 403 });
         await db.update(challenges).set({ isFavorite: action === "favorite" }).where(eq(challenges.id, id));
         break;
       case "move_up":
       case "move_down": {
-        if (!isRecipient) return Response.json({ error: "Only the recipient can rank challenges." }, { status: 403 });
-        const all = await receivedChallenges(user.userId);
+        if (!hasPermission(user, isRecipient)) return Response.json({ error: "Only the recipient can rank challenges." }, { status: 403 });
+        const all = await receivedChallenges(row.recipientId);
         const current = all.find((item) => item.id === id);
         if (!current) return Response.json({ error: "Challenge not found." }, { status: 404 });
         if (!current.isFavorite) return Response.json({ error: "Favorite this challenge before ranking it." }, { status: 409 });
@@ -76,11 +79,11 @@ export async function DELETE(request: Request, context: Context) {
     const db = getDb();
     const [row] = await db.select().from(challenges).where(eq(challenges.id, id));
     if (!row) return Response.json({ error: "Challenge not found." }, { status: 404 });
-    if (row.recipientId !== user.userId)
+    if (!hasPermission(user, row.recipientId === user.userId))
       return Response.json({ error: "Only the challenged player can remove this challenge." }, { status: 403 });
     const [deleted] = await db.delete(challenges).where(and(
       eq(challenges.id, id),
-      eq(challenges.recipientId, user.userId),
+      ...(hasPermission(user, false) ? [] : [eq(challenges.recipientId, user.userId)]),
     )).returning({ id: challenges.id });
     if (!deleted) return Response.json({ error: "This challenge changed before it could be deleted." }, { status: 409 });
     return Response.json({ ok: true }, { headers: privateResponse });

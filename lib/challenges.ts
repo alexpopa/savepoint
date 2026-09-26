@@ -97,7 +97,7 @@ export async function receivedChallenges(userId: string) {
   return sortChallenges((await decorate(rows)).filter((row) => !row.declined));
 }
 
-export async function sentChallenges(userId: string) {
+export async function sentChallenges(userId: string, includeRecipientFavorites = false) {
   const rows = await getDb().select().from(challenges).where(eq(challenges.creatorId, userId)).orderBy(desc(challenges.id));
-  return (await decorate(rows)).map((row) => ({ ...row, isFavorite: false }));
+  return (await decorate(rows)).map((row) => ({ ...row, isFavorite: includeRecipientFavorites && row.isFavorite }));
 }

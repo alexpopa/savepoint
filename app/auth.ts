@@ -2,9 +2,10 @@ import { and, eq, gt, isNotNull } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "../db";
-import { accounts, sessions } from "../db/schema";
+import { accountRoles, accounts, sessions } from "../db/schema";
+import type { PermissionUser } from "../lib/permissions";
 
-export type AppUser = { userId: string; email: string; displayName: string };
+export type AppUser = PermissionUser & { email: string; displayName: string };
 
 const cookieName = "rgboner_session";
 const sessionLengthMs = 30 * 24 * 60 * 60 * 1000;
@@ -82,10 +83,12 @@ function sessionFromCookie(cookieHeader: string | null): string | null {
 export async function getCurrentUser(): Promise<AppUser | null> {
   const token = sessionFromCookie((await headers()).get("cookie"));
   if (!token) return null;
-  const [row] = await getDb().select({ userId: accounts.userId, email: accounts.email, displayName: accounts.displayName })
+  const [row] = await getDb().select({ userId: accounts.userId, email: accounts.email, displayName: accounts.displayName, role: accountRoles.role })
     .from(sessions).innerJoin(accounts, eq(sessions.userId, accounts.userId))
+    .leftJoin(accountRoles, eq(accountRoles.userId, accounts.userId))
     .where(and(eq(sessions.tokenHash, await sha256(token)), gt(sessions.expiresAt, Date.now()), isNotNull(accounts.passwordHash), isNotNull(accounts.emailVerifiedAt)));
-  return row ?? null;
+  if (!row) return null;
+  return { userId: row.userId, email: row.email, displayName: row.displayName, isAdmin: row.role === "admin" };
 }
 
 export async function requireUser(returnTo: string): Promise<AppUser> {

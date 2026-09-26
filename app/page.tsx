@@ -13,7 +13,7 @@ export default async function Home() {
   let items: Awaited<ReturnType<typeof getTimeline>> = [];
   let error = false;
   try {
-    items = await getTimeline(user.userId);
+    items = await getTimeline(user);
   } catch {
     error = true;
   }

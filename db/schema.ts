@@ -13,6 +13,12 @@ export const accounts = sqliteTable("accounts", {
   uniqueIndex("idx_accounts_display_name_login").on(sql`lower(${table.displayName})`).where(sql`${table.passwordHash} IS NOT NULL`),
 ]);
 
+// No row means a regular player. Grants are managed only through trusted D1 operations.
+export const accountRoles = sqliteTable("account_roles", {
+  userId: text("user_id").primaryKey().references(() => accounts.userId, { onDelete: "cascade" }),
+  role: text("role", { enum: ["admin"] }).notNull(),
+}, (table) => [check("ck_account_roles_role", sql`${table.role} = 'admin'`)]);
+
 export const sessions = sqliteTable("sessions", {
   tokenHash: text("token_hash").primaryKey(),
   userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),

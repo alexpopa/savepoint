@@ -6,8 +6,10 @@ import { accountDisplayName } from "./social";
 import { profilePath } from "./profile-path";
 import { recentTimeline, type TimelineChallenge } from "./timeline-items";
 import { getIgdbGameCoversForGames } from "./igdb";
+import { hasPermission, type PermissionUser } from "./permissions";
 
-export async function getTimeline(viewerId: string) {
+export async function getTimeline(user: PermissionUser) {
+  const viewerId = user.userId;
   const db = getDb();
   const creator = alias(accounts, "creator");
   const recipient = alias(accounts, "recipient");
@@ -16,7 +18,7 @@ export async function getTimeline(viewerId: string) {
     SELECT 1 FROM ${friendships} WHERE ${friendships.status} = 'accepted'
     AND ((${friendships.userLow} = ${viewerId} AND ${friendships.userHigh} = ${id})
       OR (${friendships.userHigh} = ${viewerId} AND ${friendships.userLow} = ${id})))`;
-  const visible = (person: PersonTable) => or(eq(person.userId, viewerId), eq(person.isPublic, true), isFriend(person.userId));
+  const visible = (person: PersonTable) => hasPermission(user, false) ? sql`1 = 1` : or(eq(person.userId, viewerId), eq(person.isPublic, true), isFriend(person.userId));
   const verified = (person: PersonTable) => and(isNotNull(person.passwordHash), isNotNull(person.emailVerifiedAt));
   const [games, challengeRows] = await Promise.all([
     db.select({ game: libraryItems, person: accounts }).from(libraryItems)
