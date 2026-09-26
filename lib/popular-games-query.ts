@@ -5,7 +5,7 @@ export const popularGamesQuery = `
     WHERE added_at BETWEEN ? AND ?
     GROUP BY igdb_id
     ORDER BY player_count DESC, last_added_at DESC, igdb_id ASC
-    LIMIT 5
+    LIMIT 6
   )
   SELECT popular.igdb_id AS igdbId,
     popular.player_count AS playerCount,
