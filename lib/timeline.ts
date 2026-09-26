@@ -1,7 +1,7 @@
 import { and, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { getDb } from "../db";
-import { accounts, challenges, friendships, libraryItems } from "../db/schema";
+import { accounts, challenges, friendships, libraryItems, gameFavorites } from "../db/schema";
 import { accountDisplayName } from "./social";
 import { profilePath } from "./profile-path";
 import { recentTimeline, type TimelineChallenge } from "./timeline-items";
@@ -20,7 +20,7 @@ export async function getTimeline(user: PermissionUser) {
       OR (${friendships.userHigh} = ${viewerId} AND ${friendships.userLow} = ${id})))`;
   const visible = (person: PersonTable) => hasPermission(user, false) ? sql`1 = 1` : or(eq(person.userId, viewerId), eq(person.isPublic, true), isFriend(person.userId));
   const verified = (person: PersonTable) => and(isNotNull(person.passwordHash), isNotNull(person.emailVerifiedAt));
-  const [games, challengeRows] = await Promise.all([
+  const [games, challengeRows, favoriteRows] = await Promise.all([
     db.select({ game: libraryItems, person: accounts }).from(libraryItems)
       .innerJoin(accounts, eq(libraryItems.userId, accounts.userId))
       .where(and(isFriend(accounts.userId), verified(accounts))),
@@ -30,6 +30,9 @@ export async function getTimeline(user: PermissionUser) {
       .where(and(isNotNull(challenges.timelineAt), isNull(challenges.declinedAt),
         or(isFriend(creator.userId), isFriend(recipient.userId)),
         visible(creator), visible(recipient), verified(creator), verified(recipient))),
+    db.select({ game: gameFavorites, person: accounts }).from(gameFavorites)
+      .innerJoin(accounts, eq(gameFavorites.userId, accounts.userId))
+      .where(and(isFriend(accounts.userId), verified(accounts))),
   ]);
   const person = (row: typeof accounts.$inferSelect) => ({ id: row.userId, name: accountDisplayName(row), href: profilePath(row) });
   const items: TimelineChallenge[] = challengeRows.map(({ challenge: row, creator, recipient }) => ({
@@ -41,7 +44,10 @@ export async function getTimeline(user: PermissionUser) {
   const timeline = recentTimeline(games.map(({ game, person: owner }) => ({
     id: game.id, igdbId: game.igdbId, name: game.name, releaseYear: game.releaseYear, platformName: game.platformName, coverUrl: game.coverUrl,
     addedAt: game.addedAt, person: person(owner),
-  })), items);
+  })), items, favoriteRows.map(({ game, person: owner }) => ({
+    kind: "favorite", key: `favorite:${game.id}`, at: game.favoritedAt,
+    person: person(owner), igdbId: game.igdbId, name: game.name, coverUrl: game.coverUrl, releaseYear: game.releaseYear,
+  })));
   // Recover legacy artwork only for the initial visible covers, keeping imports cheap.
   const visibleIds = new Set(timeline.flatMap((item) => item.kind === "library" ? item.games.slice(0, 4).filter((game) => !game.coverUrl).map((game) => game.id) : []));
   if (visibleIds.size) {

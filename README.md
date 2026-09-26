@@ -8,7 +8,9 @@ The interface follows a clean retro RGB direction: the pixel wordmark anchors a 
 
 With no search term, `/search` shows up to six games most added to player libraries in the last 14 days. Each player counts once per game even if they saved several platforms. Missing cover art and older saved game IDs are resolved through IGDB when available. Open a popular game to see its details and add a platform copy.
 
-Signed-in players land on a recent friend activity timeline. Library additions are grouped per friend into rolling 24-hour batches, alongside current challenge updates. The feed shows the latest 30 entries; expand a batch to see all its games. Select a game name to open its details and add it to your library, or use **+ Add challenge** beside it to create a challenge for that friend. Open a challenge's cover or title to see its description in the challenge details popup. Open **My library** under the account icon to manage your collection.
+Players can favorite up to nine distinct games from the star button in any game details dialog, whether or not the game is in their library. Favorite games appear at the top of the profile. Use the up/down arrows on My profile to choose their order, or the filled star to remove one. Favorites follow profile privacy and survive library-copy removal.
+
+Signed-in players land on a recent friend activity timeline. New game favorites appear there with the player and game; reordering does not bump activity. Library additions are grouped per friend into rolling 24-hour batches, alongside current challenge updates. The feed shows the latest 30 entries; expand a batch to see all its games. Select a game name to open its details and add it to your library, or use **+ Add challenge** beside it to create a challenge for that friend. Open a challenge's cover or title to see its description in the challenge details popup. Open **My library** under the account icon to manage your collection.
 
 ## Start here
 
@@ -46,6 +48,7 @@ Requires Node.js 22.13 or newer, npm, and Twitch developer credentials for IGDB.
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0008_steady_paladin.sql
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0009_abandoned_kingpin.sql
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0010_user_roles.sql
+   node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0011_silly_mongu.sql
    ```
 
    Apply only the migrations that your local database has not yet received.

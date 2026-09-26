@@ -19,7 +19,7 @@ function database() {
   return { db, add: (user: string, game: number, time: number, name = `Game ${game}`) => insert.run(user, game, name, time) };
 }
 
-test("popular games count players once across platform copies and return only the five leaders", () => {
+test("popular games count players once across platform copies and return only the six leaders", () => {
   const { db, add } = database();
   add("a", 1, 1010);
   add("a", 1, 1090, "Game 1 updated");
@@ -31,7 +31,7 @@ test("popular games count players once across platform copies and return only th
   add("a", 7, 999); add("b", 7, 999); add("c", 7, 999); add("d", 7, 999);
 
   const rows = db.prepare(popularGamesQuery).all(1000, 1100) as { igdbId: number; playerCount: number; name: string }[];
-  assert.deepEqual(rows.map((row) => [row.igdbId, row.playerCount]), [[1, 3], [3, 2], [2, 2], [6, 1], [5, 1]]);
+  assert.deepEqual(rows.map((row) => [row.igdbId, row.playerCount]), [[1, 3], [3, 2], [2, 2], [6, 1], [5, 1], [4, 1]]);
   assert.equal(rows[0].name, "Game 1 updated");
   db.close();
 });

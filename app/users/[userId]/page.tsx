@@ -1,3 +1,5 @@
+import FavoriteGames from "../../favorite-games";
+import { getGameFavorites } from "../../../lib/game-favorites";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import SiteHeader from "../../site-header";
@@ -31,10 +33,11 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
   const friendship = await getFriendship(user.userId, targetId);
   const canView = canViewProfile(user, target, friendship?.status);
   const canManageChallenges = hasPermission(user, false);
-  const [games, challengeRows] = canView ? await Promise.all([
+  const [games, challengeRows, favorites] = canView ? await Promise.all([
     getDb().select().from(libraryItems).where(eq(libraryItems.userId, targetId)).orderBy(desc(libraryItems.addedAt)).then((rows) => rows.map(serializeGame)),
     receivedChallenges(targetId),
-  ]) : [[], []];
+    getGameFavorites(targetId),
+  ]) : [[], [], []];
   let displayGames = games;
   const missingCoverGames = games.filter((game) => !game.coverUrl);
   if (missingCoverGames.length) {
@@ -53,6 +56,7 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
   return <main className="library-page"><SiteHeader email={user.email}/><div className="library-wrap">
     <div className="page-heading"><div><p className="eyebrow">{target.isPublic ? "PUBLIC PROFILE" : friendship?.status === "accepted" ? "FRIEND PROFILE" : "PRIVATE PROFILE"}</p><h1>{name}&apos;s profile</h1><p className="subcopy">{canView ? "Games and challenges shared by this player." : "This profile is private. Become friends to see their games and challenges."}</p>{friendship?.status !== "accepted" && <div className="profile-friend-action"><FriendButton userId={targetId} initialRelationship={relationship} refreshOnAccept/></div>}</div>{canView && <div className="game-count"><strong>{games.length.toString().padStart(2, "0")}</strong><span>PLATFORM<br/>COPIES</span></div>}</div>
     {canView ? <>
+      <FavoriteGames initialFavorites={favorites} canManage={hasPermission(user, targetId === user.userId)}/>
       <ChallengeSections rows={challengeRows} viewerId={user.userId} canManage={canManageChallenges} title={`${name}'s challenges`}/>
       <div className="section-title collection-title"><div><p className="eyebrow">SAVED GAMES</p><h2>Library</h2></div></div>
       {games.length ? <PublicLibrary games={displayGames} recipientId={targetId} viewerId={user.userId} challengeRows={challengeRows} canManageChallenges={canManageChallenges} canCreateChallenges={hasPermission(user, friendship?.status === "accepted")}/> : <div className="empty-state"><h2>No games saved yet</h2></div>}

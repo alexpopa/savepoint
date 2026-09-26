@@ -91,3 +91,14 @@ export const challenges = sqliteTable("challenges", {
   index("idx_challenges_creator").on(table.creatorId),
   check("ck_challenge_other_player", sql`${table.creatorId} <> ${table.recipientId}`),
 ]);
+
+export const gameFavorites = sqliteTable("game_favorites", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  igdbId: integer("igdb_id").notNull(),
+  name: text("name").notNull(),
+  coverUrl: text("cover_url"),
+  releaseYear: integer("release_year"),
+  favoritedAt: integer("favorited_at").notNull(),
+  sortOrder: integer("sort_order").notNull(),
+}, (table) => [uniqueIndex("idx_game_favorites_user_game").on(table.userId, table.igdbId)]);

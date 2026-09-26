@@ -32,3 +32,12 @@ test("deleting a newest copy recalculates the batch from remaining additions", (
   assert.equal(batches.length, 1);
   assert.equal(batches[0].at, BATCH_WINDOW);
 });
+
+test("game favorites merge by favorite time and share the thirty-entry limit", () => {
+  const favorite = { kind: "favorite" as const, key: "favorite:1", at: 100 * BATCH_WINDOW, person, igdbId: 1, name: "Game", coverUrl: null, releaseYear: 2000 };
+  const games = Array.from({ length: 40 }, (_, i) => game(i, i * BATCH_WINDOW * 2));
+  const rows = recentTimeline(games, [], [favorite]);
+  assert.equal(rows.length, 30);
+  assert.equal(rows[0], favorite);
+  assert.equal(recentTimeline([], [], []).length, 0);
+});

@@ -103,3 +103,18 @@ Search, library, account, friend, and challenge GET responses use `Cache-Control
 | Identity or redirects | `app/auth.ts`, `app/login/`, and `app/api/auth/` |
 | Stored fields | `db/schema.ts`, `drizzle/`, and library API serialization |
 | Runtime bindings or build | `.openai/hosting.json`, `vite.config.ts`, `scripts/` |
+
+## Favorite games
+
+`game_favorites` stores one independent snapshot per `(user_id, igdb_id)`, including title, cover, release year, `favorited_at`, and `sort_order`. Each player can have at most nine. An atomic conditional insert checks the count and appends the order in the same statement, including concurrent requests. Duplicate adds are idempotent and preserve the timestamp and rank. Games need not be saved in the library; removing a platform copy does not remove a favorite. Unfavoriting removes its current timeline entry; favoriting it again creates a new timestamp and appends it to the list.
+
+The shared game details dialog offers a labeled star toggle with loading, limit, and error feedback. Both profile routes display Favorite games above challenges, in saved order. My profile provides labeled up/down arrows and an unfavorite star, matching favorite challenge controls, with boundaries disabled. Admin viewers can rank and remove another player's favorites through the same controls, using `hasPermission`; opening that player's game details still manages the viewer's own favorites and library. Profiles read favorites only after the existing visibility check. No role or owner email is serialized with a favorite.
+
+| Route | Behavior |
+| --- | --- |
+| `GET /api/game-favorites` | Signed-in viewer's own ordered favorites; private, uncached response. |
+| `POST /api/game-favorites` | Same-origin, signed-in write accepting `{ igdbId }`; validates catalog metadata against IGDB, adds for the viewer only, returns 409 when all nine slots are occupied. Repeated adds are idempotent. |
+| `PATCH /api/game-favorites/:id` | Same-origin write accepting `{ action: "move_up" \| "move_down" }`; owner or admin only. Atomically swaps neighbors against current database order, without updating the favorite timestamp. Boundary moves are no-ops. |
+| `DELETE /api/game-favorites/:id` | Same-origin write; owner or admin only. Removes the favorite and frees a slot. |
+
+Favorites enter the existing friend timeline as separate “favorited a game” entries, sorted by `favorited_at` alongside library batches and challenges under the shared 30-entry limit. Only verified accepted friends qualify, including private friends. A stranger's public profile or an admin role does not subscribe their favorites to the viewer's timeline. Favorite cover/title rows open the shared game details dialog. Reordering never changes activity recency.

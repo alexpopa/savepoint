@@ -530,3 +530,14 @@ button:disabled { cursor: default; }
   .timeline-challenge { padding: 12px; gap: 12px; }
   .timeline-challenge .timeline-cover { width: 48px; }
 }
+
+.favorite-games { margin-bottom: 40px; }
+.favorite-games-help { margin-bottom: 16px; }
+.favorite-games-grid { list-style: none; padding: 0; margin: 0; }
+.favorite-game-card { flex-direction: column; align-items: stretch; gap: 12px; }
+.favorite-game-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.favorite-game-rank { color: var(--rgb-muted); font-size: 0.875rem; font-family: ui-monospace, monospace; }
+.game-favorite-action { margin: 16px 0; }
+.game-favorite-action .platform-action { max-width: 100%; white-space: normal; }
+.game-favorite-action a { color: var(--rgb-info); }
+.favorite-games .section-title { flex-wrap: wrap; }

@@ -8,7 +8,11 @@ export type TimelineChallenge = {
   creator: TimelinePerson; recipient: TimelinePerson;
   state: "pending" | "claimed" | "completed";
 };
-export type TimelineItem = LibraryBatch | TimelineChallenge;
+export type TimelineFavorite = {
+  kind: "favorite"; key: string; at: number; person: TimelinePerson;
+  igdbId: number; name: string; coverUrl: string | null; releaseYear: number | null;
+};
+export type TimelineItem = LibraryBatch | TimelineChallenge | TimelineFavorite;
 
 export function batchLibraryGames(games: TimelineGame[]): LibraryBatch[] {
   const batches: LibraryBatch[] = [];
@@ -25,7 +29,7 @@ export function batchLibraryGames(games: TimelineGame[]): LibraryBatch[] {
   return batches;
 }
 
-export function recentTimeline(games: TimelineGame[], challenges: TimelineChallenge[]): TimelineItem[] {
-  return [...batchLibraryGames(games), ...challenges]
+export function recentTimeline(games: TimelineGame[], challenges: TimelineChallenge[], favorites: TimelineFavorite[] = []): TimelineItem[] {
+  return [...batchLibraryGames(games), ...challenges, ...favorites]
     .sort((a, b) => b.at - a.at || a.key.localeCompare(b.key)).slice(0, 30);
 }
