@@ -265,14 +265,20 @@ button:disabled { cursor: default; }
 .search-loading { flex-direction: row; }
 .search-tip { color: var(--rgb-muted); font-size: 0.875rem; }
 .search-notice { margin-bottom: 24px; }
+.game-grid.popular-games-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.popular-game-card .game-card-open { flex-direction: column; align-items: stretch; min-height: 0; }
+.popular-game-card .game-cover { width: 100%; height: 160px; }
+.popular-player-count { display: block; margin-top: 8px; color: var(--rgb-muted); font-size: 0.8125rem; line-height: 1.4; }
 
 @media (max-width: 920px) {
   .game-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .game-grid.popular-games-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   .topbar { flex-wrap: wrap; gap: 10px 16px; padding: 12px 20px; }
   .header-search { order: 3; min-width: 100%; max-width: none; margin: 0; }
   .game-grid { grid-template-columns: 1fr; }
+  .game-grid.popular-games-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
   .auth-card { padding: 24px 20px; }
@@ -288,6 +294,7 @@ button:disabled { cursor: default; }
   .search-platform-filter { width: min(248px, 100%); min-width: 0; }
 }
 @media (max-width: 420px) {
+  .game-grid.popular-games-grid { grid-template-columns: 1fr; }
   .brand-wordmark { width: 126px; height: 21px; }
   .topbar { padding-inline: 16px; }
   .friend-form, .person-row { align-items: stretch; flex-direction: column; }

@@ -6,6 +6,8 @@ This source repository is [`alexpopa/savepoint`](https://github.com/alexpopa/sav
 
 The interface follows a clean retro RGB direction: the pixel wordmark anchors a dark, sharp-edged layout while game artwork keeps its original rendering style. Game search can be narrowed by one or more platforms; games available on any selected platform are searched in IGDB before applying the 30-result limit. Changing platforms refreshes only the game results in place, keeping the current cards visible while IGDB responds. The Games heading shows the returned result count. The platform dropdown has a search field above full-row checkbox options to narrow choices without changing selections; its separate X control clears selected platforms. Search cards open a larger game file with IGDB details and the full platform list. Save a separate copy for each platform you own; games with only one listed platform can be added directly from search. In My library and on another player's profile, open a game to view its details and manage your own platform copies. Public profiles recover missing covers from IGDB, including legacy rows whose stored IDs no longer resolve, and refresh saved cover URLs when an image fails to load. See the visual style guide before changing the UI.
 
+With no search term, `/search` shows up to five games most added to player libraries in the last 14 days. Each player counts once per game even if they saved several platforms. Missing cover art and older saved game IDs are resolved through IGDB when available. Open a popular game to see its details and add a platform copy.
+
 Signed-in players land on a recent friend activity timeline. Library additions are grouped per friend into rolling 24-hour batches, alongside current challenge updates. The feed shows the latest 30 entries; expand a batch to see all its games. Select a game name to open its details and add it to your library, or use **+ Add challenge** beside it to create a challenge for that friend. Open a challenge's cover or title to see its description in the challenge details popup. Open **My library** under the account icon to manage your collection.
 
 ## Start here
@@ -42,6 +44,7 @@ Requires Node.js 22.13 or newer, npm, and Twitch developer credentials for IGDB.
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0006_tired_mister_fear.sql
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0007_neat_retro_girl.sql
    node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0008_steady_paladin.sql
+   node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0009_abandoned_kingpin.sql
    ```
 
    Apply only the migrations that your local database has not yet received.

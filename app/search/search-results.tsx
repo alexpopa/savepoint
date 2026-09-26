@@ -5,6 +5,7 @@ import { Check, ChevronDown, Gamepad2, LoaderCircle, Plus, Search, UserPlus, Use
 import FriendButton, { type Relationship } from "../friend-button";
 import GameDetailsDialog from "../game-details-dialog";
 import type { CatalogGame, SavedGame } from "../../lib/game-types";
+import type { PopularGame } from "../../lib/popular-games";
 
 type Player = { userId: string; displayName: string; profilePath: string; isPublic: boolean; relationship: Relationship };
 type Tab = "all" | "games" | "players";
@@ -17,7 +18,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data;
 }
 
-export default function SearchResults({ query, signedIn, initialPlatformIds }: { query: string; signedIn: boolean; initialPlatformIds: number[] }) {
+export default function SearchResults({ query, signedIn, initialPlatformIds, popularGames, popularGamesError }: { query: string; signedIn: boolean; initialPlatformIds: number[]; popularGames: PopularGame[]; popularGamesError: boolean }) {
   const [tab, setTab] = useState<Tab>("all");
   const [platformIds, setPlatformIds] = useState<number[]>(initialPlatformIds);
   const [platformMenuOpen, setPlatformMenuOpen] = useState(false);
@@ -30,7 +31,7 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
   const [games, setGames] = useState<CatalogGame[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [saved, setSaved] = useState<SavedGame[]>([]);
-  const [selectedGame, setSelectedGame] = useState<CatalogGame | null>(null);
+  const [selectedGame, setSelectedGame] = useState<(CatalogGame & { libraryIgdbId?: number }) | null>(null);
   const [busyGame, setBusyGame] = useState<number | null>(null);
   const [gamesError, setGamesError] = useState("");
   const [playersError, setPlayersError] = useState("");
@@ -143,13 +144,18 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
   const filteredPlatforms = platforms.filter((platform) => platform.name.toLowerCase().includes(normalizedPlatformSearch));
   const returnParams = new URLSearchParams({ q: query });
   platformIds.forEach((id) => returnParams.append("platform", String(id)));
-  const returnTo = `/search?${returnParams.toString()}`;
+  const returnTo = query ? `/search?${returnParams.toString()}` : "/search";
   const loginPath = `/login?return_to=${encodeURIComponent(returnTo)}`;
   return <div className="library-wrap search-wrap">
     <p className="eyebrow"><Search size={14}/> DISCOVER RGBONER</p>
     <h1>Search</h1>
     <p className="subcopy">Find games to save and players to connect with.</p>
-    {!valid ? <div className="empty-state"><Search size={28}/><h2>Search games and players</h2><p>Enter at least two characters in the search bar above.</p></div> : <>
+    {!valid ? query ? <div className="empty-state"><Search size={28}/><h2>Search games and players</h2><p>Enter at least two characters in the search bar above.</p></div> : <section className="search-group" aria-labelledby="popular-games-heading">
+      <div className="search-group-heading"><div><p className="eyebrow">FROM PLAYER LIBRARIES</p><h2 id="popular-games-heading">Popular in the last 2 weeks</h2></div><span>Most added games</span></div>
+      {popularGamesError ? <div className="search-empty" role="alert">Popular games are temporarily unavailable.</div> : popularGames.length ? <div className="game-grid popular-games-grid">{popularGames.map((game) => <article className="game-card popular-game-card" key={game.igdbId}>
+        <button className="game-card-open" type="button" onClick={() => setSelectedGame({ ...game, libraryIgdbId: game.igdbId, igdbId: game.catalogIgdbId })} aria-label={`View details and platforms for ${game.name}`}><div className="game-cover">{game.coverUrl ? <img src={game.coverUrl} alt="" loading="lazy"/> : <div className="cover-fallback"><Gamepad2 size={25}/></div>}</div><div className="game-info"><h3>{game.name}</h3><p>{game.releaseYear || "Release year unknown"}</p><span className="popular-player-count">{game.playerCount} {game.playerCount === 1 ? "player" : "players"} added</span></div></button>
+      </article>)}</div> : <div className="search-empty">No games have been added in the last 2 weeks yet.</div>}
+    </section> : <>
       <p className="search-summary">Results for <strong>“{query}”</strong></p>
       <div className="search-tabs" role="tablist" aria-label="Result type">
         {(["all", "games", "players"] as const).map((value) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}>{value === "all" ? <Search size={15}/> : value === "games" ? <Gamepad2 size={16}/> : <Users size={16}/>} {value === "all" ? "All" : value === "games" ? `Games${loadingGames ? "" : ` ${games.length}`}` : `Players${loadingPlayers ? "" : ` ${players.length}`}`}</button>)}
@@ -194,6 +200,6 @@ export default function SearchResults({ query, signedIn, initialPlatformIds }: {
       </section>}
       {done && !gamesError && !playersError && games.length === 0 && players.length === 0 && <p className="search-tip">Try a shorter name or a different spelling.</p>}
     </>}
-    {selectedGame && <GameDetailsDialog game={selectedGame} saved={saved.filter((item) => item.igdbId === selectedGame.igdbId)} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelectedGame(null)} onAdd={(platformId) => addGame(selectedGame, platformId)} onRemove={removeGame}/>}
+    {selectedGame && <GameDetailsDialog game={selectedGame} saved={saved.filter((item) => item.igdbId === selectedGame.igdbId || item.igdbId === selectedGame.libraryIgdbId)} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelectedGame(null)} onAdd={(platformId) => addGame(selectedGame, platformId)} onRemove={removeGame}/>}
   </div>;
 }

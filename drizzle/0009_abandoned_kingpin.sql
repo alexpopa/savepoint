@@ -1,0 +1,2 @@
+CREATE INDEX `idx_library_added_at_game_user` ON `library_items` (`added_at`,`igdb_id`,`user_id`);--> statement-breakpoint
+CREATE INDEX `idx_library_game_added_at` ON `library_items` (`igdb_id`,`added_at`);
