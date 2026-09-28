@@ -50,6 +50,9 @@ Local D1 state is stored under `.wrangler/state`. Keep the `--persist-to .wrangl
 | `npm run start` | Serve the built worker with local Wrangler and the same persisted D1 state. |
 | `npm run db:generate` | Generate a Drizzle SQL migration from `db/schema.ts` changes. |
 | `npm run lint` | Run ESLint. |
+| `npm run typecheck` | Type check the project with TypeScript. |
+| `npm test` | Run the `node:test` suites in `tests/`. |
+| `npm run check` | Run lint, type check, and tests. Every change must pass it before it is finished. |
 
 `scripts/execution-profile.mjs` reads the ignored `.sites-runtime/execution-profile.json`. A missing file means `portable`. The `managed-linux` profile uses a different build and development runner. Both profiles use the same D1-backed email authentication.
 

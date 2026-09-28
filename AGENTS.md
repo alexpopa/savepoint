@@ -1,32 +1,64 @@
 # Working on RGBoner
 
-Read [README.md](README.md), [docs/development.md](docs/development.md), and [docs/architecture.md](docs/architecture.md) before changing behavior or setup. The implementation remains the source of truth when documentation and code disagree.
+RGBoner is a retro RGB-styled social game library: verified email accounts, IGDB-backed game search, per-platform libraries, friendships, challenges, a Top 9 of favorite games, and a friends timeline. It is a Vinext (Next.js App Router on Vite) Cloudflare Worker with D1 via Drizzle, deployed through ChatGPT Sites. Several AI coding agents work on this repository, so this file is the shared contract. Instructions here outrank habits from other projects.
 
-Before any visual or styling change, read [docs/style-guide.md](docs/style-guide.md) and inspect the current wordmark in `app/site-header.tsx` and favicon in `public/favicon.svg`. Follow the guide's brand, imagery, accessibility, and review rules. Preserve the logo's glyphs and RGB colors unless the user explicitly requests a brand change. Keep the guide current when visual decisions change.
+## Sources of truth
 
-## Authorization and role privacy
+Read what the task touches before changing anything. The code is the final authority; when a document disagrees with it, fix the document in the same change.
 
-Admins have every application permission. Use `lib/permissions.ts` for all new server-side permission checks so admin access bypasses ordinary ownership, privacy, friendship, and participant restrictions. Authentication, same-origin writes, input validation, verified-account eligibility, and database integrity still apply. Roles come only from the authenticated account's `account_roles` row, loaded by `app/auth.ts` on each request. Read [roles and permissions](docs/architecture.md#roles-and-permissions) before adding authorization or admin-specific behavior.
+| Topic | File |
+| --- | --- |
+| Entry point and product behavior | [README.md](README.md) |
+| Coding conventions and settled decisions | [docs/conventions.md](docs/conventions.md) — read before writing code |
+| Behavior, request flow, API, data model, permissions | [docs/architecture.md](docs/architecture.md) |
+| Local setup, commands, database and roles | [docs/development.md](docs/development.md) |
+| Visual design, brand, accessibility | [docs/style-guide.md](docs/style-guide.md) — read before any UI change |
+| Friends timeline rules | [docs/timeline-design.md](docs/timeline-design.md) |
+| Releases | [docs/deployment.md](docs/deployment.md) — only when asked to publish |
 
-Never expose another player's role in public responses or UI, add admin badges or special styling, or add an admin management UI or role mutation endpoint. Admins can view private profiles and still use the ordinary friend button; role access must not create a friendship. Grants and revocations require explicitly authorized, trusted D1 operations, as documented in [development](docs/development.md#roles-and-trusted-administration).
+## Start of every task
 
-## Key locations
+1. Run `git status` and `git log --oneline -10`. Uncommitted changes you did not make belong to the user or another agent: build on them, never revert, restyle, or "clean up" them, and mention them in your summary.
+2. Read the relevant sources above and the code you will change, including its nearest existing sibling (another route, page, or component doing the same kind of job). Copy that sibling's pattern.
+3. If the request conflicts with a rule here or a settled decision in `docs/conventions.md`, say so and ask before proceeding.
 
-- `app/library.tsx`: client-side search and collection UI.
-- `app/api/`: authenticated search and collection endpoints.
-- `app/chatgpt-auth.ts`: user header parsing and sign-in redirects.
-- `lib/igdb.ts`: server-side Twitch token and IGDB access.
-- `db/schema.ts` and `drizzle/`: D1 schema and migrations.
-- `vite.config.ts`, `build/sites-vite-plugin.ts`, and `.openai/hosting.json`: local runtime, simulated sign-in, and hosting binding configuration.
+## Commands
 
-## Local run commands
+- `npm run dev` — local preview at `http://localhost:5173/`. Use this for any "preview", "refresh", "restart", or "redeploy locally" request; reuse a running dev server rather than starting a second one.
+- `npm run check` — lint, type check, and unit tests. Run it before you finish; a change is not done while it fails.
+- `npm run build` then `npm run start` — the built Worker through local Wrangler, only when explicitly asked.
+- `npm run db:generate` — generate a migration after editing `db/schema.ts` (see [development](docs/development.md#database-changes)).
 
-- For local preview, refresh, restart, or “redeploy locally” requests, use `npm run dev` and the documented URL `http://localhost:5173/`.
-- `npm run build` followed by `npm run start` serves the built Worker through local Wrangler. Use that runner only when the user explicitly asks to run the built Worker; do not infer it from “redeploy locally.”
-- If a local server is already running, reuse or restart the project’s dev server rather than starting a second runner.
+## Boundaries
 
-## Keep the docs current
+**Always**
+- Put new server-side authorization through `hasPermission` / `canViewProfile` in `lib/permissions.ts` so admins keep every permission. Authentication, same-origin writes, input validation, verified accounts, and data integrity still apply to admins.
+- Validate every request body on the server and load stored game details from IGDB by ID; never trust client-supplied names, covers, years, platforms, or roles.
+- Add a new forward migration for every schema change; treat applied migrations as immutable.
+- Update the affected documentation in the same change, describing current behavior with no dated change entries.
 
-For every completed app change, update the relevant documentation in the same change so it describes the app's current behavior and setup. Add new explanations where needed, revise outdated ones, and remove instructions that no longer apply. Keep `README.md` as the entry point, `docs/development.md` as the setup and database guide, and `docs/architecture.md` as the behavior and API guide. Do not add dated change entries; Git records history.
+**Ask first**
+- Adding, upgrading, or removing a dependency.
+- Schema changes, new tables, or destructive data operations.
+- Changes to authentication, sessions, email delivery, or privacy rules.
+- Brand changes (wordmark glyphs, logo colors, favicon) or a new design direction.
+- Large refactors or reformatting of code outside the task.
 
-Add migrations for schema changes and document how to apply them. Keep secrets out of documentation and browser code. Do not edit generated `dist/`, `.next/`, `.vinext/`, or `.wrangler/` output as source. A change is complete only after its documentation is accurate.
+**Never**
+- Expose another player's role, email, or private data in responses or UI; add admin badges, admin UI, or role mutation endpoints. Role grants are trusted D1 operations only ([development](docs/development.md#roles-and-trusted-administration)).
+- Put secrets in source, docs, or browser code, or commit `.dev.vars`.
+- Edit generated output (`dist/`, `.next/`, `.vinext/`, `.wrangler/`) or vendored shadcn files in `components/ui/`.
+- Commit, push, publish to Sites, or touch production data unless the user asks in this conversation.
+- Leave lock files, scratch files, or debug output in the repository.
+
+## Definition of done
+
+1. The change follows [docs/conventions.md](docs/conventions.md) and matches its neighbors.
+2. `npm run check` passes. Behavior changes to pure logic or SQL have a test in `tests/`.
+3. UI changes were reviewed against the style guide at desktop, 320px width, keyboard focus, and reduced motion.
+4. README, architecture, development, and style guide say what the code now does; instructions that no longer apply are removed.
+5. Your final message lists what changed, what you verified, what you could not verify, and any uncommitted work you found.
+
+## Commits (when asked to commit)
+
+One logical change per commit, with its documentation. Imperative subject under 72 characters that says what the change does, for example `Add Top 9 cover wall to profiles`. Keep history in Git, not in the docs.

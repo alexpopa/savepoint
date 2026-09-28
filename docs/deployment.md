@@ -21,8 +21,7 @@ If the manifest has no `project_id`, check whether RGBoner already exists in the
 
    ```sh
    npm run install:ci
-   npm run lint
-   ./node_modules/.bin/tsc --noEmit --incremental false
+   npm run check
    npm run build
    ```
 
@@ -50,7 +49,7 @@ Every deployment URL is a production URL, including one with owner-only access. 
 3. Read `project_id` from `.openai/hosting.json`. Call Sites `get_site` for that exact ID, record its current audience, and obtain a source-repository write credential without automatic publish-on-push. The credential's remote and branch are authoritative; do not assume they match GitHub. Keep its token in memory and pass it to the workflow only through protected stdin, as the `sites-hosting` skill directs.
 4. Create a **fresh, empty temporary directory outside this project checkout**. Start `site-workflow.mjs` there in opening mode, without `source` or `archivePath`. Retain its result as `source`. Confirm that `source.checkout_path` is a separate, clean checkout of the existing Site source and that its `.openai/hosting.json` has the same `project_id`. If any check fails, stop; do not build from the project checkout.
 5. Compare that Site checkout with the exact GitHub commit pushed in step 1. Inspect Site-only files and differences; stop if any Site-only file has an unclear purpose. In the Site checkout, fetch the verified GitHub `main`, confirm `FETCH_HEAD` equals the recorded GitHub SHA, then run `git restore --source=FETCH_HEAD --staged --worktree :/`. Confirm `git write-tree` in the Site checkout equals the GitHub commit's tree hash (`git rev-parse <GitHub SHA>^{tree}`). This copies the source without merging histories. Stop on uncommitted Site changes, a project-ID mismatch, or a remote race. Never reset, rebase, or force-push the Site branch.
-6. Run the workflow again with `source`, an absolute temporary `archivePath`, and the four preparation commands above, in order. It builds, commits and pushes the Site source, verifies the pushed commit, and packages the matching artifact. The Site commit SHA may differ from GitHub's; confirm its tree hash still equals the GitHub tree hash. Confirm the archive contains `dist/server/index.js`, `.openai/hosting.json`, and migrations. If only source synchronization was requested, stop here.
+6. Run the workflow again with `source`, an absolute temporary `archivePath`, and the three preparation commands above, in order. It builds, commits and pushes the Site source, verifies the pushed commit, and packages the matching artifact. The Site commit SHA may differ from GitHub's; confirm its tree hash still equals the GitHub tree hash. Confirm the archive contains `dist/server/index.js`, `.openai/hosting.json`, and migrations. If only source synchronization was requested, stop here.
 7. Call Sites `save_site_version` with the returned `project_id`, `commit_sha`, and archive. If only a saved candidate was requested, stop here. Otherwise deploy that saved version with the Site's existing audience and wait for a **succeeded** deployment. Report the URL returned by Sites.
 
 The [Sites guide](https://learn.chatgpt.com/docs/sites#understand-projects-versions-and-deployments) explains the source-commit/version association. The installed `sites-hosting` skill owns the workflow invocation and current native tool schemas; use this runbook for RGBoner's release order and app-specific checks.
