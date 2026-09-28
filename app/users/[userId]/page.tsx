@@ -2,14 +2,16 @@ import FavoriteGames from "../../favorite-games";
 import { getGameFavorites } from "../../../lib/game-favorites";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
+import { Gamepad2, Lock } from "lucide-react";
 import SiteHeader from "../../site-header";
 import FriendButton from "../../friend-button";
-import { ChallengeSections } from "../../challenges";
+import { ProfileChallenges } from "../../challenges";
+import { ProfileNameplate } from "../../profile-nameplate";
 import PublicLibrary from "./public-library";
 import { requireUser } from "../../auth";
 import { getDb } from "../../../db";
 import { accounts, libraryItems } from "../../../db/schema";
-import { receivedChallenges } from "../../../lib/challenges";
+import { isComplete, receivedChallenges } from "../../../lib/challenges";
 import { getIgdbGameCoversForGames } from "../../../lib/igdb";
 import { profilePath } from "../../../lib/profile-path";
 import { accountDisplayName, ensureAccount, getFriendship, serializeGame } from "../../../lib/social";
@@ -53,13 +55,23 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
   }
   const relationship = friendship ? { status: friendship.status, direction: friendship.requesterId === user.userId ? "outgoing" as const : "incoming" as const } : null;
   const name = accountDisplayName(target);
-  return <main className="library-page"><SiteHeader email={user.email}/><div className="library-wrap">
-    <div className="page-heading"><div><p className="eyebrow">{target.isPublic ? "PUBLIC PROFILE" : friendship?.status === "accepted" ? "FRIEND PROFILE" : "PRIVATE PROFILE"}</p><h1>{name}&apos;s profile</h1><p className="subcopy">{canView ? "Games and challenges shared by this player." : "This profile is private. Become friends to see their games and challenges."}</p>{friendship?.status !== "accepted" && <div className="profile-friend-action"><FriendButton userId={targetId} initialRelationship={relationship} refreshOnAccept/></div>}</div>{canView && <div className="game-count"><strong>{games.length.toString().padStart(2, "0")}</strong><span>PLATFORM<br/>COPIES</span></div>}</div>
+  const cleared = challengeRows.filter(isComplete).length;
+  const status = friendship?.status === "accepted" ? "friend" : target.isPublic ? "public" : "private";
+  return <main className="library-page"><SiteHeader email={user.email}/><div className="library-wrap profile-wrap">
+    <ProfileNameplate seed={targetId} name={name} status={status} stats={canView ? [
+      { label: "Games", value: new Set(games.map((game) => game.igdbId)).size, href: "#library" },
+      { label: "Cleared", value: cleared },
+      { label: "Pending", value: challengeRows.length - cleared },
+    ] : undefined}>
+      {friendship?.status !== "accepted" && <FriendButton userId={targetId} initialRelationship={relationship} refreshOnAccept/>}
+    </ProfileNameplate>
     {canView ? <>
       <FavoriteGames initialFavorites={favorites} canManage={hasPermission(user, targetId === user.userId)}/>
-      <ChallengeSections rows={challengeRows} viewerId={user.userId} canManage={canManageChallenges} title={`${name}'s challenges`}/>
-      <div className="section-title collection-title"><div><p className="eyebrow">SAVED GAMES</p><h2>Library</h2></div></div>
-      {games.length ? <PublicLibrary games={displayGames} recipientId={targetId} viewerId={user.userId} challengeRows={challengeRows} canManageChallenges={canManageChallenges} canCreateChallenges={hasPermission(user, friendship?.status === "accepted")}/> : <div className="empty-state"><h2>No games saved yet</h2></div>}
-    </> : <div className="empty-state"><h2>Private profile</h2><p>Send a friend request to see this player&apos;s games and challenges after they accept.</p></div>}
+      <ProfileChallenges received={challengeRows} viewerId={user.userId} canManage={canManageChallenges}/>
+      <section className="profile-section" id="library" aria-labelledby="library-title">
+        <div className="profile-section-head"><h2 id="library-title" className="profile-label"><Gamepad2 size={15} aria-hidden="true"/>Library</h2></div>
+        {games.length ? <PublicLibrary games={displayGames} recipientId={targetId} viewerId={user.userId} challengeRows={challengeRows} canManageChallenges={canManageChallenges} canCreateChallenges={hasPermission(user, friendship?.status === "accepted")}/> : <p className="challenge-section-empty">No games saved yet.</p>}
+      </section>
+    </> : <div className="profile-locked"><Lock size={26} aria-hidden="true"/><h2>Friends only</h2></div>}
   </div></main>;
 }

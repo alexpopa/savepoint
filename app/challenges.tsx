@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Circle, Flag, Gamepad2, Plus, Star, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Circle, Flag, Gamepad2, Plus, Star, Trophy, X } from "lucide-react";
 import type { Challenge, ChallengeDetails } from "../lib/challenges";
 import type { ConfirmationParticipant } from "../lib/permissions";
 
@@ -195,29 +195,83 @@ export function ChallengeDetailsDialog({ row, viewerId, onClose }: { row: Challe
   </dialog>;
 }
 
-export function ChallengeSections({ rows, viewerId, ownerControls = false, canManage = false, title = "Challenges" }: { rows: Challenge[]; viewerId: string; ownerControls?: boolean; canManage?: boolean; title?: string }) {
-  const [currentRows, setCurrentRows] = useState(rows);
+type LogTab = "pending" | "completed" | "sent";
+
+// Favorite completed challenges are the player's trophies; everything else lives in the tabbed log.
+export function ProfileChallenges({ received, sent, viewerId, ownerControls = false, canManage = false }: { received: Challenge[]; sent?: Challenge[]; viewerId: string; ownerControls?: boolean; canManage?: boolean }) {
+  const [receivedRows, setReceivedRows] = useState(received);
+  const [sentRows, setSentRows] = useState(sent ?? []);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
-  const active = currentRows.filter((row) => !row.declined);
+  const active = receivedRows.filter((row) => !row.declined);
   const pending = active.filter((row) => !completed(row));
   const done = active.filter(completed);
-  const declined = currentRows.filter((row) => row.declined);
+  const trophies = done.filter((row) => row.isFavorite);
+  const tabs: { key: LogTab; label: string; items: Challenge[]; empty: string }[] = [
+    { key: "pending", label: "Pending", items: pending, empty: "Nothing pending." },
+    { key: "completed", label: "Completed", items: done, empty: "No completed challenges yet." },
+    ...(sent ? [{ key: "sent" as const, label: "Sent", items: sentRows, empty: "No challenges sent yet." }] : []),
+  ];
+  const [tab, setTab] = useState<LogTab>(pending.length || !done.length ? "pending" : "completed");
+  const current = tabs.find((item) => item.key === tab) ?? tabs[0];
   function updateConfirmation(id: number, confirmed: boolean, participant: ConfirmationParticipant) {
-    setCurrentRows((current) => current.map((row) => {
-      if (row.id !== id) return row;
-      return participant === "recipient" ? { ...row, recipientConfirmed: confirmed } : { ...row, creatorConfirmed: confirmed };
-    }));
+    const update = (rows: Challenge[]) => rows.map((row) => row.id !== id ? row
+      : participant === "recipient" ? { ...row, recipientConfirmed: confirmed } : { ...row, creatorConfirmed: confirmed });
+    setReceivedRows(update);
+    setSentRows(update);
   }
-  function cards(items: Challenge[]) {
-    return <div className="challenge-grid">{items.map((row, index) => <ChallengeCard key={row.id} row={row} viewerId={viewerId} ownerControls={ownerControls} canManage={canManage} moveUp={index > 0} moveDown={index < items.length - 1} onConfirmationChange={(confirmed, participant) => updateConfirmation(row.id, confirmed, participant)} onOpen={() => setSelectedChallenge(row)}/>)}</div>;
+  function focusTab(index: number) {
+    const next = tabs[(index + tabs.length) % tabs.length];
+    setTab(next.key);
+    document.getElementById(`challenge-tab-${next.key}`)?.focus();
   }
-  function section(label: string, items: Challenge[]) {
-    const favorites = items.filter((row) => row.isFavorite);
-    const others = items.filter((row) => !row.isFavorite);
-    return <section className="challenge-section"><div className="section-title"><div><p className="eyebrow">{label.toUpperCase()}</p><h2>{label} <span className="small-count">{items.length}</span></h2></div></div>{items.length ? <>{favorites.length > 0 && <div className="challenge-featured"><h3><Star size={17} fill="currentColor"/> Favorites</h3>{cards(favorites)}</div>}{others.length > 0 && cards(others)}</> : <p className="challenge-section-empty">No {label.toLowerCase()} challenges yet.</p>}</section>;
+  function cards(items: Challenge[], rankable: boolean) {
+    return <div className="challenge-grid">{items.map((row, index) => <ChallengeCard key={row.id} row={row} viewerId={viewerId} ownerControls={ownerControls && rankable} canManage={canManage} moveUp={index > 0} moveDown={index < items.length - 1} onConfirmationChange={(confirmed, participant) => updateConfirmation(row.id, confirmed, participant)} onOpen={() => setSelectedChallenge(row)}/>)}</div>;
+  }
+  function panel(items: Challenge[], rankable: boolean, empty: string) {
+    if (!items.length) return <p className="challenge-section-empty">{empty}</p>;
+    const favorites = rankable ? items.filter((row) => row.isFavorite) : [];
+    const others = rankable ? items.filter((row) => !row.isFavorite) : items;
+    return <>
+      {favorites.length > 0 && <div className="challenge-featured"><h3><Star size={17} fill="currentColor" aria-hidden="true"/> Favorites</h3>{cards(favorites, true)}</div>}
+      {others.length > 0 && cards(others, rankable)}
+    </>;
   }
   return <>
-    <div className="profile-challenges"><div className="section-title"><div><p className="eyebrow">PLAYER CHALLENGES</p><h2>{title}</h2></div></div>{section("Pending", pending)}{section("Completed", done)}{declined.length > 0 && section("Declined", declined)}</div>
+    {(trophies.length > 0 || ownerControls) && <section className="profile-section" aria-labelledby="trophies-title">
+      <div className="profile-section-head"><h2 id="trophies-title" className="profile-label"><Trophy size={15} aria-hidden="true"/>Trophies</h2></div>
+      {trophies.length
+        ? <ol className="trophy-case">{trophies.map((row) => <TrophyCard key={row.id} row={row} viewerId={viewerId} onOpen={() => setSelectedChallenge(row)}/>)}</ol>
+        : <p className="trophy-empty"><Star size={16} aria-hidden="true"/>Star a completed challenge to keep it here.</p>}
+    </section>}
+    <section className="profile-section challenge-log" aria-labelledby="challenge-log-title">
+      <div className="profile-section-head"><h2 id="challenge-log-title" className="profile-label"><Flag size={15} aria-hidden="true"/>Challenges</h2></div>
+      <div className="profile-tabs" role="tablist" aria-labelledby="challenge-log-title">
+        {tabs.map((item, index) => <button key={item.key} type="button" role="tab" id={`challenge-tab-${item.key}`} aria-selected={item.key === current.key} aria-controls="challenge-log-panel" tabIndex={item.key === current.key ? 0 : -1} className="profile-tab" onClick={() => setTab(item.key)} onKeyDown={(event) => {
+          if (event.key === "ArrowRight") { event.preventDefault(); focusTab(index + 1); }
+          if (event.key === "ArrowLeft") { event.preventDefault(); focusTab(index - 1); }
+        }}>{item.label}<span className="profile-tab-count">{item.items.length}</span></button>)}
+      </div>
+      <div className="profile-tab-panel" role="tabpanel" id="challenge-log-panel" aria-labelledby={`challenge-tab-${current.key}`}>
+        {panel(current.items, current.key !== "sent", current.empty)}
+      </div>
+    </section>
     {selectedChallenge && <ChallengeDetailsDialog row={selectedChallenge} viewerId={viewerId} onClose={() => setSelectedChallenge(null)}/>}
   </>;
+}
+
+function TrophyCard({ row, viewerId, onOpen }: { row: Challenge; viewerId: string; onOpen: () => void }) {
+  const [coverUnavailable, setCoverUnavailable] = useState(false);
+  return <li className="trophy">
+    <button type="button" className="trophy-cover" aria-label={`View challenge details for ${row.title}`} onClick={onOpen}>
+      {row.gameCoverUrl && !coverUnavailable
+        ? <img src={row.gameCoverUrl} alt={`${row.gameName} cover`} loading="lazy" onError={() => setCoverUnavailable(true)}/>
+        : <span className="cover-fallback challenge-cover-fallback"><Gamepad2 size={25} aria-hidden="true"/><span>{row.gameName.slice(0, 1)}</span></span>}
+    </button>
+    <div className="trophy-body">
+      <p className="trophy-game">{row.gameName}</p>
+      <button type="button" className="trophy-title" onClick={onOpen}><span role="heading" aria-level={3}>{row.title}</span></button>
+      <p className="trophy-by"><span className="trophy-seal" role="img" aria-label="Completed by both players"><Circle size={9} fill="currentColor" aria-hidden="true"/><Circle size={9} fill="currentColor" aria-hidden="true"/></span>
+        {row.creatorId === viewerId ? "From you" : <>From <a className="inline-link" href={row.creatorProfilePath}>{row.creatorName}</a></>}</p>
+    </div>
+  </li>;
 }
