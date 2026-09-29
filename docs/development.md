@@ -9,7 +9,7 @@
 
 From the repository root:
 
-1. Copy `.dev.vars.example` to `.dev.vars` and replace the two IGDB placeholders. `AUTH_EMAIL_MODE=console` prints local verification and password reset links in the server log; use only for local development. The Cloudflare Vite runtime reads these values as server-side bindings. `.dev.vars` is ignored by Git.
+1. Copy `.dev.vars.example` to `.dev.vars` and replace the two IGDB placeholders. `AUTH_EMAIL_MODE=console` prints every outgoing email (verification, password reset, and friend request) in the server log instead of sending it; use only for local development. The Cloudflare Vite runtime reads these values as server-side bindings. `.dev.vars` is ignored by Git.
 2. Run `npm run install:ci` to install the locked dependencies.
 3. Run `npm run build` to produce `dist/server/wrangler.json`, which the local D1 migration command uses.
 4. Apply the checked-in migrations to local D1 in order:
@@ -110,7 +110,7 @@ Run `node --experimental-strip-types --test tests/permissions.test.ts` for the p
 
 Use [Deploy RGBoner with Sites](deployment.md) for the release steps, Site secrets, audience settings, production migrations, verification, and recovery. `.openai/hosting.json` requests a logical D1 binding named `DB`; `db/index.ts` uses that binding. The build copies checked-in Drizzle migrations to `dist/.openai/drizzle/`, and Sites applies pending migrations to hosted D1 during publication before uploading the Worker. Local Wrangler migration commands above do not update hosted D1.
 
-The hosted Site needs `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, and `RESEND_API_KEY` as Site secrets, plus `AUTH_EMAIL_FROM` on a verified sender domain and `AUTH_PUBLIC_URL` set to its HTTPS origin. The app authenticates visitors from its own D1 accounts and sessions. To let visitors reach its sign-in page without ChatGPT login, the Site audience must be public. Email verification is required before sign-in; the same email service sends password reset links. The local console delivery mode is disabled for non-local hosts. Existing ChatGPT-based records remain in D1 but are excluded from the new account directory and cannot sign in.
+The hosted Site needs `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, and `RESEND_API_KEY` as Site secrets, plus `AUTH_EMAIL_FROM` on a verified sender domain and `AUTH_PUBLIC_URL` set to its HTTPS origin. The app authenticates visitors from its own D1 accounts and sessions. To let visitors reach its sign-in page without ChatGPT login, the Site audience must be public. Email verification is required before sign-in; the same email service sends password reset links and friend request notifications. The local console delivery mode is disabled for non-local hosts. Existing ChatGPT-based records remain in D1 but are excluded from the new account directory and cannot sign in.
 
 Registration exceptions are written to the server's error output with their stack trace while the browser receives only a generic error. In local development, inspect the server terminal. In production, ask Codex to inspect the Site's production Worker logs; Sites Analytics shows traffic metrics, not exception details. Do not log request bodies or credentials.
 

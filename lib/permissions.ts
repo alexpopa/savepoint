@@ -8,7 +8,7 @@ export function hasPermission(user: PermissionUser | null, ordinarilyAllowed: bo
 }
 
 export function canViewProfile(user: PermissionUser | null, account: { userId: string; isPublic: boolean }, friendshipStatus?: string): boolean {
-  return hasPermission(user, account.userId === user?.userId || account.isPublic || friendshipStatus === "accepted");
+  return account.isPublic || hasPermission(user, account.userId === user?.userId || friendshipStatus === "accepted");
 }
 
 export function confirmationParticipant(user: PermissionUser, challenge: { recipientId: string; creatorId: string }, requested?: unknown): ConfirmationParticipant | null {

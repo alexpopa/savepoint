@@ -9,8 +9,10 @@ const regular = { userId: "player", isAdmin: false };
 const target = { userId: "target", isPublic: false };
 const challenge = { creatorId: "creator", recipientId: "recipient" };
 
-test("profile access requires sign-in, and admins bypass privacy independently of friendship", () => {
-  assert.equal(canViewProfile(null, { ...target, isPublic: true }), false);
+test("guests can view public profiles, while private profiles require friendship or admin access", () => {
+  assert.equal(canViewProfile(null, { ...target, isPublic: true }), true);
+  assert.equal(canViewProfile(null, target), false);
+  assert.equal(canViewProfile(null, target, "accepted"), false);
   for (const status of [undefined, "pending", "accepted"]) {
     assert.equal(canViewProfile(admin, target, status), true);
     assert.equal(canViewProfile(regular, target, status), status === "accepted");

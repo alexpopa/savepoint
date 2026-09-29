@@ -36,8 +36,30 @@ export function BrandWordmark() {
 
 export default function SiteHeader({ email, query = "" }: { email?: string; query?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const signInHref = "/login";
+
+  useEffect(() => {
+    let active = true;
+    async function refreshPendingRequestCount() {
+      try {
+        const response = await fetch("/api/friends/pending-count");
+        if (!response.ok) return;
+        const result = await response.json() as { count?: unknown };
+        if (active && Number.isSafeInteger(result.count) && (result.count as number) >= 0) setPendingRequestCount(result.count as number);
+      } catch {}
+    }
+
+    if (email) {
+      void refreshPendingRequestCount();
+      window.addEventListener("friend-requests-changed", refreshPendingRequestCount);
+    }
+    return () => {
+      active = false;
+      window.removeEventListener("friend-requests-changed", refreshPendingRequestCount);
+    };
+  }, [email]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -80,11 +102,12 @@ export default function SiteHeader({ email, query = "" }: { email?: string; quer
         <button
           className="account-menu-trigger"
           type="button"
-          aria-label="Account menu"
+          aria-label={pendingRequestCount > 0 ? `Account menu, ${pendingRequestCount} pending friend requests` : "Account menu"}
           aria-expanded={menuOpen}
-          title="Account menu"
+          title={pendingRequestCount > 0 ? `Account menu, ${pendingRequestCount} pending friend requests` : "Account menu"}
           onClick={() => setMenuOpen((open) => !open)}
         >
+          {pendingRequestCount > 0 && <span className="friend-request-badge" aria-hidden="true">{pendingRequestCount}</span>}
           <UserRound size={21} aria-hidden="true"/>
           <ChevronDown size={14} aria-hidden="true"/>
         </button>
@@ -93,7 +116,7 @@ export default function SiteHeader({ email, query = "" }: { email?: string; quer
             <a className="account-menu-link" href="/library" onClick={() => setMenuOpen(false)}><Gamepad2 size={18} aria-hidden="true"/>My library</a>
             <a className="account-menu-link" href="/profile" onClick={() => setMenuOpen(false)}><UserRound size={18} aria-hidden="true"/>My profile</a>
             <a className="account-menu-link" href="/users" onClick={() => setMenuOpen(false)}><Users size={18} aria-hidden="true"/>Browse players</a>
-            <a className="account-menu-link" href="/settings" onClick={() => setMenuOpen(false)}><Settings size={18} aria-hidden="true"/>Settings &amp; friends</a>
+            <a className="account-menu-link" href="/settings" aria-label={pendingRequestCount > 0 ? `Settings & friends, ${pendingRequestCount} pending friend requests` : undefined} onClick={() => setMenuOpen(false)}><Settings size={18} aria-hidden="true"/>Settings &amp; friends{pendingRequestCount > 0 && <span className="friend-request-badge" aria-hidden="true">{pendingRequestCount}</span>}</a>
             <form className="account-menu-signout" action="/api/auth/logout" method="post">
               <button className="account-menu-link" type="submit"><LogOut size={18} aria-hidden="true"/>Sign out</button>
             </form>

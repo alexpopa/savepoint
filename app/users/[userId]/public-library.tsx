@@ -14,6 +14,8 @@ type Props = {
   challengeRows: Challenge[];
   canCreateChallenges: boolean;
   canManageChallenges?: boolean;
+  signedIn: boolean;
+  loginPath: string;
 };
 
 type PublicGame = SavedGame & { catalogIgdbId?: number };
@@ -25,7 +27,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return result as T;
 }
 
-export default function PublicLibrary({ games, recipientId, viewerId, challengeRows, canCreateChallenges, canManageChallenges = false }: Props) {
+export default function PublicLibrary({ games, recipientId, viewerId, challengeRows, canCreateChallenges, canManageChallenges = false, signedIn, loginPath }: Props) {
   const [selected, setSelected] = useState<PublicGame | null>(null);
   const [saved, setSaved] = useState<SavedGame[]>([]);
   const [coverOverrides, setCoverOverrides] = useState<Record<number, string | null>>({});
@@ -35,8 +37,8 @@ export default function PublicLibrary({ games, recipientId, viewerId, challengeR
   const pendingCoverRefreshes = useRef(new Set<number>());
 
   useEffect(() => {
-    api<{ games: SavedGame[] }>("/api/library").then(({ games }) => setSaved(games)).catch(() => {});
-  }, []);
+    if (signedIn) api<{ games: SavedGame[] }>("/api/library").then(({ games }) => setSaved(games)).catch(() => {});
+  }, [signedIn]);
 
   async function refreshSaved() {
     const data = await api<{ games: SavedGame[] }>("/api/library");
@@ -59,6 +61,10 @@ export default function PublicLibrary({ games, recipientId, viewerId, challengeR
   }
 
   async function recoverCover(igdbId: number, failedCoverUrl: string) {
+    if (!signedIn) {
+      setUnavailableCovers((current) => ({ ...current, [igdbId]: true }));
+      return;
+    }
     if (pendingCoverRefreshes.current.has(igdbId)) return;
     if (attemptedCoverRefreshes.current.has(igdbId)) {
       setUnavailableCovers((current) => ({ ...current, [igdbId]: true }));
@@ -106,6 +112,6 @@ export default function PublicLibrary({ games, recipientId, viewerId, challengeR
         <GameChallenges game={game} recipientId={recipientId} viewerId={viewerId} rows={challengeRows} canCreate={canCreateChallenges} canManage={canManageChallenges}/>
       </article>;
     })}</div>
-    {selected && <GameDetailsDialog key={selectedCatalogId} game={{ ...selected, igdbId: selectedCatalogId!, platformOptions: [] } satisfies CatalogGame} saved={selectedCopies} signedIn onClose={() => setSelected(null)} onAdd={(platformId) => addGame(selectedCatalogId!, platformId)} onRemove={removeGame} onPlaying={setPlaying}/>}
+    {selected && <GameDetailsDialog key={selectedCatalogId} game={{ ...selected, igdbId: selectedCatalogId!, platformOptions: [] } satisfies CatalogGame} saved={selectedCopies} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelected(null)} onAdd={(platformId) => addGame(selectedCatalogId!, platformId)} onRemove={removeGame} onPlaying={setPlaying}/>}
   </>;
 }

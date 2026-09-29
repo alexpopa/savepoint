@@ -140,8 +140,8 @@ export default function SearchResults({ query, signedIn, initialPlatformIds, pop
         {loadingPlayers ? <div className="search-loading"><LoaderCircle className="spin" size={18}/> Searching players…</div> : playersError ? <div className="search-empty" role="alert">{playersError}</div> : players.length ? <div className="search-player-list">{players.map((player) => {
           const playerProfilePath = player.profilePath;
           return <article className="search-player" key={player.userId}>
-            <a href={signedIn ? playerProfilePath : `/login?return_to=${encodeURIComponent(playerProfilePath)}`} className="search-player-main"><span className="account-avatar">{player.displayName.charAt(0).toUpperCase()}</span><span><strong>{player.displayName}</strong><small>{player.isPublic ? "Public library" : player.relationship?.status === "accepted" ? "Private library · Friend" : "Private library"}</small></span></a>
-            <div className="search-player-actions"><a className="view-profile" href={signedIn ? playerProfilePath : `/login?return_to=${encodeURIComponent(playerProfilePath)}`}>{signedIn ? "View profile" : "Sign in to view"}</a>{signedIn ? <FriendButton userId={player.userId} initialRelationship={player.relationship}/> : <a className="friend-button" href={loginPath}><UserPlus size={16}/> Sign in to add friend</a>}</div>
+            <a href={playerProfilePath} className="search-player-main"><span className="account-avatar">{player.displayName.charAt(0).toUpperCase()}</span><span><strong>{player.displayName}</strong><small>{player.isPublic ? "Public library" : player.relationship?.status === "accepted" ? "Private library · Friend" : "Private library"}</small></span></a>
+            <div className="search-player-actions"><a className="view-profile" href={playerProfilePath}>View profile</a>{signedIn ? <FriendButton userId={player.userId} initialRelationship={player.relationship}/> : <a className="friend-button" href={loginPath}><UserPlus size={16}/> Sign in to add friend</a>}</div>
           </article>;
         })}</div> : <div className="search-empty">No players matched “{query}”.</div>}
       </section>}

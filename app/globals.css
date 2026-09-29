@@ -14,6 +14,7 @@
   --rgb-action: #00e51b;
   --rgb-info: #8ea2ff;
   --rgb-danger: #ff6b66;
+  --rgb-notification: #b4232e;
   --rgb-rule: #343d4b;
   --rgb-black: #08080b;
   --background: var(--rgb-page);
@@ -96,9 +97,11 @@ button:disabled { cursor: default; }
 .account-menu { position: relative; }
 .account-menu-trigger { display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 48px; min-height: 48px; padding: 0 7px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: var(--rgb-muted); }
 .account-menu-trigger:hover, .account-menu-trigger[aria-expanded="true"] { border-color: var(--rgb-control-edge); background: var(--rgb-panel); color: var(--rgb-ink); }
+.friend-request-badge { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--rgb-notification); color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 700; line-height: 1; }
 .account-menu-panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 50; width: min(264px, calc(100vw - 32px)); max-height: calc(100dvh - 120px); overflow-y: auto; overscroll-behavior: contain; padding: 8px; border: 1px solid var(--rgb-control-edge); border-radius: 4px; background: var(--rgb-panel); }
 .account-menu-nav { display: grid; gap: 2px; }
 .account-menu-link { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 44px; padding: 9px 10px; border: 0; border-radius: 2px; background: transparent; color: var(--rgb-ink); font-size: 0.9375rem; text-align: left; }
+.account-menu-link .friend-request-badge { margin-left: auto; }
 .account-menu-link svg { flex: none; color: var(--rgb-muted); }
 .account-menu-link:hover { background: var(--rgb-panel-raised); }
 .account-menu-signout { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--rgb-rule); }

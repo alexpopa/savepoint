@@ -11,6 +11,7 @@ Read what the task touches before changing anything. The code is the final autho
 | Entry point and product behavior | [README.md](README.md) |
 | Coding conventions and settled decisions | [docs/conventions.md](docs/conventions.md) — read before writing code |
 | Behavior, request flow, API, data model, permissions | [docs/architecture.md](docs/architecture.md) |
+| Sending email (Resend, local console mode, adding a new email) | [docs/conventions.md#email](docs/conventions.md#email) |
 | Local setup, commands, database and roles | [docs/development.md](docs/development.md) |
 | Visual design, brand, accessibility | [docs/style-guide.md](docs/style-guide.md) — read before any UI change |
 | Friends timeline rules | [docs/timeline-design.md](docs/timeline-design.md) |

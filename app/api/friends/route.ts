@@ -2,6 +2,9 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { getCurrentUser } from "../../auth";
 import { getDb } from "../../../db";
 import { accounts, friendships } from "../../../db/schema";
+import { publicOrigin, sendEmail } from "../../../lib/email";
+import { friendRequestEmail } from "../../../lib/email-messages";
+import { profilePath } from "../../../lib/profile-path";
 import { isSameOriginWrite } from "../../../lib/request-security";
 import { ensureAccount, getSocialState, pairFor, privateResponse } from "../../../lib/social";
 
@@ -34,6 +37,12 @@ export async function POST(request: Request) {
     if (target.userId === user.userId) return Response.json({ error: "You cannot send yourself a friend request." }, { status: 400 });
     const result = await db.insert(friendships).values({ ...pairFor(user.userId, target.userId), requesterId: user.userId, status: "pending", createdAt: Date.now() }).onConflictDoNothing().returning();
     if (!result.length) return Response.json({ error: "A friend request or friendship already exists." }, { status: 409 });
+    try {
+      await sendEmail(request, friendRequestEmail(target.email, user.displayName, publicOrigin(request), profilePath(user)));
+    } catch (error) {
+      // The request is already saved and shown in Settings, so a delivery failure should not undo or fail it.
+      console.error("Friend request email failed", error instanceof Error ? error.message : error);
+    }
     return Response.json({ ok: true }, { status: 201, headers: privateResponse });
   } catch { return Response.json({ error: "Could not send the friend request." }, { status: 503 }); }
 }

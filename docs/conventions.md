@@ -10,6 +10,7 @@ These are the patterns the existing code already follows. New code should look l
 | `app/*.tsx` | Shared components. Client components start with `"use client";`. Server-safe ones (such as `profile-nameplate.tsx`) do not. |
 | `app/api/**/route.ts` | HTTP handlers. Thin: authenticate, validate, call `lib/`, serialize. |
 | `app/auth.ts` | Sessions, passwords, `getCurrentUser()`, `requireUser(returnTo)`. |
+| `lib/email.ts`, `lib/email-messages.ts` | Outgoing email delivery and message content; see [Email](#email). |
 | `lib/` | Server logic and data access. Pure functions (no DB, no `cloudflare:workers`) go in their own module so tests can import them. |
 | `lib/*-queries.ts` | Raw SQL strings that must be atomic, imported by routes and tested against real migrations. |
 | `db/schema.ts`, `drizzle/` | Drizzle schema and generated SQL migrations. |
@@ -65,6 +66,20 @@ export async function POST(request: Request) {
 - Stored game details are snapshots loaded from IGDB on the server by ID.
 - Batch `inArray` lookups in chunks of 400 IDs (see `lib/challenges.ts`).
 - Schema changes: edit `db/schema.ts`, run `npm run db:generate`, review the SQL, and document the migration in `docs/development.md` and `docs/deployment.md`.
+
+## Email
+
+All outgoing email goes through `sendEmail(request, { to, subject, text })` in `lib/email.ts`, which posts to the Resend HTTP API with the server-side `RESEND_API_KEY` and `AUTH_EMAIL_FROM`. Never call Resend (or any other mail service) directly from a route or component. To add a new kind of email:
+
+1. Write a pure builder in `lib/email-messages.ts` that returns an `EmailMessage` (see `friendRequestEmail`), and test its subject and links in `tests/email-messages.test.ts`. Keep the wording in that module; routes only pass data in. Token emails whose content depends on a stored secret, such as verification and password reset in `lib/auth-email.ts`, build their text beside the token logic instead.
+2. Build every link with `new URL(path, publicOrigin(request))`. `publicOrigin` returns the configured `AUTH_PUBLIC_URL` in production and the local origin on localhost, so links never trust the request's Host header.
+3. Send from the route after the database write succeeds. Look up the recipient's address on the server by account ID; never accept an address, name, or link text for the message from the client.
+4. Messages are plain text. Name other players only by display name and profile link: never include another player's email, role, or private data. Use a subject and first line that say who did what, then the link, then what to do if the email was unexpected.
+5. Decide what a delivery failure means. When the email *is* the feature (verification, reset), let the error reach the route's `catch` so the player sees a 503, and call `assertEmailDeliveryReady(request)` before writing anything that depends on the email. When the email only notifies about a saved change (friend requests), wrap `sendEmail` in its own `try`/`catch`, `console.error` the message (not the email address or body), and still return success.
+6. Think about repeat sends. Anything a player can trigger over and over at another player's inbox needs a limit or a reason it cannot be abused; auth links use `recentlyIssued` for one per minute per account.
+7. Document the new email in `docs/architecture.md` (the behavior and its API row) and in the QA step of `docs/deployment.md`.
+
+Locally, `AUTH_EMAIL_MODE=console` in `.dev.vars` makes `sendEmail` print the recipient, subject, and full text to the dev server log instead of sending. It only works on `localhost`/`127.0.0.1`; hosted requests always use Resend.
 
 ## Client components
 

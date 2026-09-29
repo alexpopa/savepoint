@@ -28,7 +28,7 @@ const librarySource: PickerSource = {
 };
 
 // Newest first, with no ordering of its own. Edit only removes, matching the Top 10's controls.
-export default function CurrentlyPlaying({ initialGames, canManage, isOwner = false }: { initialGames: PlayingGame[]; canManage: boolean; isOwner?: boolean }) {
+export default function CurrentlyPlaying({ initialGames, canManage, isOwner = false, signedIn = true, loginPath }: { initialGames: PlayingGame[]; canManage: boolean; isOwner?: boolean; signedIn?: boolean; loginPath?: string }) {
   const [games, setGames] = useState(initialGames);
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -57,7 +57,7 @@ export default function CurrentlyPlaying({ initialGames, canManage, isOwner = fa
   async function open(game: PlayingGame) {
     setError("");
     try {
-      await libraryRequest();
+      if (signedIn) await libraryRequest();
       setSelected({ ...game, platforms: [], platformOptions: [] });
     } catch (error) { setError(error instanceof Error ? error.message : "Could not open this game."); }
   }
@@ -95,7 +95,7 @@ export default function CurrentlyPlaying({ initialGames, canManage, isOwner = fa
       isSelected={(item) => games.some((game) => game.id === item.id)} onClose={() => setPicking(false)}
       emptyText={<>Your library is empty. <a href="/search">Find a game</a> to add it first.</>}
       onToggle={async (item, playing) => { setGames(await playingRequest(item.id, playing)); setStatus(`${item.name} ${playing ? "added to" : "removed from"} Currently playing.`); }}/>}
-    {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={saved.filter((game) => game.igdbId === selected.igdbId)} signedIn onClose={() => setSelected(null)}
+    {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={saved.filter((game) => game.igdbId === selected.igdbId)} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelected(null)}
       onAdd={async (platformId) => { await libraryRequest({ method: "POST", body: JSON.stringify({ igdbId: selected.igdbId, platformId }) }); await libraryRequest(); }}
       onRemove={async (id) => { await libraryRequest({ method: "DELETE" }, id); await libraryRequest(); if (isOwner) setGames((current) => current.filter((game) => game.id !== id)); }}
       onPlaying={async (id, playing) => { const next = await playingRequest(id, playing); if (isOwner) setGames(next); await libraryRequest(); }}/>}

@@ -4,13 +4,13 @@ import { getCurrentlyPlaying } from "../../../lib/currently-playing";
 import { getGameFavorites } from "../../../lib/game-favorites";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
-import { Gamepad2, Lock } from "lucide-react";
+import { Gamepad2, Lock, UserPlus } from "lucide-react";
 import SiteHeader from "../../site-header";
 import FriendButton from "../../friend-button";
 import { ProfileChallenges } from "../../challenges";
 import { ProfileNameplate } from "../../profile-nameplate";
 import PublicLibrary from "./public-library";
-import { requireUser } from "../../auth";
+import { getCurrentUser } from "../../auth";
 import { getDb } from "../../../db";
 import { accounts, libraryItems } from "../../../db/schema";
 import { isComplete, receivedChallenges } from "../../../lib/challenges";
@@ -25,18 +25,19 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
   const routeSegment = (await params).userId;
   let profileName: string;
   try { profileName = decodeURIComponent(routeSegment); } catch { notFound(); }
-  const user = await requireUser(`/users/${encodeURIComponent(profileName)}`);
-  await ensureAccount(user);
+  const user = await getCurrentUser();
+  if (user) await ensureAccount(user);
   const db = getDb();
   const [namedAccount] = await db.select().from(accounts).where(and(sql`lower(${accounts.displayName}) = lower(${profileName})`, isNotNull(accounts.passwordHash), isNotNull(accounts.emailVerifiedAt)));
   const [target] = namedAccount ? [namedAccount] : await db.select().from(accounts).where(eq(accounts.userId, profileName));
   if (!target?.passwordHash || !target.emailVerifiedAt) notFound();
   const targetId = target.userId;
-  if (targetId === user.userId) redirect("/profile");
+  if (targetId === user?.userId) redirect("/profile");
   if (!namedAccount && profilePath(target) !== `/users/${encodeURIComponent(profileName)}`) redirect(profilePath(target));
-  const friendship = await getFriendship(user.userId, targetId);
+  const friendship = user ? await getFriendship(user.userId, targetId) : undefined;
   const canView = canViewProfile(user, target, friendship?.status);
   const canManageChallenges = hasPermission(user, false);
+  const loginPath = `/login?return_to=${encodeURIComponent(profilePath(target))}`;
   const [games, challengeRows, favorites, playing] = canView ? await Promise.all([
     getDb().select().from(libraryItems).where(eq(libraryItems.userId, targetId)).orderBy(desc(libraryItems.addedAt)).then((rows) => rows.map(serializeGame)),
     receivedChallenges(targetId),
@@ -56,25 +57,26 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
       // Keep profile rendering available when IGDB cannot restore older cover art.
     }
   }
-  const relationship = friendship ? { status: friendship.status, direction: friendship.requesterId === user.userId ? "outgoing" as const : "incoming" as const } : null;
+  const relationship = friendship ? { status: friendship.status, direction: friendship.requesterId === user?.userId ? "outgoing" as const : "incoming" as const } : null;
   const name = accountDisplayName(target);
   const cleared = challengeRows.filter(isComplete).length;
   const status = friendship?.status === "accepted" ? "friend" : target.isPublic ? "public" : "private";
-  return <main className="library-page"><SiteHeader email={user.email}/><div className="library-wrap profile-wrap">
+  return <main className="library-page"><SiteHeader email={user?.email}/><div className="library-wrap profile-wrap">
     <ProfileNameplate seed={targetId} name={name} status={status} stats={canView ? [
       { label: "Games", value: new Set(games.map((game) => game.igdbId)).size, href: "#library" },
       { label: "Cleared", value: cleared },
       { label: "Pending", value: challengeRows.length - cleared },
     ] : undefined}>
-      {friendship?.status !== "accepted" && <FriendButton userId={targetId} initialRelationship={relationship} refreshOnAccept/>}
+      {user ? friendship?.status !== "accepted" && <FriendButton userId={targetId} initialRelationship={relationship} refreshOnAccept/>
+        : <a className="friend-button" href={loginPath}><UserPlus size={16} aria-hidden="true"/> Sign in to Add Friend</a>}
     </ProfileNameplate>
     {canView ? <>
-      <CurrentlyPlaying initialGames={playing} canManage={hasPermission(user, targetId === user.userId)}/>
-      <FavoriteGames initialFavorites={favorites} canManage={hasPermission(user, targetId === user.userId)}/>
-      <ProfileChallenges received={challengeRows} viewerId={user.userId} canManage={canManageChallenges}/>
+      <CurrentlyPlaying initialGames={playing} canManage={hasPermission(user, targetId === user?.userId)} signedIn={Boolean(user)} loginPath={loginPath}/>
+      <FavoriteGames initialFavorites={favorites} canManage={hasPermission(user, targetId === user?.userId)} signedIn={Boolean(user)} loginPath={loginPath}/>
+      <ProfileChallenges received={challengeRows} viewerId={user?.userId ?? ""} canManage={canManageChallenges}/>
       <section className="profile-section" id="library" aria-labelledby="library-title">
         <div className="profile-section-head"><h2 id="library-title" className="profile-label"><Gamepad2 size={15} aria-hidden="true"/>Library</h2></div>
-        {games.length ? <PublicLibrary games={displayGames} recipientId={targetId} viewerId={user.userId} challengeRows={challengeRows} canManageChallenges={canManageChallenges} canCreateChallenges={hasPermission(user, friendship?.status === "accepted")}/> : <p className="challenge-section-empty">No games saved yet.</p>}
+        {games.length ? <PublicLibrary games={displayGames} recipientId={targetId} viewerId={user?.userId ?? ""} challengeRows={challengeRows} canManageChallenges={canManageChallenges} canCreateChallenges={hasPermission(user, friendship?.status === "accepted")} signedIn={Boolean(user)} loginPath={loginPath}/> : <p className="challenge-section-empty">No games saved yet.</p>}
       </section>
     </> : <div className="profile-locked"><Lock size={26} aria-hidden="true"/><h2>Friends only</h2></div>}
   </div></main>;

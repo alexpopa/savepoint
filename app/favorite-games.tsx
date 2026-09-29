@@ -38,7 +38,7 @@ const favoriteSource: PickerSource = {
 
 // Covers stand on two shelves of five. In Edit, a cover is picked up and set down
 // by click, keyboard, or drag, so reordering never depends on a pointer.
-export default function FavoriteGames({ initialFavorites, canManage, isOwner = false }: { initialFavorites: GameFavorite[]; canManage: boolean; isOwner?: boolean }) {
+export default function FavoriteGames({ initialFavorites, canManage, isOwner = false, signedIn = true, loginPath }: { initialFavorites: GameFavorite[]; canManage: boolean; isOwner?: boolean; signedIn?: boolean; loginPath?: string }) {
   const [favorites, setFavorites] = useState(initialFavorites);
   const [arranging, setArranging] = useState(false);
   const [held, setHeld] = useState<number | null>(null);
@@ -81,7 +81,7 @@ export default function FavoriteGames({ initialFavorites, canManage, isOwner = f
   async function open(game: GameFavorite) {
     setError("");
     try {
-      await libraryRequest();
+      if (signedIn) await libraryRequest();
       setSelected({ ...game, platforms: [], platformOptions: [] });
     } catch (error) { setError(error instanceof Error ? error.message : "Could not open this game."); }
   }
@@ -153,7 +153,7 @@ export default function FavoriteGames({ initialFavorites, canManage, isOwner = f
         setFavorites(await favoriteRequest(add ? "/api/game-favorites" : `/api/game-favorites/${favorite?.id}`, add ? { method: "POST", body: JSON.stringify({ igdbId: item.id }) } : { method: "DELETE" }));
         setStatus(`${item.name} ${add ? "added to" : "removed from"} Top 10.`);
       }}/>}
-    {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={saved.filter((game) => game.igdbId === selected.igdbId)} signedIn onClose={() => setSelected(null)} onFavoritesChange={isOwner ? setFavorites : undefined} onAdd={async (platformId) => { await libraryRequest({ method: "POST", body: JSON.stringify({ igdbId: selected.igdbId, platformId }) }); await libraryRequest(); }} onRemove={async (id) => { await libraryRequest({ method: "DELETE" }, id); await libraryRequest(); }} onPlaying={async (id, playing) => { await playingRequest(id, playing); await libraryRequest(); }}/>}
+    {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={saved.filter((game) => game.igdbId === selected.igdbId)} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelected(null)} onFavoritesChange={isOwner ? setFavorites : undefined} onAdd={async (platformId) => { await libraryRequest({ method: "POST", body: JSON.stringify({ igdbId: selected.igdbId, platformId }) }); await libraryRequest(); }} onRemove={async (id) => { await libraryRequest({ method: "DELETE" }, id); await libraryRequest(); }} onPlaying={async (id, playing) => { await playingRequest(id, playing); await libraryRequest(); }}/>}
   </section>;
 }
 

@@ -4,7 +4,8 @@ import { getDb } from "../../../../db";
 import { accounts } from "../../../../db/schema";
 import { isSameOriginWrite } from "../../../../lib/request-security";
 import { privateResponse } from "../../../../lib/social";
-import { assertEmailDeliveryReady, issueAuthToken } from "../../../../lib/auth-email";
+import { issueAuthToken } from "../../../../lib/auth-email";
+import { assertEmailDeliveryReady } from "../../../../lib/email";
 
 export async function POST(request: Request) {
   if (!isSameOriginWrite(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
