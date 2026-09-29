@@ -25,4 +25,5 @@ export type SavedGame = Omit<CatalogGame, "platformOptions"> & {
   id: number;
   platformId: number;
   platformName: string | null;
+  playingSince?: number | null;
 };

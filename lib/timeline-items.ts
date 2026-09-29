@@ -12,7 +12,11 @@ export type TimelineFavorite = {
   kind: "favorite"; key: string; at: number; person: TimelinePerson;
   igdbId: number; name: string; coverUrl: string | null; releaseYear: number | null;
 };
-export type TimelineItem = LibraryBatch | TimelineChallenge | TimelineFavorite;
+export type TimelinePlaying = {
+  kind: "playing"; key: string; at: number; person: TimelinePerson;
+  igdbId: number; name: string; coverUrl: string | null; releaseYear: number | null; platformName: string | null;
+};
+export type TimelineItem = LibraryBatch | TimelineChallenge | TimelineFavorite | TimelinePlaying;
 
 export function batchLibraryGames(games: TimelineGame[]): LibraryBatch[] {
   const batches: LibraryBatch[] = [];
@@ -29,7 +33,7 @@ export function batchLibraryGames(games: TimelineGame[]): LibraryBatch[] {
   return batches;
 }
 
-export function recentTimeline(games: TimelineGame[], challenges: TimelineChallenge[], favorites: TimelineFavorite[] = []): TimelineItem[] {
-  return [...batchLibraryGames(games), ...challenges, ...favorites]
+export function recentTimeline(games: TimelineGame[], challenges: TimelineChallenge[], favorites: TimelineFavorite[] = [], playing: TimelinePlaying[] = []): TimelineItem[] {
+  return [...batchLibraryGames(games), ...challenges, ...favorites, ...playing]
     .sort((a, b) => b.at - a.at || a.key.localeCompare(b.key)).slice(0, 30);
 }

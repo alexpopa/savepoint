@@ -47,6 +47,9 @@ export async function getTimeline(user: PermissionUser) {
   })), items, favoriteRows.map(({ game, person: owner }) => ({
     kind: "favorite", key: `favorite:${game.id}`, at: game.favoritedAt,
     person: person(owner), igdbId: game.igdbId, name: game.name, coverUrl: game.coverUrl, releaseYear: game.releaseYear,
+  })), games.filter(({ game }) => game.playingSince !== null).map(({ game, person: owner }) => ({
+    kind: "playing", key: `playing:${game.id}`, at: game.playingSince!,
+    person: person(owner), igdbId: game.igdbId, name: game.name, coverUrl: game.coverUrl, releaseYear: game.releaseYear, platformName: game.platformName,
   })));
   // Recover legacy artwork only for the initial visible covers, keeping imports cheap.
   const visibleIds = new Set(timeline.flatMap((item) => item.kind === "library" ? item.games.slice(0, 4).filter((game) => !game.coverUrl).map((game) => game.id) : []));

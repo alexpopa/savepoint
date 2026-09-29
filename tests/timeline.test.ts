@@ -41,3 +41,10 @@ test("game favorites merge by favorite time and share the thirty-entry limit", (
   assert.equal(rows[0], favorite);
   assert.equal(recentTimeline([], [], []).length, 0);
 });
+
+test("currently playing adds one entry per platform copy, outside library batches", () => {
+  const playing = (id: number, at: number, platformName: string) => ({ kind: "playing" as const, key: `playing:${id}`, at, person, igdbId: 1, name: "Game", coverUrl: null, releaseYear: 2000, platformName });
+  const rows = recentTimeline([game(1, 10), game(2, 10)], [], [], [playing(1, 50, "SNES"), playing(2, 40, "N64")]);
+  assert.deepEqual(rows.map((row) => row.key), ["playing:1", "playing:2", "library:2"]);
+  assert.equal(rows[2].kind === "library" && rows[2].games.length, 2);
+});

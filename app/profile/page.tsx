@@ -1,7 +1,9 @@
 import { eq, sql } from "drizzle-orm";
+import CurrentlyPlaying from "../currently-playing";
 import FavoriteGames from "../favorite-games";
 import { getDb } from "../../db";
 import { libraryItems } from "../../db/schema";
+import { getCurrentlyPlaying } from "../../lib/currently-playing";
 import { getGameFavorites } from "../../lib/game-favorites";
 import { hasPermission } from "../../lib/permissions";
 import { requireUser } from "../auth";
@@ -16,10 +18,11 @@ export const dynamic = "force-dynamic";
 export default async function ProfilePage() {
   const user = await requireUser("/profile");
   const account = await ensureAccount(user);
-  const [received, sent, favorites, [library]] = await Promise.all([
+  const [received, sent, favorites, playing, [library]] = await Promise.all([
     receivedChallenges(user.userId),
     sentChallenges(user.userId, hasPermission(user, false)),
     getGameFavorites(user.userId),
+    getCurrentlyPlaying(user.userId),
     getDb().select({ games: sql<number>`count(distinct ${libraryItems.igdbId})` }).from(libraryItems).where(eq(libraryItems.userId, user.userId)),
   ]);
   const cleared = received.filter(isComplete).length;
@@ -29,6 +32,7 @@ export default async function ProfilePage() {
       { label: "Cleared", value: cleared },
       { label: "Pending", value: received.length - cleared },
     ]}/>
+    <CurrentlyPlaying initialGames={playing} canManage isOwner/>
     <FavoriteGames initialFavorites={favorites} canManage isOwner/>
     <ProfileChallenges received={received} sent={sent} viewerId={user.userId} canManage={hasPermission(user, false)} ownerControls/>
   </div></main>;

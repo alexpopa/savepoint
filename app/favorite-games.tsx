@@ -1,28 +1,46 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Check, Gamepad2, Pencil, Plus, Star } from "lucide-react";
+import { Check, Gamepad2, Pencil, Plus, X } from "lucide-react";
+import { favoriteLimit } from "../lib/game-favorite-queries";
 import type { GameFavorite } from "../lib/game-favorites";
 import type { CatalogGame, SavedGame } from "../lib/game-types";
 import GameDetailsDialog from "./game-details-dialog";
 import { favoriteRequest } from "./game-favorite-button";
+import { playingRequest } from "./currently-playing";
 
-const slots = 9;
+const shelves = [[0, 5], [5, favoriteLimit]];
 
-// The cover wall is a pointer shortcut; the numbered list is the keyboard and screen reader path.
+// Covers stand on two shelves of five. In Edit, a cover is picked up and set down
+// by click, keyboard, or drag, so reordering never depends on a pointer.
 export default function FavoriteGames({ initialFavorites, canManage, isOwner = false }: { initialFavorites: GameFavorite[]; canManage: boolean; isOwner?: boolean }) {
   const [favorites, setFavorites] = useState(initialFavorites);
   const [arranging, setArranging] = useState(false);
+  const [held, setHeld] = useState<number | null>(null);
+  const [over, setOver] = useState<number | null>(null);
   const [lit, setLit] = useState<number | null>(null);
+  const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<CatalogGame | null>(null);
   const [saved, setSaved] = useState<SavedGame[]>([]);
-  async function act(id: number, action: "move_up" | "move_down" | "remove") {
-    setBusy(true); setError("");
+  async function place(id: number, position: number) {
+    const from = favorites.findIndex((game) => game.id === id);
+    setHeld(null); setOver(null);
+    if (from < 0 || from === position - 1) return;
+    const previous = favorites, next = [...favorites];
+    const [game] = next.splice(from, 1);
+    next.splice(position - 1, 0, game);
+    setFavorites(next); setBusy(true); setError(""); setStatus(`${game.name} moved to ${position}.`);
+    try { setFavorites(await favoriteRequest(`/api/game-favorites/${id}`, { method: "PATCH", body: JSON.stringify({ position }) })); }
+    catch (error) { setFavorites(previous); setError(error instanceof Error ? error.message : "Could not update favorite games."); }
+    finally { setBusy(false); }
+  }
+  async function remove(game: GameFavorite) {
+    setBusy(true); setError(""); setHeld(null);
     try {
-      const next = await favoriteRequest(`/api/game-favorites/${id}`, { method: action === "remove" ? "DELETE" : "PATCH", body: action === "remove" ? undefined : JSON.stringify({ action }) });
-      setFavorites(next);
+      const next = await favoriteRequest(`/api/game-favorites/${game.id}`, { method: "DELETE" });
+      setFavorites(next); setStatus(`${game.name} removed from Top 10.`);
       if (!next.length) setArranging(false);
     }
     catch (error) { setError(error instanceof Error ? error.message : "Could not update favorite games."); }
@@ -41,52 +59,72 @@ export default function FavoriteGames({ initialFavorites, canManage, isOwner = f
       setSelected({ ...game, platforms: [], platformOptions: [] });
     } catch (error) { setError(error instanceof Error ? error.message : "Could not open this game."); }
   }
-  const canAdd = isOwner && favorites.length < slots;
-  return <section className="profile-section top-nine" aria-labelledby="top-nine-title">
+  function choose(game: GameFavorite, index: number) {
+    if (!arranging) return void open(game);
+    if (busy) return;
+    if (held === null) { setHeld(game.id); setStatus(`${game.name} picked up. Choose its new spot, or press Escape.`); }
+    else if (held === game.id) { setHeld(null); setStatus(`${game.name} put back.`); }
+    else void place(held, index + 1);
+  }
+  function toggleArranging() {
+    setArranging(!arranging); setHeld(null); setOver(null);
+    setStatus(arranging ? "" : "Select a cover, then select its new spot.");
+  }
+  const heldIndex = favorites.findIndex((game) => game.id === held);
+  const heldGame = favorites[heldIndex];
+  const litIndex = favorites.findIndex((game) => game.id === lit);
+  const canAdd = isOwner && !arranging && favorites.length < favoriteLimit;
+  const caption = arranging
+    ? heldGame ? `Moving ${heldGame.name}` : "Select a cover, then its new spot"
+    : litIndex >= 0 ? favorites[litIndex] : null;
+  return <section className="profile-section" aria-labelledby="top-ten-title">
     <div className="profile-section-head">
-      <h2 id="top-nine-title" className="profile-label"><span className="rgb-bar" aria-hidden="true"/>Top 9</h2>
-      {canManage && favorites.length > 0 && <button type="button" className="profile-tool" aria-pressed={arranging} onClick={() => setArranging(!arranging)}>
+      <h2 id="top-ten-title" className="profile-label"><span className="rgb-bar" aria-hidden="true"/>Top 10</h2>
+      {canManage && favorites.length > 0 && <button type="button" className="profile-tool" aria-pressed={arranging} onClick={toggleArranging}>
         {arranging ? <Check size={15} aria-hidden="true"/> : <Pencil size={15} aria-hidden="true"/>}{arranging ? "Done" : "Edit"}
       </button>}
     </div>
     {error && <p className="notice error" role="alert">{error}</p>}
-    {favorites.length || isOwner ? <div className={`top-nine-screen${arranging ? " is-arranging" : ""}`} onMouseLeave={() => setLit(null)}>
-      <ol className="top-nine-wall" aria-hidden="true">
-        {Array.from({ length: slots }, (_, index) => {
-          const game = favorites[index];
-          if (game) return <li key={game.id} className={lit === game.id ? "is-lit" : undefined} onMouseEnter={() => setLit(game.id)}>
-            <button type="button" className="top-nine-tile" tabIndex={-1} onClick={() => void open(game)}><WallCover game={game}/></button>
+    {favorites.length || isOwner ? <div className={`bookshelf${arranging ? " is-arranging" : ""}${held !== null ? " is-holding" : ""}`} onKeyDown={(event) => { if (event.key === "Escape" && held !== null) { setHeld(null); setStatus("Move cancelled."); } }}>
+      {shelves.filter(([start]) => start < favorites.length + (canAdd ? 1 : 0)).map(([start, end]) => <ol key={start} className="shelf" start={start + 1}>
+        {favorites.slice(start, end).map((game, offset) => {
+          const index = start + offset;
+          const target = over === index && held !== null && held !== game.id ? (heldIndex < index ? " is-target-after" : " is-target-before") : "";
+          return <li key={game.id} className={`shelf-slot${held === game.id ? " is-held" : ""}${target}`}
+            onDragOver={(event) => { if (held === null) return; event.preventDefault(); setOver(index); }}
+            onDragLeave={() => setOver((current) => current === index ? null : current)}
+            onDrop={(event) => { event.preventDefault(); if (held !== null) void place(held, index + 1); }}>
+            <button type="button" className="shelf-book" draggable={arranging && !busy}
+              aria-label={arranging
+                ? held === null ? `${index + 1}. ${game.name}. Pick up to move` : held === game.id ? `${index + 1}. ${game.name}. Put back` : `Move ${heldGame?.name} to ${index + 1}, where ${game.name} is`
+                : `${index + 1}. ${game.name}${game.releaseYear ? `, ${game.releaseYear}` : ""}. View details`}
+              aria-pressed={arranging ? held === game.id : undefined}
+              onMouseEnter={() => setLit(game.id)} onMouseLeave={() => setLit(null)} onFocus={() => setLit(game.id)} onBlur={() => setLit(null)}
+              onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", String(game.id)); setHeld(game.id); }}
+              onDragEnd={() => { setHeld(null); setOver(null); }}
+              onClick={() => choose(game, index)}>
+              <BookCover game={game}/>
+            </button>
+            {arranging && <button type="button" className="shelf-remove" aria-label={`Remove ${game.name} from Top 10`} title="Remove from Top 10" disabled={busy} onClick={() => void remove(game)}><X size={14} aria-hidden="true"/></button>}
           </li>;
-          return <li key={`slot-${index}`}>{canAdd && index === favorites.length
-            ? <a className="top-nine-add" href="/search" tabIndex={-1}><Plus size={22}/></a>
-            : <span className="top-nine-blank"/>}</li>;
         })}
-      </ol>
-      <ol className="top-nine-list">
-        {favorites.map((game, index) => <li key={game.id} className={`top-nine-row${lit === game.id ? " is-lit" : ""}`} onMouseEnter={() => setLit(game.id)}>
-          <span className="top-nine-rank" aria-hidden="true">{(index + 1).toString().padStart(2, "0")}</span>
-          <button type="button" className="top-nine-name" aria-label={`${index + 1}. ${game.name}${game.releaseYear ? `, ${game.releaseYear}` : ""}. View details`} onFocus={() => setLit(game.id)} onBlur={() => setLit(null)} onClick={() => void open(game)}>
-            <span>{game.name}</span><small>{game.releaseYear || "Year unknown"}</small>
-          </button>
-          {arranging && <div className="top-nine-tools">
-            <button type="button" className="challenge-icon-button" aria-label={`Move ${game.name} up`} title="Move up" disabled={busy || index === 0} onClick={() => void act(game.id, "move_up")}><ArrowUp size={17}/></button>
-            <button type="button" className="challenge-icon-button" aria-label={`Move ${game.name} down`} title="Move down" disabled={busy || index === favorites.length - 1} onClick={() => void act(game.id, "move_down")}><ArrowDown size={17}/></button>
-            <button type="button" className="challenge-icon-button" aria-label={`Remove ${game.name} from top 9`} title="Remove from top 9" disabled={busy} onClick={() => void act(game.id, "remove")}><Star size={17} fill="currentColor"/></button>
-          </div>}
-        </li>)}
-        {canAdd && !arranging && <li className="top-nine-row is-add">
-          <span className="top-nine-rank" aria-hidden="true">{(favorites.length + 1).toString().padStart(2, "0")}</span>
-          <a className="top-nine-name" href="/search"><span><Plus size={15} aria-hidden="true"/> Add a game</span></a>
+        {canAdd && favorites.length >= start && favorites.length < end && <li className="shelf-slot">
+          <a className="shelf-add" href="/search" aria-label="Add a game to your Top 10" title="Add a game"><Plus size={20} aria-hidden="true"/></a>
         </li>}
-      </ol>
+      </ol>)}
+      <p className="shelf-caption" aria-hidden="true">
+        {typeof caption === "string" ? <span>{caption}</span>
+          : caption ? <><b>{(litIndex + 1).toString().padStart(2, "0")}</b><span>{caption.name}</span>{caption.releaseYear && <small>{caption.releaseYear}</small>}</> : null}
+      </p>
+      <p className="shelf-status" role="status">{status}</p>
     </div> : <div className="profile-screen-empty"><Gamepad2 size={22} aria-hidden="true"/><p>No games picked yet</p></div>}
-    {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={saved.filter((game) => game.igdbId === selected.igdbId)} signedIn onClose={() => setSelected(null)} onFavoritesChange={isOwner ? setFavorites : undefined} onAdd={async (platformId) => { await libraryRequest({ method: "POST", body: JSON.stringify({ igdbId: selected.igdbId, platformId }) }); await libraryRequest(); }} onRemove={async (id) => { await libraryRequest({ method: "DELETE" }, id); await libraryRequest(); }}/>}
+    {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={saved.filter((game) => game.igdbId === selected.igdbId)} signedIn onClose={() => setSelected(null)} onFavoritesChange={isOwner ? setFavorites : undefined} onAdd={async (platformId) => { await libraryRequest({ method: "POST", body: JSON.stringify({ igdbId: selected.igdbId, platformId }) }); await libraryRequest(); }} onRemove={async (id) => { await libraryRequest({ method: "DELETE" }, id); await libraryRequest(); }} onPlaying={async (id, playing) => { await playingRequest(id, playing); await libraryRequest(); }}/>}
   </section>;
 }
 
-function WallCover({ game }: { game: GameFavorite }) {
+function BookCover({ game }: { game: GameFavorite }) {
   const [failed, setFailed] = useState(false);
   return game.coverUrl && !failed
-    ? <img src={game.coverUrl} alt="" loading="lazy" onError={() => setFailed(true)}/>
-    : <span className="cover-fallback"><Gamepad2 size={29}/><span>{game.name.slice(0, 1)}</span></span>;
+    ? <img src={game.coverUrl} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)}/>
+    : <span className="cover-fallback"><Gamepad2 size={24}/><span>{game.name.slice(0, 1)}</span></span>;
 }

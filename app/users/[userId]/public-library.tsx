@@ -53,6 +53,11 @@ export default function PublicLibrary({ games, recipientId, viewerId, challengeR
     await refreshSaved();
   }
 
+  async function setPlaying(id: number, playing: boolean) {
+    await api(`/api/library/${id}/playing`, { method: playing ? "PUT" : "DELETE" });
+    await refreshSaved();
+  }
+
   async function recoverCover(igdbId: number, failedCoverUrl: string) {
     if (pendingCoverRefreshes.current.has(igdbId)) return;
     if (attemptedCoverRefreshes.current.has(igdbId)) {
@@ -101,6 +106,6 @@ export default function PublicLibrary({ games, recipientId, viewerId, challengeR
         <GameChallenges game={game} recipientId={recipientId} viewerId={viewerId} rows={challengeRows} canCreate={canCreateChallenges} canManage={canManageChallenges}/>
       </article>;
     })}</div>
-    {selected && <GameDetailsDialog key={selectedCatalogId} game={{ ...selected, igdbId: selectedCatalogId!, platformOptions: [] } satisfies CatalogGame} saved={selectedCopies} signedIn onClose={() => setSelected(null)} onAdd={(platformId) => addGame(selectedCatalogId!, platformId)} onRemove={removeGame}/>}
+    {selected && <GameDetailsDialog key={selectedCatalogId} game={{ ...selected, igdbId: selectedCatalogId!, platformOptions: [] } satisfies CatalogGame} saved={selectedCopies} signedIn onClose={() => setSelected(null)} onAdd={(platformId) => addGame(selectedCatalogId!, platformId)} onRemove={removeGame} onPlaying={setPlaying}/>}
   </>;
 }

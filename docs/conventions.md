@@ -74,11 +74,11 @@ export async function POST(request: Request) {
 - Modals use native `<dialog>` with `showModal()` in an effect and close on unmount (see `ChallengeDetailsDialog`).
 - Links between pages are plain `<a href>`, not `next/link` (see settled decisions).
 - Icons come from `lucide-react`. Decorative icons get `aria-hidden="true"`; icon-only buttons get an `aria-label` and a `title`.
-- Every interactive element is keyboard reachable with a visible focus state. When one control duplicates another for pointer users (such as the Top 9 cover wall), hide the duplicate from assistive technology and the tab order instead of exposing two.
+- Every interactive element is keyboard reachable with a visible focus state. When one element duplicates another for pointer users (such as the Top 10 shelf caption), hide the duplicate from assistive technology and the tab order instead of exposing two.
 
 ## Styling
 
-- Write semantic, feature-prefixed classes in `app/globals.css` (`.top-nine-row`, `.trophy-cover`), not Tailwind utility classes or inline styles. Tailwind supplies the preflight reset and the `antialiased` class on `<body>`; nothing else.
+- Write semantic, feature-prefixed classes in `app/globals.css` (`.shelf-book`, `.trophy-cover`), not Tailwind utility classes or inline styles. Tailwind supplies the preflight reset and the `antialiased` class on `<body>`; nothing else.
 - Use the `--rgb-*` tokens from the style guide; do not add one-off colors or sizes. Brand red, green, and blue appear only in the logo, favicon, and the small RGB bar.
 - Monospace (`ui-monospace, …`) is for short labels, counters, and section markers; everything else uses the Arial/Helvetica stack.
 - Put responsive overrides in the feature's own `@media` block at the end of that feature's section. Check 320px width.
@@ -98,7 +98,8 @@ These were chosen deliberately. Do not undo them without the user's approval; ar
 - Profiles are private by default. Pending friend requests grant nothing.
 - Native anchors instead of `next/link`: the current Vinext production bundle breaks client-side navigation.
 - The friends timeline is computed on read from current records. There is no activity table, queue, or notification system.
+- Every feature where a player adds, chooses, or finishes something with its own timestamp gets a timeline entry in the same change (see [timeline design](timeline-design.md#what-belongs-in-the-timeline)).
 - Challenges belong to the recipient and IGDB game, not to a library row, so removing a game keeps its challenges.
-- Library entries are one row per game and platform. Favorites are independent of library copies and capped at nine.
+- Library entries are one row per game and platform. Currently playing is a mark on a platform copy (`playing_since`), so only owned copies qualify and there is no limit. Favorites are independent of library copies and capped at ten (`favoriteLimit` in `lib/game-favorite-queries.ts`).
 - Game artwork keeps its proportions (`object-fit: contain` on black) and is never tinted or given CRT effects.
 - Documentation describes the current state. History lives in Git commits, not in dated notes or state files.

@@ -1,6 +1,6 @@
 # Working on RGBoner
 
-RGBoner is a retro RGB-styled social game library: verified email accounts, IGDB-backed game search, per-platform libraries, friendships, challenges, a Top 9 of favorite games, and a friends timeline. It is a Vinext (Next.js App Router on Vite) Cloudflare Worker with D1 via Drizzle, deployed through ChatGPT Sites. Several AI coding agents work on this repository, so this file is the shared contract. Instructions here outrank habits from other projects.
+RGBoner is a retro RGB-styled social game library: verified email accounts, IGDB-backed game search, per-platform libraries, friendships, challenges, a Top 10 of favorite games, currently playing status, and a friends timeline. It is a Vinext (Next.js App Router on Vite) Cloudflare Worker with D1 via Drizzle, deployed through ChatGPT Sites. Several AI coding agents work on this repository, so this file is the shared contract. Instructions here outrank habits from other projects.
 
 ## Sources of truth
 
@@ -36,6 +36,7 @@ Read what the task touches before changing anything. The code is the final autho
 - Validate every request body on the server and load stored game details from IGDB by ID; never trust client-supplied names, covers, years, platforms, or roles.
 - Add a new forward migration for every schema change; treat applied migrations as immutable.
 - Update the affected documentation in the same change, describing current behavior with no dated change entries.
+- Add a friends timeline entry for any new feature that fits the timeline's rules ([what belongs](docs/timeline-design.md#what-belongs-in-the-timeline)), and document it there.
 
 **Ask first**
 - Adding, upgrading, or removing a dependency.

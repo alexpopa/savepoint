@@ -69,5 +69,6 @@ export function serializeGame(row: typeof libraryItems.$inferSelect) {
     platforms: JSON.parse(row.platformsJson) as string[],
     platformId: row.platformId,
     platformName: row.platformName,
+    playingSince: row.playingSince,
   };
 }

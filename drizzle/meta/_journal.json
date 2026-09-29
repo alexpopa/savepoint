@@ -85,6 +85,13 @@
       "when": 1790448196431,
       "tag": "0011_silly_mongu",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790657055006,
+      "tag": "0012_hard_terrax",
+      "breakpoints": true
     }
   ]
 }

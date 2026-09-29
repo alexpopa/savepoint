@@ -3,7 +3,7 @@ import { getCurrentUser } from "../../auth";
 import { getDb } from "../../../db";
 import { gameFavorites } from "../../../db/schema";
 import { getGameFavorites } from "../../../lib/game-favorites";
-import { insertGameFavorite } from "../../../lib/game-favorite-queries";
+import { favoriteLimit, insertGameFavorite } from "../../../lib/game-favorite-queries";
 import { getIgdbGame } from "../../../lib/igdb";
 import { isSameOriginWrite } from "../../../lib/request-security";
 import { privateResponse } from "../../../lib/social";
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     }
     const favorites = await getGameFavorites(user.userId);
     if (!favorites.some((game) => game.igdbId === igdbId))
-      return Response.json({ error: "You can favorite up to 9 games. Remove a favorite to make room." }, { status: 409 });
+      return Response.json({ error: `You can favorite up to ${favoriteLimit} games. Remove a favorite to make room.` }, { status: 409 });
     return Response.json({ favorites }, { headers: privateResponse });
   } catch { return Response.json({ error: "Could not favorite this game. Please try again." }, { status: 503 }); }
 }

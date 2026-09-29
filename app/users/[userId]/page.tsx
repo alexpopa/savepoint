@@ -1,4 +1,6 @@
+import CurrentlyPlaying from "../../currently-playing";
 import FavoriteGames from "../../favorite-games";
+import { getCurrentlyPlaying } from "../../../lib/currently-playing";
 import { getGameFavorites } from "../../../lib/game-favorites";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
@@ -35,11 +37,12 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
   const friendship = await getFriendship(user.userId, targetId);
   const canView = canViewProfile(user, target, friendship?.status);
   const canManageChallenges = hasPermission(user, false);
-  const [games, challengeRows, favorites] = canView ? await Promise.all([
+  const [games, challengeRows, favorites, playing] = canView ? await Promise.all([
     getDb().select().from(libraryItems).where(eq(libraryItems.userId, targetId)).orderBy(desc(libraryItems.addedAt)).then((rows) => rows.map(serializeGame)),
     receivedChallenges(targetId),
     getGameFavorites(targetId),
-  ]) : [[], [], []];
+    getCurrentlyPlaying(targetId),
+  ]) : [[], [], [], []];
   let displayGames = games;
   const missingCoverGames = games.filter((game) => !game.coverUrl);
   if (missingCoverGames.length) {
@@ -66,6 +69,7 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
       {friendship?.status !== "accepted" && <FriendButton userId={targetId} initialRelationship={relationship} refreshOnAccept/>}
     </ProfileNameplate>
     {canView ? <>
+      <CurrentlyPlaying initialGames={playing} canManage={hasPermission(user, targetId === user.userId)}/>
       <FavoriteGames initialFavorites={favorites} canManage={hasPermission(user, targetId === user.userId)}/>
       <ProfileChallenges received={challengeRows} viewerId={user.userId} canManage={canManageChallenges}/>
       <section className="profile-section" id="library" aria-labelledby="library-title">

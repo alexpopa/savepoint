@@ -135,6 +135,11 @@ export default function SearchResults({ query, signedIn, initialPlatformIds, pop
     await refreshSaved();
   }
 
+  async function setPlaying(id: number, playing: boolean) {
+    await api(`/api/library/${id}/playing`, { method: playing ? "PUT" : "DELETE" });
+    await refreshSaved();
+  }
+
   const valid = query.length >= 2 && query.length <= 100;
   const showPlayers = tab !== "games";
   const showGames = tab !== "players";
@@ -200,6 +205,6 @@ export default function SearchResults({ query, signedIn, initialPlatformIds, pop
       </section>}
       {done && !gamesError && !playersError && games.length === 0 && players.length === 0 && <p className="search-tip">Try a shorter name or a different spelling.</p>}
     </>}
-    {selectedGame && <GameDetailsDialog game={selectedGame} saved={saved.filter((item) => item.igdbId === selectedGame.igdbId || item.igdbId === selectedGame.libraryIgdbId)} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelectedGame(null)} onAdd={(platformId) => addGame(selectedGame, platformId)} onRemove={removeGame}/>}
+    {selectedGame && <GameDetailsDialog game={selectedGame} saved={saved.filter((item) => item.igdbId === selectedGame.igdbId || item.igdbId === selectedGame.libraryIgdbId)} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelectedGame(null)} onAdd={(platformId) => addGame(selectedGame, platformId)} onRemove={removeGame} onPlaying={setPlaying}/>}
   </div>;
 }

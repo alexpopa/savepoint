@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-import { insertGameFavorite, moveGameFavorite } from "../lib/game-favorite-queries.ts";
+import { insertGameFavorite, placeGameFavorite } from "../lib/game-favorite-queries.ts";
 
 function database() {
   const db = new DatabaseSync(":memory:");
@@ -21,52 +21,56 @@ function rows(db: DatabaseSync, owner = "one") {
   return db.prepare("SELECT id, igdb_id, favorited_at FROM game_favorites WHERE user_id = ? ORDER BY sort_order, id").all(owner);
 }
 
-test("favorites stop at nine distinct games per player, independently of platform copies", () => {
+test("favorites stop at ten distinct games per player, independently of platform copies", () => {
   const db = database();
   for (let i = 1; i <= 12; i++) add(db, i);
-  assert.equal(rows(db).length, 9);
+  assert.equal(rows(db).length, 10);
   add(db, 1, "one", 500);
-  assert.equal(rows(db).length, 9);
+  assert.equal(rows(db).length, 10);
   assert.equal(rows(db)[0].favorited_at, 100);
   add(db, 10, "two");
   assert.equal(rows(db, "two").length, 1);
   db.exec("INSERT INTO library_items (user_id, igdb_id, name, platform_id, added_at) VALUES ('one', 1, 'Game 1', 1, 100), ('one', 1, 'Game 1', 2, 100)");
   db.exec("DELETE FROM library_items");
-  assert.equal(rows(db).length, 9);
+  assert.equal(rows(db).length, 10);
   db.close();
 });
 
-test("move arrows swap adjacent favorites, preserve timestamps, and respect boundaries and owners", () => {
+test("placing a favorite shifts the ones between, preserves timestamps, and respects bounds and owners", () => {
   const db = database();
-  for (let i = 1; i <= 4; i++) add(db, i);
-  add(db, 5, "two");
-  const move = db.prepare(moveGameFavorite);
-  move.run("one", 2, -1);
-  assert.deepEqual(rows(db).map((row) => row.igdb_id), [2, 1, 3, 4]);
-  move.run("one", 2, -1);
-  move.run("one", 4, 1);
-  assert.deepEqual(rows(db).map((row) => row.igdb_id), [2, 1, 3, 4]);
-  move.run("one", 2, 1);
-  assert.deepEqual(rows(db).map((row) => row.igdb_id), [1, 2, 3, 4]);
-  move.run("one", 5, -1);
-  assert.deepEqual(rows(db, "two").map((row) => row.igdb_id), [5]);
+  for (let i = 1; i <= 5; i++) add(db, i);
+  add(db, 6, "two");
+  const place = db.prepare(placeGameFavorite);
+  place.run("one", 4, 1);
+  assert.deepEqual(rows(db).map((row) => row.igdb_id), [4, 1, 2, 3, 5]);
+  place.run("one", 4, 5);
+  assert.deepEqual(rows(db).map((row) => row.igdb_id), [1, 2, 3, 5, 4]);
+  place.run("one", 2, 3);
+  assert.deepEqual(rows(db).map((row) => row.igdb_id), [1, 3, 2, 5, 4]);
+  place.run("one", 2, 3);
+  assert.deepEqual(rows(db).map((row) => row.igdb_id), [1, 3, 2, 5, 4]);
+  place.run("one", 1, 10);
+  assert.deepEqual(rows(db).map((row) => row.igdb_id), [3, 2, 5, 4, 1]);
+  place.run("one", 6, 1);
+  assert.deepEqual(rows(db, "two").map((row) => row.igdb_id), [6]);
+  assert.deepEqual(rows(db).map((row) => row.igdb_id), [3, 2, 5, 4, 1]);
   assert.ok(rows(db).every((row) => row.favorited_at === 100));
-  db.exec("DELETE FROM game_favorites WHERE igdb_id = 2 AND user_id = 'one'");
-  move.run("one", 3, -1);
-  assert.deepEqual(rows(db).map((row) => row.igdb_id), [3, 1, 4]);
+  db.exec("DELETE FROM game_favorites WHERE igdb_id IN (2, 5) AND user_id = 'one'");
+  place.run("one", 4, 1);
+  assert.deepEqual(rows(db).map((row) => row.igdb_id), [4, 3, 1]);
   add(db, 2, "one", 900);
-  assert.deepEqual(rows(db).map((row) => row.igdb_id), [3, 1, 4, 2]);
+  assert.deepEqual(rows(db).map((row) => row.igdb_id), [4, 3, 1, 2]);
   assert.equal(rows(db)[3].favorited_at, 900);
   db.close();
 });
 
 test("removing a favorite frees a slot; repeated adds do not reorder or bump activity", () => {
   const db = database();
-  for (let i = 1; i <= 9; i++) add(db, i);
+  for (let i = 1; i <= 10; i++) add(db, i);
   db.exec("DELETE FROM game_favorites WHERE igdb_id = 4");
-  add(db, 10, "one", 500);
-  add(db, 10, "one", 600);
-  assert.deepEqual(rows(db).map((row) => row.igdb_id), [1, 2, 3, 5, 6, 7, 8, 9, 10]);
-  assert.equal(rows(db)[8].favorited_at, 500);
+  add(db, 11, "one", 500);
+  add(db, 11, "one", 600);
+  assert.deepEqual(rows(db).map((row) => row.igdb_id), [1, 2, 3, 5, 6, 7, 8, 9, 10, 11]);
+  assert.equal(rows(db)[9].favorited_at, 500);
   db.close();
 });

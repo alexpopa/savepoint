@@ -2,7 +2,11 @@
 
 The signed-in home page shows the latest 30 entries from accepted friends, newest first. Guests still go to search. **My library** lives at `/library`, under the account icon; the wordmark returns to the timeline.
 
-This is a view of current activity, not a permanent history. It reads the existing library, game-favorite, and challenge records when the page loads. There is no activity table, queue, push delivery, pagination, notification system, friendship announcement, or unread marker.
+This is a view of current activity, not a permanent history. It reads the existing library, currently playing, game-favorite, and challenge records when the page loads. There is no activity table, queue, push delivery, pagination, notification system, friendship announcement, or unread marker.
+
+## What belongs in the timeline
+
+Every new feature that fits this methodology must add a timeline entry in the same change, with its section below. A feature fits when a player adds, chooses, starts, or finishes something that a friend would notice, and the current record stores a timestamp for that moment. The entry is computed from that record on read, respects the friendship and verified-account rules below, and disappears when the record is removed. Reordering, editing details, and repeating an action do not bump it. Settings, profile edits, friendships, and reorderings do not belong in the timeline.
 
 ## Library batches
 
@@ -32,13 +36,17 @@ All eligibility is checked on the server. Library additions require an accepted 
 
 Current friendship and account visibility are rechecked on each read. Pending requests grant no access to regular players; admin profile access is independent of friendship. Removing a friendship can remove activity. A private profile remains visible to accepted friends. Challenge IDs prevent duplication when both participants are friends.
 
-After grouping, merge library batches, game favorites, and challenges, sort by timestamp descending with a stable type/ID tie-breaker, and take 30. The initial implementation reads eligible current records directly; revisit query limits or indexing only if measured usage warrants it. Do not truncate library rows before grouping, which would split large imports or produce incomplete batches.
+After grouping, merge library batches, currently playing entries, game favorites, and challenges, sort by timestamp descending with a stable type/ID tie-breaker, and take 30. The initial implementation reads eligible current records directly; revisit query limits or indexing only if measured usage warrants it. Do not truncate library rows before grouping, which would split large imports or produce incomplete batches.
 
 ## Presentation
 
 A dark, square monitor-like frame, a small RGB accent, and restrained monospaced labels evoke a clean CRT/PVM RGB signal. Covers retain their proportions and normal image rendering. Game names open the full game details dialog with controls for adding or removing platform copies from the viewer's library. The green **+ Add challenge** action sits in the unused space at the end of each game row without enlarging the batch layout. Challenge covers and titles open the shared challenge detail popup, including the description; the separate profile link is omitted. The initial four covers per library batch reuse the profile’s cached IGDB recovery for missing legacy artwork; unavailable covers use a quiet fallback. Expanded entries use stored artwork. Text, focus outlines, and state labels stay clear; there are no scanlines, flicker, glow, or distortion. Empty and error states provide useful next steps. See [the style guide](style-guide.md).
 
 Implementation: `lib/timeline.ts` handles visibility and reads; `lib/timeline-items.ts` handles batching and final ordering; `app/timeline.tsx` renders the feed. The home page handles read failures without presenting an empty feed as a successful load.
+
+## Currently playing
+
+Each platform copy a verified accepted friend marks as currently playing contributes its own entry: “[Player] started playing”, with the cover, a clickable title, and the platform. The same game on two platforms produces two entries. `playing_since` determines ordering; repeating the mark or changing the copy's platform does not bump it. Unmarking or removing the copy removes its entry, and marking it again creates a fresh timestamp. These entries are separate from library batches: marking a copy does not change the batch it was added in. They share the 30-entry limit and friendship visibility rules with library additions, and the viewer's own games are excluded.
 
 ## Game favorites
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
+import { favoriteLimit } from "../lib/game-favorite-queries";
 import type { GameFavorite } from "../lib/game-favorites";
 
 export async function favoriteRequest(url: string, init?: RequestInit): Promise<GameFavorite[]> {
@@ -22,7 +23,7 @@ export default function GameFavoriteButton({ igdbId, name, onChange }: { igdbId:
     return () => { active = false; };
   }, []);
   const favorite = favorites?.find((row) => row.igdbId === igdbId);
-  const full = !favorite && favorites !== null && favorites.length >= 9;
+  const full = !favorite && favorites !== null && favorites.length >= favoriteLimit;
   async function toggle() {
     setBusy(true); setError("");
     try {
@@ -36,7 +37,7 @@ export default function GameFavoriteButton({ igdbId, name, onChange }: { igdbId:
   }
   return <div className="game-favorite-action">
     <button type="button" className="platform-action" aria-pressed={Boolean(favorite)} aria-label={favorite ? `Remove ${name} from favorite games` : `Favorite ${name}`} disabled={busy || full || (!favorites && !error)} onClick={() => void toggle()}><Star size={17} fill={favorite ? "currentColor" : "none"} aria-hidden="true"/>{!favorites ? error ? "Retry favorites" : "Loading favorites…" : favorite ? "Favorited" : "Favorite game"}</button>
-    <p className="game-dialog-help">{full ? "9 of 9 favorites. Remove one on your profile to make room." : "Choose up to 9 games and arrange them on your profile."} <a href="/profile">My profile</a></p>
+    <p className="game-dialog-help">{full ? `${favoriteLimit} of ${favoriteLimit} favorites. Remove one on your profile to make room.` : `Choose up to ${favoriteLimit} games and arrange them on your profile.`} <a href="/profile">My profile</a></p>
     {error && <p className="game-dialog-error" role="alert">{error}</p>}
   </div>;
 }

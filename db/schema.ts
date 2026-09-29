@@ -64,6 +64,8 @@ export const libraryItems = sqliteTable("library_items", {
   platformId: integer("platform_id").notNull().default(0),
   platformName: text("platform_name"),
   addedAt: integer("added_at").notNull(),
+  // Set while this platform copy is currently playing; removing the copy removes the mark.
+  playingSince: integer("playing_since"),
 }, (table) => [
   uniqueIndex("idx_library_user_game_platform").on(table.userId, table.igdbId, table.platformId),
   index("idx_library_added_at_game_user").on(table.addedAt, table.igdbId, table.userId),
