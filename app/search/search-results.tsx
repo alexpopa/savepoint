@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, Gamepad2, LoaderCircle, Plus, Search, UserPlus, Users, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Gamepad2, LoaderCircle, Plus, Search, UserPlus, Users } from "lucide-react";
 import FriendButton, { type Relationship } from "../friend-button";
 import GameDetailsDialog from "../game-details-dialog";
+import PlatformFilter, { type Platform } from "../platform-filter";
 import type { CatalogGame, SavedGame } from "../../lib/game-types";
 import type { PopularGame } from "../../lib/popular-games";
 
 type Player = { userId: string; displayName: string; profilePath: string; isPublic: boolean; relationship: Relationship };
 type Tab = "all" | "games" | "players";
-type Platform = { id: number; name: string };
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -21,10 +21,6 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 export default function SearchResults({ query, signedIn, initialPlatformIds, popularGames, popularGamesError }: { query: string; signedIn: boolean; initialPlatformIds: number[]; popularGames: PopularGame[]; popularGamesError: boolean }) {
   const [tab, setTab] = useState<Tab>("all");
   const [platformIds, setPlatformIds] = useState<number[]>(initialPlatformIds);
-  const [platformMenuOpen, setPlatformMenuOpen] = useState(false);
-  const [platformSearch, setPlatformSearch] = useState("");
-  const platformFilterRef = useRef<HTMLDivElement>(null);
-  const platformSearchRef = useRef<HTMLInputElement>(null);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loadingPlatforms, setLoadingPlatforms] = useState(true);
   const [platformsError, setPlatformsError] = useState("");
@@ -46,25 +42,6 @@ export default function SearchResults({ query, signedIn, initialPlatformIds, pop
       .catch((error) => { if (active) setPlatformsError(error.message); }).finally(() => { if (active) setLoadingPlatforms(false); });
     return () => { active = false; };
   }, [query]);
-
-  useEffect(() => {
-    if (!platformMenuOpen) return;
-    function closeOnOutsidePointer(event: PointerEvent) {
-      if (event.target instanceof Node && !platformFilterRef.current?.contains(event.target)) setPlatformMenuOpen(false);
-    }
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setPlatformMenuOpen(false);
-        platformFilterRef.current?.querySelector<HTMLButtonElement>(".platform-filter-trigger")?.focus();
-      }
-    }
-    document.addEventListener("pointerdown", closeOnOutsidePointer);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeOnOutsidePointer);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [platformMenuOpen]);
 
   useEffect(() => {
     if (query.length < 2 || query.length > 100) return;
@@ -101,8 +78,7 @@ export default function SearchResults({ query, signedIn, initialPlatformIds, pop
     return () => window.removeEventListener("popstate", syncPlatformFromUrl);
   }, []);
 
-  function changePlatforms(nextPlatformIds: number[]) {
-    const normalized = [...new Set(nextPlatformIds)].sort((a, b) => a - b);
+  function changePlatforms(normalized: number[]) {
     setLoadingGames(true);
     setGamesError("");
     setPlatformIds(normalized);
@@ -110,10 +86,6 @@ export default function SearchResults({ query, signedIn, initialPlatformIds, pop
     url.searchParams.delete("platform");
     normalized.forEach((id) => url.searchParams.append("platform", String(id)));
     window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
-  }
-
-  function togglePlatform(id: number) {
-    changePlatforms(platformIds.includes(id) ? platformIds.filter((platformId) => platformId !== id) : [...platformIds, id]);
   }
 
   async function refreshSaved() {
@@ -145,8 +117,6 @@ export default function SearchResults({ query, signedIn, initialPlatformIds, pop
   const showGames = tab !== "players";
   const done = !loadingGames && !loadingPlayers;
   const selectedPlatforms = platforms.filter((platform) => platformIds.includes(platform.id));
-  const normalizedPlatformSearch = platformSearch.trim().toLowerCase();
-  const filteredPlatforms = platforms.filter((platform) => platform.name.toLowerCase().includes(normalizedPlatformSearch));
   const returnParams = new URLSearchParams({ q: query });
   platformIds.forEach((id) => returnParams.append("platform", String(id)));
   const returnTo = query ? `/search?${returnParams.toString()}` : "/search";
@@ -176,21 +146,7 @@ export default function SearchResults({ query, signedIn, initialPlatformIds, pop
         })}</div> : <div className="search-empty">No players matched “{query}”.</div>}
       </section>}
       {showGames && <section className="search-group" aria-labelledby="games-heading" aria-busy={loadingGames}><div className="search-group-heading"><div><p className="eyebrow">IGDB CATALOG</p><div className="search-games-title"><h2 id="games-heading">Games</h2><span className="search-results-count" role="status">{loadingGames ? "Searching…" : `${games.length} results`}</span></div></div><div className="search-group-tools">
-        <div ref={platformFilterRef} className={`search-platform-filter${platformIds.length ? " active" : ""}`}>
-          <span id="platform-filter-label">Platform</span>
-          <button type="button" className="platform-filter-trigger" aria-labelledby="platform-filter-label platform-filter-value" aria-expanded={platformMenuOpen} aria-controls="platform-filter-options" disabled={loadingPlatforms || Boolean(platformsError)} onClick={() => {
-            if (!platformMenuOpen) setPlatformSearch("");
-            setPlatformMenuOpen(!platformMenuOpen);
-          }}>
-            <span id="platform-filter-value">{loadingPlatforms ? "Loading platforms…" : platformsError ? "Unavailable" : platformIds.length ? `${platformIds.length} selected` : "All platforms"}</span><ChevronDown size={16} aria-hidden="true"/>
-          </button>
-          {platformMenuOpen && <div className="platform-filter-menu" id="platform-filter-options" role="group" aria-label="Filter games by platform">
-            <div className="platform-filter-search"><Search size={16} aria-hidden="true"/><input ref={platformSearchRef} type="search" autoFocus aria-label="Search platforms" placeholder="Search platforms" value={platformSearch} onChange={(event) => setPlatformSearch(event.target.value)}/>{platformIds.length > 0 && <button className="platform-filter-clear" type="button" aria-label="Clear selected platforms" title="Clear selected platforms" onClick={() => { changePlatforms([]); platformSearchRef.current?.focus(); }}><X size={16} aria-hidden="true"/></button>}</div>
-            <div className="platform-filter-options" role="group" aria-label="Platform options">
-              {filteredPlatforms.length ? filteredPlatforms.map((platform) => <label className="platform-filter-option" key={platform.id}><input type="checkbox" checked={platformIds.includes(platform.id)} onChange={() => togglePlatform(platform.id)}/><span>{platform.name}</span></label>) : <p className="platform-filter-empty" role="status">No platforms found.</p>}
-            </div>
-          </div>}
-        </div>
+        <PlatformFilter platforms={platforms} selected={platformIds} onChange={changePlatforms} loading={loadingPlatforms} error={Boolean(platformsError)}/>
       </div></div>
         {platformsError && <p className="search-platform-error" role="status">Platform filter unavailable right now.</p>}
         {loadingGames && games.length === 0 ? <div className="search-loading"><LoaderCircle className="spin" size={18}/> Searching games…</div> : gamesError ? <div className="search-empty" role="alert">{gamesError}</div> : games.length ? <div className={`game-grid${loadingGames ? " is-updating" : ""}`} inert={loadingGames}>{games.map((game) => {

@@ -8,8 +8,33 @@ import type { CatalogGame, SavedGame } from "../lib/game-types";
 import GameDetailsDialog from "./game-details-dialog";
 import { favoriteRequest } from "./game-favorite-button";
 import { playingRequest } from "./currently-playing";
+import GamePicker, { libraryParams, pickerRequest, type PickerSource } from "./game-picker";
+import type { Platform } from "./platform-filter";
+import type { LibraryGame } from "../lib/library-copies-query";
 
 const shelves = [[0, 5], [5, favoriteLimit]];
+
+// Favorites can be any IGDB game. The picker opens on the player's own library, one row per game,
+// and searches IGDB once there are two characters (IGDB's minimum). IGDB returns a single page.
+// Both use IGDB platform IDs, so one platform list, fetched once per page view, filters either.
+let igdbPlatforms: Promise<Platform[]> | null = null;
+const favoriteSource: PickerSource = {
+  async load({ query, platformIds, cursor }, signal) {
+    igdbPlatforms ??= pickerRequest<{ platforms: Platform[] }>("/api/igdb/platforms", undefined, "IGDB platforms are unavailable.")
+      .then((data) => data.platforms).catch(() => { igdbPlatforms = null; return []; });
+    if (query.length < 2) {
+      const params = libraryParams(query, platformIds, cursor);
+      params.set("group", "game");
+      const [platforms, page] = await Promise.all([igdbPlatforms, pickerRequest<{ items: LibraryGame[]; next: string | null }>(`/api/library/copies?${params}`, signal, "Could not load your library.")]);
+      return { next: page.next, platforms, heading: "Your library", items: page.items.map((game) => ({ id: game.igdbId, name: game.name, coverUrl: game.coverUrl, detail: game.platformNames })) };
+    }
+    const params = new URLSearchParams({ q: query });
+    platformIds.forEach((id) => params.append("platform", String(id)));
+    const [platforms, { games }] = await Promise.all([igdbPlatforms, pickerRequest<{ games: CatalogGame[] }>(`/api/igdb/search?${params}`, signal, "IGDB search failed.")]);
+    return { next: null, platforms, heading: "All games on IGDB", items: games.map((game) => ({ id: game.igdbId, name: game.name, coverUrl: game.coverUrl,
+      detail: [game.releaseYear, game.platforms.slice(0, 2).join(" · ")].filter(Boolean).join(" · ") || "Release year unknown" })) };
+  },
+};
 
 // Covers stand on two shelves of five. In Edit, a cover is picked up and set down
 // by click, keyboard, or drag, so reordering never depends on a pointer.
@@ -24,6 +49,7 @@ export default function FavoriteGames({ initialFavorites, canManage, isOwner = f
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<CatalogGame | null>(null);
   const [saved, setSaved] = useState<SavedGame[]>([]);
+  const [picking, setPicking] = useState(false);
   async function place(id: number, position: number) {
     const from = favorites.findIndex((game) => game.id === id);
     setHeld(null); setOver(null);
@@ -109,7 +135,7 @@ export default function FavoriteGames({ initialFavorites, canManage, isOwner = f
           </li>;
         })}
         {canAdd && favorites.length >= start && favorites.length < end && <li className="shelf-slot">
-          <a className="shelf-add" href="/search" aria-label="Add a game to your Top 10" title="Add a game"><Plus size={20} aria-hidden="true"/></a>
+          <button type="button" className="shelf-add" aria-haspopup="dialog" aria-label="Add a game to your Top 10" title="Add a game" onClick={() => setPicking(true)}><Plus size={20} aria-hidden="true"/></button>
         </li>}
       </ol>)}
       <p className="shelf-caption" aria-hidden="true">
@@ -118,6 +144,15 @@ export default function FavoriteGames({ initialFavorites, canManage, isOwner = f
       </p>
       <p className="shelf-status" role="status">{status}</p>
     </div> : <div className="profile-screen-empty"><Gamepad2 size={22} aria-hidden="true"/><p>No games picked yet</p></div>}
+    {picking && <GamePicker title="Add to your Top 10" searchLabel="Search games" source={favoriteSource} selectedLabel="In Top 10"
+      isSelected={(item) => favorites.some((game) => game.igdbId === item.id)} onClose={() => setPicking(false)}
+      emptyText="Your library is empty. Type a game's name to search all games."
+      fullText={favorites.length >= favoriteLimit ? `Your Top 10 is full. Remove a game to add another.` : undefined}
+      onToggle={async (item, add) => {
+        const favorite = favorites.find((game) => game.igdbId === item.id);
+        setFavorites(await favoriteRequest(add ? "/api/game-favorites" : `/api/game-favorites/${favorite?.id}`, add ? { method: "POST", body: JSON.stringify({ igdbId: item.id }) } : { method: "DELETE" }));
+        setStatus(`${item.name} ${add ? "added to" : "removed from"} Top 10.`);
+      }}/>}
     {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={saved.filter((game) => game.igdbId === selected.igdbId)} signedIn onClose={() => setSelected(null)} onFavoritesChange={isOwner ? setFavorites : undefined} onAdd={async (platformId) => { await libraryRequest({ method: "POST", body: JSON.stringify({ igdbId: selected.igdbId, platformId }) }); await libraryRequest(); }} onRemove={async (id) => { await libraryRequest({ method: "DELETE" }, id); await libraryRequest(); }} onPlaying={async (id, playing) => { await playingRequest(id, playing); await libraryRequest(); }}/>}
   </section>;
 }
