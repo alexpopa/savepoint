@@ -18,7 +18,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return result as T;
 }
 
-export default function Library({ email, userId }: { email: string; userId: string }) {
+export default function Library({ email, userId, showAdmin }: { email: string; userId: string; showAdmin: boolean }) {
   const [games, setGames] = useState<SavedGame[]>([]);
   const [selected, setSelected] = useState<CatalogGame | null>(null);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -89,7 +89,7 @@ export default function Library({ email, userId }: { email: string; userId: stri
   }
 
   return <main className="library-page">
-    <SiteHeader email={email}/>
+    <SiteHeader email={email} showAdmin={showAdmin}/>
     <div className="library-wrap"><div className="page-heading"><div><p className="eyebrow"><LibraryIcon size={14} /> YOUR PERSONAL CATALOG</p><h1>Game library</h1><p className="subcopy">Keep track of the games you want to remember.</p></div><div className="game-count"><strong>{games.length.toString().padStart(2, "0")}</strong><span>PLATFORM<br />COPIES</span></div></div>
       {error && <div className="notice error"><X size={17} />{error}</div>}
       <div className="section-title collection-title"><div><p className="eyebrow">YOUR SAVED GAMES</p><h2>Collection</h2></div></div>

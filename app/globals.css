@@ -229,6 +229,13 @@ button:disabled { cursor: default; }
 .settings-notice { margin: 16px 0; }
 .top-links { display: flex; align-items: center; gap: 20px; color: var(--rgb-muted); font-size: 0.875rem; }
 
+/* Admin portal: aggregate counters in settings-style cards; monospace numbers, no role styling. */
+.admin-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin: 16px 0 0; }
+.admin-stats div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 4px; padding: 14px 16px; border: 1px solid var(--rgb-rule); border-radius: 3px; background: var(--rgb-page); }
+.admin-stats dt { color: var(--rgb-muted); font-size: 0.875rem; line-height: 1.4; }
+.admin-stats dd { margin: 0; color: var(--rgb-ink); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.75rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) { .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .admin-stats div { padding: 12px; } .admin-stats dd { font-size: 1.375rem; } }
+
 .people-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 32px; }
 .people-grid > .empty-state { grid-column: 1 / -1; }
 .player-card { display: flex; align-items: center; gap: 16px; min-width: 0; min-height: 96px; padding: 18px; border: 1px solid var(--rgb-rule); border-radius: 4px; background: var(--rgb-panel); }

@@ -49,7 +49,8 @@ Read what the task touches before changing anything. The code is the final autho
 - Large refactors or reformatting of code outside the task.
 
 **Never**
-- Expose another player's role, email, or private data in responses or UI; add admin badges, admin UI, or role mutation endpoints. Role grants are trusted D1 operations only ([development](docs/development.md#roles-and-trusted-administration)).
+- Expose another player's role, email, or private data in responses or UI, or show regular players who is an admin (badges, labels, colors, role lists). Pages only admins can open, such as the [admin portal](docs/architecture.md#admin-portal), are allowed.
+- Add a UI or endpoint that grants or revokes roles. Role grants are trusted D1 operations only ([development](docs/development.md#roles-and-trusted-administration)).
 - Put secrets in source, docs, or browser code, or commit `.dev.vars`.
 - Edit generated output (`dist/`, `.next/`, `.vinext/`, `.wrangler/`) or vendored shadcn files in `components/ui/`.
 - Commit, push, publish to Sites, or touch production data unless the user asks in this conversation.

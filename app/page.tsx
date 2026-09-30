@@ -2,6 +2,7 @@ import { getCurrentUser } from "./auth";
 import { redirect } from "next/navigation";
 import { getTimelinePage } from "../lib/timeline";
 import Timeline from "./timeline";
+import { hasPermission } from "../lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,5 +16,5 @@ export default async function Home() {
   } catch {
     error = true;
   }
-  return <Timeline email={user.email} viewerId={user.userId} items={page.items} next={page.next} error={error} />;
+  return <Timeline email={user.email} viewerId={user.userId} showAdmin={hasPermission(user, false)} items={page.items} next={page.next} error={error} />;
 }

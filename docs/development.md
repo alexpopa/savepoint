@@ -96,7 +96,15 @@ The tables are `game_favorites`, `library_items`, `accounts`, `account_roles`, `
 
 Apply `drizzle/0010_user_roles.sql` locally with the command above. Sites applies it to production during deployment. Its bounded, one-time data statement grants `admin` only to the existing verified production account `1ffaf3ac-09e4-4e76-912a-c00a3258ff8e` (BlazeCloud), whose email was confirmed as `alex.florin.popa@gmail.com`. It also checks that email, a password hash, and verification exist. It does not grant future accounts with the same email and does not elevate dormant ChatGPT-era records. A local account with another ID is unaffected.
 
-Admin grants and revocations are trusted database operations only. There is no role mutation API, admin management page, registration flag, public role list, or public badge. For local testing, select the intended verified email account first, confirm its exact ID, and apply the following SQL through local Wrangler using a temporary SQL file. Substitute that confirmed account ID; do not infer authorization from email alone:
+Admins can open the [admin portal](architecture.md#admin-portal) at `/admin` from the account menu; everyone else gets a 404 there. Admin grants and revocations are trusted database operations only. There is no role mutation API, role management page, registration flag, public role list, or public badge.
+
+To make a local account an admin, first confirm its exact ID and that it is a verified email account (`npm run d1` is described in [browser testing](browser-testing.md#local-database)):
+
+```sh
+npm run d1 -- "SELECT a.user_id, a.display_name, a.password_hash IS NOT NULL AS has_password, a.email_verified_at IS NOT NULL AS verified, r.role FROM accounts a LEFT JOIN account_roles r USING (user_id) WHERE lower(a.display_name) = lower('BlazeCloud')"
+```
+
+Then apply the following SQL, with `npm run d1 -- "<SQL>"` or through local Wrangler using a temporary SQL file. Substitute that confirmed account ID; do not infer authorization from email alone. In this checkout's local database, BlazeCloud is an admin; its local ID differs from the production account's. No new sign-in is needed: the role applies on the next request.
 
 ```sql
 INSERT INTO account_roles (user_id, role)

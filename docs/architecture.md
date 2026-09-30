@@ -57,9 +57,20 @@ Current admin behavior:
 
 Personal endpoints and pages still mean the current viewer's own account, library, friends, received challenges, and sent challenges. An admin role does not silently impersonate a profile owner or change the destination of an Add game action. Resource-specific endpoints enforce the admin override when a different resource is explicitly targeted.
 
-Admin pages may offer additional permitted actions or data, but regular players must never see who is an admin. Do not add badges, colors, labels, role directories, admin links, or role fields to profile, search, account, friendship, or challenge responses. Pass only the current viewer's required action capabilities to client components, never a target account's role or the full `AppUser`. Client flags render controls only; the API independently rechecks permission from its authenticated session. There is no UI or HTTP API for adding or removing admins. Role changes are explicitly authorized, trusted D1 operations; see [development](development.md#roles-and-trusted-administration).
+Admin-only pages may offer additional permitted actions or data (see [Admin portal](#admin-portal)), but regular players must never see who is an admin. Do not add badges, colors, labels, role directories, or role fields to profile, search, account, friendship, or challenge responses. Links to admin-only pages render only for the admin viewing them. Pass only the current viewer's required action capabilities to client components, never a target account's role or the full `AppUser`. Client flags render controls only; the API independently rechecks permission from its authenticated session. There is no UI or HTTP API for adding or removing admins. Role changes are explicitly authorized, trusted D1 operations; see [development](development.md#roles-and-trusted-administration).
 
 Migration `0010_user_roles.sql` creates the table and includes the specifically requested one-time grant for the confirmed existing production owner account. Registration and login contain no email-based admin bootstrap. Grants and revocations take effect on the next request, including within an existing session. Player privacy preferences, friendships, and role grants are independent records. This application role is also separate from the Sites owner/editor/viewer sharing roles and the Site's public audience.
+
+### Admin portal
+
+`/admin` (`app/admin/page.tsx`) is a server-rendered site overview for admins. It checks `hasPermission(user, false)` and calls `notFound()` for guests and regular players, so they get the ordinary 404 and cannot tell the page exists. It reads aggregate counts in one D1 statement (`siteStatsQuery` in `lib/admin-queries.ts`, loaded by `getSiteStats` in `lib/admin.ts`):
+
+- Players: verified email accounts, public profiles among them, accounts awaiting email verification, and distinct accounts with an unexpired session. ChatGPT-era records without a password are not counted.
+- Libraries: distinct IGDB games, saved platform copies, currently playing and completed copies, Top 10 favorites, and scores.
+- Social: challenges, cleared challenges (both confirmations), accepted friendships, and pending friend requests.
+- Last 7 days: library copies added, challenges created, games scored, and friend requests sent, by their stored timestamps. Accounts have no creation time, so there is no signup count.
+
+The page shows only totals: no emails, roles, or per-player rows. If the read fails it shows an inline error. Signed-in pages pass `showAdmin={hasPermission(user, false)}` to `SiteHeader` (through `Library`, `Timeline`, and `Settings` for client pages), which adds an **Admin** item to the account menu only for admins. The portal has no write actions and no role management; it is not a timeline source. Add new admin views as sections of this page or as routes under `/admin/` with the same `notFound()` check, and put any admin write through a normal API route that rechecks `hasPermission` on the server.
 
 ## API
 
@@ -117,6 +128,7 @@ Follow the patterns in [conventions](conventions.md) for any of these.
 | Outgoing email | `lib/email.ts`, `lib/email-messages.ts`, and [conventions](conventions.md#email) |
 | Identity or redirects | `app/auth.ts`, `app/login/`, and `app/api/auth/` |
 | Stored fields | `db/schema.ts`, `drizzle/`, and library API serialization |
+| Admin portal | `app/admin/page.tsx`, `lib/admin-queries.ts`, and [Admin portal](#admin-portal) |
 | Runtime bindings or build | `.openai/hosting.json`, `vite.config.ts`, `scripts/` |
 
 ## Currently playing

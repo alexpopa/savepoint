@@ -31,7 +31,7 @@ function Stamp({ at, updated }: { at: number; updated?: boolean }) {
   return <time dateTime={date.toISOString()} title={date.toUTCString()}>{updated ? "Updated " : ""}{date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</time>;
 }
 
-export default function Timeline({ email, viewerId, items: firstItems, next: firstNext, error = false }: { email: string; viewerId: string; items: TimelineItem[]; next: string | null; error?: boolean }) {
+export default function Timeline({ email, viewerId, showAdmin, items: firstItems, next: firstNext, error = false }: { email: string; viewerId: string; showAdmin: boolean; items: TimelineItem[]; next: string | null; error?: boolean }) {
   const [items, setItems] = useState(firstItems);
   const [next, setNext] = useState(firstNext);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -111,7 +111,7 @@ export default function Timeline({ email, viewerId, items: firstItems, next: fir
     });
   }
 
-  return <div className="library-page"><SiteHeader email={email} />
+  return <div className="library-page"><SiteHeader email={email} showAdmin={showAdmin} />
     <main className="timeline-wrap">
       <header className="timeline-heading"><div><p className="timeline-eyebrow"><span className="timeline-rgb" aria-hidden="true" />Your circle</p><h1>Recent activity</h1></div><a className="timeline-players" href="/users">Find players <ArrowUpRight size={16} aria-hidden="true" /></a></header>
       <section className="timeline-screen" aria-label="Recent friend activity">

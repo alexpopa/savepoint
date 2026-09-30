@@ -70,7 +70,7 @@ Use one prominent accent action per region. A colored state also needs a visible
 
 ## Role visibility
 
-Admin status is never a public visual identity. Do not add role badges, special colors, labels, admin links, or role management controls. A server-authorized admin viewer may see additional data and existing action controls on their own page view; other viewers see the normal interface. Private profile labels and friend controls reflect actual visibility and friendship, even when the current viewer has permission to see private data. Admin challenge controls reuse the existing confirmation, favorite, rank, and remove buttons; each confirmation button has an accessible name and tooltip identifying whose confirmation it changes.
+Admin status is never a public visual identity. Do not add role badges, special colors, labels, or role management controls. The account menu's **Admin** link and the `/admin` site overview render only for admins; the overview reuses the settings cards with monospace counters and has no role styling. A server-authorized admin viewer may see additional data and existing action controls on their own page view; other viewers see the normal interface. Private profile labels and friend controls reflect actual visibility and friendship, even when the current viewer has permission to see private data. Admin challenge controls reuse the existing confirmation, favorite, rank, and remove buttons; each confirmation button has an accessible name and tooltip identifying whose confirmation it changes.
 
 ## Component behavior
 

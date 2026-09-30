@@ -20,7 +20,7 @@ The five legacy fixture accounts were replaced with new email accounts using the
 
 Each library was randomly selected from the previous local fixture catalog. Game selections may overlap between accounts. Some retained rows use fixture IDs instead of current IGDB IDs and have no saved cover URL; public profiles resolve those by exact title and release year for display and game details.
 
-All five accounts have accepted friendships with the local `BlazeCloud` account. `Verified Test` remains an accepted friend as well. `Auth Smoke` and `Pending Search Test` are separate, unverified local accounts and are not included in this list.
+All five accounts have accepted friendships with the local `BlazeCloud` account, which is also the local admin (see [roles](development.md#roles-and-trusted-administration)); sign in as it with `--as BlazeCloud` to check admin-only views such as `/admin`. `Verified Test` remains an accepted friend as well. `Auth Smoke` and `Pending Search Test` are separate, unverified local accounts and are not included in this list.
 
 ## Credentials and email delivery
 

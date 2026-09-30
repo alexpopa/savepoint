@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function ProfilePage() {
   const user = await requireUser("/profile");
   const { isPublic, received, sent, favorites, playing, games, completed } = await getOwnProfile(user);
-  return <main className="library-page"><SiteHeader email={user.email}/><div className="library-wrap profile-wrap">
+  return <main className="library-page"><SiteHeader email={user.email} showAdmin={hasPermission(user, false)}/><div className="library-wrap profile-wrap">
     <ProfileNameplate seed={user.userId} name={accountDisplayName(user)} status={isPublic ? "public" : "private"} statusHref="/settings" topGame={favorites[0]} stats={[
       { label: "Games", value: games, href: "/library" },
       { label: "Completed", value: completed },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Gamepad2, LogOut, Search, Settings, UserRound, Users } from "lucide-react";
+import { ChevronDown, Gamepad2, LayoutDashboard, LogOut, Search, Settings, UserRound, Users } from "lucide-react";
 
 const glyphs = {
   R: ["01110", "10001", "10001", "11110", "10100", "10010", "10001"],
@@ -34,7 +34,8 @@ export function BrandWordmark() {
   </svg>;
 }
 
-export default function SiteHeader({ email, query = "" }: { email?: string; query?: string }) {
+// showAdmin is the current viewer's own capability, computed on the server with hasPermission.
+export default function SiteHeader({ email, query = "", showAdmin = false }: { email?: string; query?: string; showAdmin?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -117,6 +118,7 @@ export default function SiteHeader({ email, query = "" }: { email?: string; quer
             <a className="account-menu-link" href="/profile" onClick={() => setMenuOpen(false)}><UserRound size={18} aria-hidden="true"/>My profile</a>
             <a className="account-menu-link" href="/users" onClick={() => setMenuOpen(false)}><Users size={18} aria-hidden="true"/>Browse players</a>
             <a className="account-menu-link" href="/settings" aria-label={pendingRequestCount > 0 ? `Settings & friends, ${pendingRequestCount} pending friend requests` : undefined} onClick={() => setMenuOpen(false)}><Settings size={18} aria-hidden="true"/>Settings &amp; friends{pendingRequestCount > 0 && <span className="friend-request-badge" aria-hidden="true">{pendingRequestCount}</span>}</a>
+            {showAdmin && <a className="account-menu-link" href="/admin" onClick={() => setMenuOpen(false)}><LayoutDashboard size={18} aria-hidden="true"/>Admin</a>}
             <form className="account-menu-signout" action="/api/auth/logout" method="post">
               <button className="account-menu-link" type="submit"><LogOut size={18} aria-hidden="true"/>Sign out</button>
             </form>

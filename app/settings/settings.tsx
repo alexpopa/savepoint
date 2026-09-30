@@ -16,7 +16,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return result as T;
 }
 
-export default function Settings({ email: signedInEmail }: { email: string }) {
+export default function Settings({ email: signedInEmail, showAdmin }: { email: string; showAdmin: boolean }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [email, setEmail] = useState("");
@@ -69,7 +69,7 @@ export default function Settings({ email: signedInEmail }: { email: string }) {
   const friends = people.filter((person) => person.status === "accepted");
 
   return <main className="library-page">
-    <SiteHeader email={signedInEmail}/>
+    <SiteHeader email={signedInEmail} showAdmin={showAdmin}/>
     <div className="library-wrap settings-wrap"><p className="eyebrow">ACCOUNT</p><h1>Settings & friends</h1><p className="subcopy">Control who can see your game library and connect with other players.</p>
       {error && <div className="notice error settings-notice" role="alert">{error}</div>}
       {notice && <div className="notice success settings-notice" role="status">{notice}</div>}

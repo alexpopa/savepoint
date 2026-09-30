@@ -60,7 +60,7 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
   const relationship = friendship ? { status: friendship.status, direction: friendship.requesterId === user?.userId ? "outgoing" as const : "incoming" as const } : null;
   const name = accountDisplayName(target);
   const status = friendship?.status === "accepted" ? "friend" : target.isPublic ? "public" : "private";
-  return <main className="library-page"><SiteHeader email={user?.email}/><div className="library-wrap profile-wrap">
+  return <main className="library-page"><SiteHeader email={user?.email} showAdmin={canManageChallenges}/><div className="library-wrap profile-wrap">
     <ProfileNameplate seed={targetId} name={name} status={status} topGame={canView ? favorites[0] : undefined} stats={canView ? [
       { label: "Games", value: new Set(games.map((game) => game.igdbId)).size, href: "#library" },
       { label: "Completed", value: new Set(games.filter((game) => game.completedAt).map((game) => game.igdbId)).size },
