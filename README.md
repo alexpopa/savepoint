@@ -1,25 +1,46 @@
 # RGBoner
 
-RGBoner is a social library for video games. Search games and players, track the games you own by platform, and share your library with friends.
+A retro, RGB-styled social library for video games.
 
-Players can mark games they are currently playing or have completed, score any game from one to five stars, pick up to ten favorites for their profile, and create challenges around games in friends' libraries. Up to six completed challenges can be kept in the player's Hall of Honor. The #1 favorite's cover is the player's profile picture when the art is available and the profile is visible. Browse games and public profiles without an account; sign in to manage a library and connect with other players. Private profiles are shared with accepted friends.
+## Features
 
-Game information comes from IGDB. The app runs on Cloudflare Workers with D1 and Drizzle, using Vinext for its Next.js App Router app.
+- **Library** — track the games you own, per platform
+- **Status and ratings** — mark games as playing or completed, and score them 1–5 stars
+- **Top 10** — pin your favorites; your #1 cover becomes your profile picture
+- **Friends** — timeline, direct messages, and private profiles shared with friends
+- **Challenges** — dare friends on games in their library and keep the best in your Hall of Honor
 
-## Run locally
+Anyone can browse games and public profiles; sign in to build a library.
 
-Requires Node.js 22.13 or newer, npm, and IGDB API credentials. Follow the [local setup guide](docs/development.md) to configure `.dev.vars` and initialize the local database, then run:
+## Tech stack
+
+[Vinext](https://github.com/cloudflare/vinext) (Next.js App Router on Vite) · Cloudflare Workers · D1 + Drizzle · [IGDB](https://api-docs.igdb.com/) for game data
+
+## Getting started
+
+Requires Node.js 22.13+ and IGDB (Twitch) API credentials.
 
 ```sh
-npm run dev
+npm install
+cp .dev.vars.example .dev.vars   # add your IGDB client ID and secret
+npm run dev                      # http://localhost:5173
 ```
 
-The app is available at `http://localhost:5173/`. Run `npm run check` for lint, type checks, and tests.
+Set up the local database first — see the [development guide](docs/development.md).
 
-## Project guides
+## Scripts
 
-- [Architecture and app behavior](docs/architecture.md)
-- [Development and database workflow](docs/development.md)
-- [Visual style guide](docs/style-guide.md)
-- [Friends timeline rules](docs/timeline-design.md)
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the local dev server |
+| `npm run check` | Lint, type check, and run tests |
+| `npm run build` | Build the Worker |
+| `npm run db:generate` | Generate a migration from `db/schema.ts` |
+
+## Docs
+
+- [Architecture](docs/architecture.md)
+- [Development](docs/development.md)
+- [Style guide](docs/style-guide.md)
+- [Timeline design](docs/timeline-design.md)
 - [Deployment](docs/deployment.md)

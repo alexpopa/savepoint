@@ -18,7 +18,7 @@ function hash(value: string, seed = 2166136261) {
 }
 
 // A mirrored 5 × 5 sprite on a one-cell black margin, drawn at an integer scale.
-function PixelAvatar({ seed }: { seed: string }) {
+export function PixelAvatar({ seed }: { seed: string }) {
   const bits = hash(seed);
   const ink = avatarInks[hash(seed, 3339675911) % avatarInks.length];
   const cells: [number, number][] = [];

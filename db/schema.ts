@@ -126,3 +126,22 @@ export const gameRatings = sqliteTable("game_ratings", {
   index("idx_game_ratings_user_rated_at").on(table.userId, table.ratedAt),
   check("ck_game_ratings_score", sql`${table.score} BETWEEN 1 AND 5`),
 ]);
+
+// One conversation per pair of players: the ordered pair mirrors friendships, and `id` orders and pages it.
+export const messages = sqliteTable("messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userLow: text("user_low").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  userHigh: text("user_high").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  senderId: text("sender_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  recipientId: text("recipient_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: integer("created_at").notNull(),
+  // Set when the recipient reads it; the partial index keeps unread counts cheap because most rows are read.
+  readAt: integer("read_at"),
+}, (table) => [
+  index("idx_messages_pair_id").on(table.userLow, table.userHigh, table.id),
+  index("idx_messages_unread").on(table.recipientId, table.senderId).where(sql`${table.readAt} IS NULL`),
+  check("ck_messages_pair", sql`${table.userLow} < ${table.userHigh}`),
+  check("ck_messages_participants", sql`(${table.senderId} = ${table.userLow} AND ${table.recipientId} = ${table.userHigh}) OR (${table.senderId} = ${table.userHigh} AND ${table.recipientId} = ${table.userLow})`),
+  check("ck_messages_body", sql`length(${table.body}) BETWEEN 1 AND 2000`),
+]);

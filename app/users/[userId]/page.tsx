@@ -4,7 +4,7 @@ import { getCurrentlyPlaying } from "../../../lib/currently-playing";
 import { getGameFavorites } from "../../../lib/game-favorites";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
-import { Gamepad2, Lock, UserPlus } from "lucide-react";
+import { Gamepad2, Lock, MessageSquare, UserPlus } from "lucide-react";
 import SiteHeader from "../../site-header";
 import FriendButton from "../../friend-button";
 import { HallOfHonor, ProfileChallenges } from "../../challenges";
@@ -15,7 +15,7 @@ import { getDb } from "../../../db";
 import { accounts } from "../../../db/schema";
 import { isComplete, receivedChallenges } from "../../../lib/challenges";
 import { getIgdbGameCoversForGames } from "../../../lib/igdb";
-import { profilePath } from "../../../lib/profile-path";
+import { messagesPath, profilePath } from "../../../lib/profile-path";
 import { accountDisplayName, ensureAccount, getFriendship, getLibraryGames } from "../../../lib/social";
 import { canViewProfile, hasPermission } from "../../../lib/permissions";
 
@@ -66,7 +66,7 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
       { label: "Completed", value: new Set(games.filter((game) => game.completedAt).map((game) => game.igdbId)).size },
       { label: "Challenges cleared", value: challengeRows.filter(isComplete).length },
     ] : undefined}>
-      {user ? friendship?.status !== "accepted" && <FriendButton userId={targetId} initialRelationship={relationship} refreshOnAccept/>
+      {user ? friendship?.status === "accepted" ? <a className="friend-button" href={messagesPath(target)}><MessageSquare size={16} aria-hidden="true"/> Message</a> : <FriendButton userId={targetId} initialRelationship={relationship} refreshOnAccept/>
         : <a className="friend-button" href={loginPath}><UserPlus size={16} aria-hidden="true"/> Sign in to Add Friend</a>}
     </ProfileNameplate>
     {canView ? <>

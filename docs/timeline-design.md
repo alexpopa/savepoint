@@ -2,11 +2,11 @@
 
 The signed-in home page shows the latest 15 entries from accepted friends, newest first, and a **Show more** button loads the next 15 below them. Guests still go to search. **My library** lives at `/library`, under the account icon; the wordmark returns to the timeline.
 
-This is a view of current activity, not a permanent history. It reads the existing library, currently playing, completed, game-rating, game-favorite, and challenge records when the page loads. There is no activity table, queue, push delivery, notification system, friendship announcement, or unread marker.
+This is a view of current activity, not a permanent history. It reads the existing library, currently playing, completed, game-rating, game-favorite, and challenge records when the page loads. There is no activity table, queue, push delivery, friendship announcement, or unread marker in the timeline.
 
 ## What belongs in the timeline
 
-Every new feature that fits this methodology must add a timeline entry in the same change, with its section below. A feature fits when a player adds, chooses, starts, or finishes something that a friend would notice, and the current record stores a timestamp for that moment. The entry is computed from that record on read, respects the friendship and verified-account rules below, and disappears when the record is removed. Reordering, editing details, and repeating an action do not bump it. Settings, profile edits, friendships, and reorderings do not belong in the timeline.
+Every new feature that fits this methodology must add a timeline entry in the same change, with its section below. A feature fits when a player adds, chooses, starts, or finishes something that a friend would notice, and the current record stores a timestamp for that moment. The entry is computed from that record on read, respects the friendship and verified-account rules below, and disappears when the record is removed. Reordering, editing details, and repeating an action do not bump it. Settings, profile edits, friendships, reorderings, and [direct messages](architecture.md#messages) (private between two players) do not belong in the timeline.
 
 ## Library batches
 

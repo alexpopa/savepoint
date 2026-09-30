@@ -1,6 +1,6 @@
 # Working on RGBoner
 
-RGBoner is a retro RGB-styled social game library: verified email accounts, IGDB-backed game search, per-platform libraries, friendships, challenges, a Top 10 of favorite games, currently playing status, and a friends timeline. It is a Vinext (Next.js App Router on Vite) Cloudflare Worker with D1 via Drizzle, deployed through ChatGPT Sites. Several AI coding agents work on this repository, so this file is the shared contract. Instructions here outrank habits from other projects.
+RGBoner is a retro RGB-styled social game library: verified email accounts, IGDB-backed game search, per-platform libraries, friendships, challenges, a Top 10 of favorite games, currently playing status, a friends timeline, and direct messages between friends. It is a Vinext (Next.js App Router on Vite) Cloudflare Worker with D1 via Drizzle, deployed through ChatGPT Sites. Several AI coding agents work on this repository, so this file is the shared contract. Instructions here outrank habits from other projects.
 
 ## Sources of truth
 
@@ -35,7 +35,7 @@ Read what the task touches before changing anything. The code is the final autho
 ## Boundaries
 
 **Always**
-- Put new server-side authorization through `hasPermission` / `canViewProfile` in `lib/permissions.ts` so admins keep every permission. Authentication, same-origin writes, input validation, verified accounts, and data integrity still apply to admins.
+- Put new server-side authorization through `hasPermission` / `canViewProfile` in `lib/permissions.ts` so admins keep every permission. The one exception is direct messages, which stay friends-only for admins too ([architecture](docs/architecture.md#messages)). Authentication, same-origin writes, input validation, verified accounts, and data integrity still apply to admins.
 - Validate every request body on the server and load stored game details from IGDB by ID; never trust client-supplied names, covers, years, platforms, or roles.
 - Add a new forward migration for every schema change; treat applied migrations as immutable.
 - Update the affected documentation in the same change, describing current behavior with no dated change entries.

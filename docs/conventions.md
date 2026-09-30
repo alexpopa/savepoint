@@ -112,7 +112,8 @@ These were chosen deliberately. Do not undo them without the user's approval; ar
 - Admins have every permission through `lib/permissions.ts`, and admin status is never visible to other players.
 - Profiles are private by default. Pending friend requests grant nothing.
 - Native anchors instead of `next/link`: the current Vinext production bundle breaks client-side navigation.
-- The friends timeline is computed on read from current records. There is no activity table, queue, or notification system.
+- The friends timeline is computed on read from current records. There is no activity table or queue.
+- Direct messages are between accepted friends only, for every player including admins: a message from a non-friend would reveal the role, so this is the one deliberate exception to the admin override. They send no email, and new messages arrive by polling, not push. See [architecture](architecture.md#messages).
 - Every feature where a player adds, chooses, or finishes something with its own timestamp gets a timeline entry in the same change (see [timeline design](timeline-design.md#what-belongs-in-the-timeline)).
 - Challenges belong to the recipient and IGDB game, not to a library row, so removing a game keeps its challenges.
 - Library entries are one row per game and platform. Currently playing is a mark on a platform copy (`playing_since`), so only owned copies qualify and there is no limit. Completed is a mark on a platform copy (`completed_at`), independent of currently playing. Scores are independent of library copies, one 1–5 score per player and game (`game_ratings`). Favorites are independent of library copies and capped at ten (`favoriteLimit` in `lib/game-favorite-queries.ts`). The Hall of Honor holds at most six starred completed challenges (`honorLimit` in `lib/challenge-queries.ts`).

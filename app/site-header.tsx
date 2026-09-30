@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Gamepad2, LayoutDashboard, LogOut, Search, Settings, UserRound, Users } from "lucide-react";
+import { ChevronDown, Gamepad2, LayoutDashboard, LogOut, MessageSquare, Search, Settings, UserRound, Users } from "lucide-react";
+
+// Dispatched with the fresh unread count as `detail` when the messages page reads or receives messages.
+export const messagesChangedEvent = "messages-changed";
+// The badge refreshes on page load, on returning to the tab, and at this interval while the tab is visible.
+const unreadRefreshMs = 60_000;
 
 const glyphs = {
   R: ["01110", "10001", "10001", "11110", "10100", "10010", "10001"],
@@ -38,6 +43,7 @@ export function BrandWordmark() {
 export default function SiteHeader({ email, query = "", showAdmin = false }: { email?: string; query?: string; showAdmin?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const signInHref = "/login";
 
@@ -59,6 +65,36 @@ export default function SiteHeader({ email, query = "", showAdmin = false }: { e
     return () => {
       active = false;
       window.removeEventListener("friend-requests-changed", refreshPendingRequestCount);
+    };
+  }, [email]);
+
+  useEffect(() => {
+    if (!email) return;
+    let active = true;
+    async function refreshUnreadMessageCount() {
+      if (document.hidden) return;
+      try {
+        const response = await fetch("/api/messages/unread-count");
+        if (!response.ok) return;
+        const result = await response.json() as { count?: unknown };
+        if (active && Number.isSafeInteger(result.count) && (result.count as number) >= 0) setUnreadMessageCount(result.count as number);
+      } catch {}
+    }
+    function applyReportedCount(event: Event) {
+      const count = (event as CustomEvent<unknown>).detail;
+      if (Number.isSafeInteger(count) && (count as number) >= 0) setUnreadMessageCount(count as number);
+      else void refreshUnreadMessageCount();
+    }
+
+    void refreshUnreadMessageCount();
+    const timer = window.setInterval(refreshUnreadMessageCount, unreadRefreshMs);
+    document.addEventListener("visibilitychange", refreshUnreadMessageCount);
+    window.addEventListener(messagesChangedEvent, applyReportedCount);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshUnreadMessageCount);
+      window.removeEventListener(messagesChangedEvent, applyReportedCount);
     };
   }, [email]);
 
@@ -93,6 +129,15 @@ export default function SiteHeader({ email, query = "", showAdmin = false }: { e
     </form>
     <div className="header-actions">
       {!email && <a className="header-signin" href={signInHref}>Sign in</a>}
+      {email && <a
+        className="header-messages"
+        href="/messages"
+        aria-label={unreadMessageCount > 0 ? `Messages, ${unreadMessageCount} unread` : "Messages"}
+        title={unreadMessageCount > 0 ? `Messages, ${unreadMessageCount} unread` : "Messages"}
+      >
+        <MessageSquare size={21} aria-hidden="true"/>
+        {unreadMessageCount > 0 && <span className="friend-request-badge" aria-hidden="true">{unreadMessageCount > 99 ? "99+" : unreadMessageCount}</span>}
+      </a>}
       {email && <div
         className="account-menu"
         ref={menuRef}
