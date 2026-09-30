@@ -7,7 +7,7 @@ import { notFound, redirect } from "next/navigation";
 import { Gamepad2, Lock, UserPlus } from "lucide-react";
 import SiteHeader from "../../site-header";
 import FriendButton from "../../friend-button";
-import { ProfileChallenges } from "../../challenges";
+import { HallOfHonor, ProfileChallenges } from "../../challenges";
 import { ProfileNameplate } from "../../profile-nameplate";
 import PublicLibrary from "./public-library";
 import { getCurrentUser } from "../../auth";
@@ -62,7 +62,7 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
   const cleared = challengeRows.filter(isComplete).length;
   const status = friendship?.status === "accepted" ? "friend" : target.isPublic ? "public" : "private";
   return <main className="library-page"><SiteHeader email={user?.email}/><div className="library-wrap profile-wrap">
-    <ProfileNameplate seed={targetId} name={name} status={status} stats={canView ? [
+    <ProfileNameplate seed={targetId} name={name} status={status} topGame={canView ? favorites[0] : undefined} stats={canView ? [
       { label: "Games", value: new Set(games.map((game) => game.igdbId)).size, href: "#library" },
       { label: "Cleared", value: cleared },
       { label: "Pending", value: challengeRows.length - cleared },
@@ -72,6 +72,7 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
     </ProfileNameplate>
     {canView ? <>
       <CurrentlyPlaying initialGames={playing} canManage={hasPermission(user, targetId === user?.userId)} signedIn={Boolean(user)} loginPath={loginPath}/>
+      <HallOfHonor received={challengeRows} viewerId={user?.userId ?? ""} canManage={canManageChallenges}/>
       <FavoriteGames initialFavorites={favorites} canManage={hasPermission(user, targetId === user?.userId)} signedIn={Boolean(user)} loginPath={loginPath}/>
       <ProfileChallenges received={challengeRows} viewerId={user?.userId ?? ""} canManage={canManageChallenges}/>
       <section className="profile-section" id="library" aria-labelledby="library-title">

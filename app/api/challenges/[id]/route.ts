@@ -1,14 +1,14 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "../../../auth";
 import { getDb } from "../../../../db";
 import { challenges } from "../../../../db/schema";
-import { isComplete, receivedChallenges } from "../../../../lib/challenges";
+import { awardHonor, honorLimit, placeHonor } from "../../../../lib/challenge-queries";
 import { isSameOriginWrite } from "../../../../lib/request-security";
 import { privateResponse } from "../../../../lib/social";
 import { confirmationParticipant, hasPermission } from "../../../../lib/permissions";
 
 type Context = { params: Promise<{ id: string }> };
-type Action = "confirm" | "unconfirm" | "favorite" | "unfavorite" | "move_up" | "move_down";
+type Action = "confirm" | "unconfirm" | "favorite" | "unfavorite" | "place";
 
 export async function PATCH(request: Request, context: Context) {
   const user = await getCurrentUser();
@@ -19,8 +19,11 @@ export async function PATCH(request: Request, context: Context) {
   let payload: unknown;
   try { payload = await request.json(); } catch { return Response.json({ error: "Invalid JSON." }, { status: 400 }); }
   const action = (payload as { action?: unknown } | null)?.action;
-  if (!["confirm", "unconfirm", "favorite", "unfavorite", "move_up", "move_down"].includes(action as string))
+  if (!["confirm", "unconfirm", "favorite", "unfavorite", "place"].includes(action as string))
     return Response.json({ error: "Invalid challenge action." }, { status: 400 });
+  const position = (payload as { position?: unknown }).position;
+  if (action === "place" && (!Number.isSafeInteger(position) || (position as number) < 1 || (position as number) > honorLimit))
+    return Response.json({ error: `Choose a Hall of Honor position from 1 to ${honorLimit}.` }, { status: 400 });
   try {
     const db = getDb();
     const [row] = await db.select().from(challenges).where(eq(challenges.id, id));
@@ -46,24 +49,21 @@ export async function PATCH(request: Request, context: Context) {
         break;
       }
       case "favorite":
+        if (!hasPermission(user, isRecipient)) return Response.json({ error: "Only the recipient can add challenges to their Hall of Honor." }, { status: 403 });
+        if (row.isFavorite) break;
+        if (!row.creatorConfirmed || !row.recipientConfirmed) return Response.json({ error: "Complete this challenge before adding it to the Hall of Honor." }, { status: 409 });
+        if (!(await db.$client.prepare(awardHonor).bind(row.recipientId, id).run()).meta.changes)
+          return Response.json({ error: `The Hall of Honor holds ${honorLimit} challenges. Remove one to add another.` }, { status: 409 });
+        break;
       case "unfavorite":
-        if (!hasPermission(user, isRecipient)) return Response.json({ error: "Only the recipient can favorite challenges." }, { status: 403 });
-        await db.update(challenges).set({ isFavorite: action === "favorite" }).where(eq(challenges.id, id));
+        if (!hasPermission(user, isRecipient)) return Response.json({ error: "Only the recipient can remove challenges from their Hall of Honor." }, { status: 403 });
+        await db.update(challenges).set({ isFavorite: false }).where(eq(challenges.id, id));
         break;
-      case "move_up":
-      case "move_down": {
+      case "place":
         if (!hasPermission(user, isRecipient)) return Response.json({ error: "Only the recipient can rank challenges." }, { status: 403 });
-        const all = await receivedChallenges(row.recipientId);
-        const current = all.find((item) => item.id === id);
-        if (!current) return Response.json({ error: "Challenge not found." }, { status: 404 });
-        if (!current.isFavorite) return Response.json({ error: "Favorite this challenge before ranking it." }, { status: 409 });
-        const peers = all.filter((item) => item.isFavorite && isComplete(item) === isComplete(current));
-        const index = peers.findIndex((item) => item.id === id);
-        const other = peers[index + (action === "move_up" ? -1 : 1)];
-        if (!other) return Response.json({ ok: true }, { headers: privateResponse });
-        await db.update(challenges).set({ sortOrder: sql`CASE WHEN ${challenges.id} = ${id} THEN ${other.sortOrder} ELSE ${current.sortOrder} END` }).where(inArray(challenges.id, [id, other.id]));
+        if (!row.isFavorite || !row.creatorConfirmed || !row.recipientConfirmed) return Response.json({ error: "Only challenges in the Hall of Honor can be ranked." }, { status: 409 });
+        await db.$client.prepare(placeHonor).bind(row.recipientId, id, position).run();
         break;
-      }
     }
     return Response.json({ ok: true }, { headers: privateResponse });
   } catch { return Response.json({ error: "Could not update the challenge." }, { status: 503 }); }

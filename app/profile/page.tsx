@@ -7,7 +7,7 @@ import { getCurrentlyPlaying } from "../../lib/currently-playing";
 import { getGameFavorites } from "../../lib/game-favorites";
 import { hasPermission } from "../../lib/permissions";
 import { requireUser } from "../auth";
-import { ProfileChallenges } from "../challenges";
+import { HallOfHonor, ProfileChallenges } from "../challenges";
 import { ProfileNameplate } from "../profile-nameplate";
 import SiteHeader from "../site-header";
 import { isComplete, receivedChallenges, sentChallenges } from "../../lib/challenges";
@@ -27,12 +27,13 @@ export default async function ProfilePage() {
   ]);
   const cleared = received.filter(isComplete).length;
   return <main className="library-page"><SiteHeader email={user.email}/><div className="library-wrap profile-wrap">
-    <ProfileNameplate seed={user.userId} name={accountDisplayName(account)} status={account.isPublic ? "public" : "private"} statusHref="/settings" stats={[
+    <ProfileNameplate seed={user.userId} name={accountDisplayName(account)} status={account.isPublic ? "public" : "private"} statusHref="/settings" topGame={favorites[0]} stats={[
       { label: "Games", value: library?.games ?? 0, href: "/library" },
       { label: "Cleared", value: cleared },
       { label: "Pending", value: received.length - cleared },
     ]}/>
     <CurrentlyPlaying initialGames={playing} canManage isOwner/>
+    <HallOfHonor received={received} viewerId={user.userId} canManage={hasPermission(user, false)} ownerControls/>
     <FavoriteGames initialFavorites={favorites} canManage isOwner/>
     <ProfileChallenges received={received} sent={sent} viewerId={user.userId} canManage={hasPermission(user, false)} ownerControls/>
   </div></main>;

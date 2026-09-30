@@ -115,6 +115,6 @@ These were chosen deliberately. Do not undo them without the user's approval; ar
 - The friends timeline is computed on read from current records. There is no activity table, queue, or notification system.
 - Every feature where a player adds, chooses, or finishes something with its own timestamp gets a timeline entry in the same change (see [timeline design](timeline-design.md#what-belongs-in-the-timeline)).
 - Challenges belong to the recipient and IGDB game, not to a library row, so removing a game keeps its challenges.
-- Library entries are one row per game and platform. Currently playing is a mark on a platform copy (`playing_since`), so only owned copies qualify and there is no limit. Favorites are independent of library copies and capped at ten (`favoriteLimit` in `lib/game-favorite-queries.ts`).
+- Library entries are one row per game and platform. Currently playing is a mark on a platform copy (`playing_since`), so only owned copies qualify and there is no limit. Favorites are independent of library copies and capped at ten (`favoriteLimit` in `lib/game-favorite-queries.ts`). The Hall of Honor holds at most six starred completed challenges (`honorLimit` in `lib/challenge-queries.ts`).
 - Game artwork keeps its proportions (`object-fit: contain` on black) and is never tinted or given CRT effects.
 - Documentation describes the current state. History lives in Git commits, not in dated notes or state files.

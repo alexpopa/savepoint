@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Gamepad2 } from "lucide-react";
+import { Gamepad2, Search } from "lucide-react";
 import { GameChallenges } from "../../challenges";
 import GameDetailsDialog from "../../game-details-dialog";
+import PlatformFilter, { type Platform } from "../../platform-filter";
 import type { Challenge } from "../../../lib/challenges";
 import type { CatalogGame, SavedGame } from "../../../lib/game-types";
+import { filterLibraryGames, paginateLibraryGames } from "../../../lib/library-view";
 
 type Props = {
   games: PublicGame[];
@@ -33,6 +35,10 @@ export default function PublicLibrary({ games, recipientId, viewerId, challengeR
   const [coverOverrides, setCoverOverrides] = useState<Record<number, string | null>>({});
   const [catalogIdOverrides, setCatalogIdOverrides] = useState<Record<number, number>>({});
   const [unavailableCovers, setUnavailableCovers] = useState<Record<number, true>>({});
+  const [query, setQuery] = useState("");
+  const [platformIds, setPlatformIds] = useState<number[]>([]);
+  const [page, setPage] = useState(1);
+  const pageStatus = useRef<HTMLParagraphElement>(null);
   const attemptedCoverRefreshes = useRef(new Set<number>());
   const pendingCoverRefreshes = useRef(new Set<number>());
 
@@ -99,9 +105,27 @@ export default function PublicLibrary({ games, recipientId, viewerId, challengeR
 
   const selectedCatalogId = selected ? catalogIdOverrides[selected.igdbId] ?? selected.catalogIgdbId ?? selected.igdbId : undefined;
   const selectedCopies = selected ? saved.filter((game) => game.igdbId === selected.igdbId || game.igdbId === selectedCatalogId) : [];
+  const platforms: Platform[] = [...new Map(games.map((game) => [game.platformId, { id: game.platformId, name: game.platformName || "Platform not set" }])).values()]
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const matching = filterLibraryGames(games, query, platformIds);
+  const { items: visible, page: currentPage, pageCount, first, last } = paginateLibraryGames(matching, page);
+  const filtered = Boolean(query.trim() || platformIds.length);
+
+  function changePage(next: number) {
+    setPage(next);
+    requestAnimationFrame(() => {
+      pageStatus.current?.focus({ preventScroll: true });
+      pageStatus.current?.scrollIntoView({ block: "start" });
+    });
+  }
 
   return <>
-    <div className="game-grid library-grid">{games.map((game) => {
+    <div className="library-tools">
+      <label className="library-search"><span>Search their games</span><span className="library-search-field"><Search size={17} aria-hidden="true"/><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search titles" maxLength={100} autoComplete="off" spellCheck={false}/></span></label>
+      <PlatformFilter platforms={platforms} selected={platformIds} onChange={(ids) => { setPlatformIds(ids); setPage(1); }} className="is-end"/>
+    </div>
+    <p ref={pageStatus} className="library-results" role="status" tabIndex={-1}>{matching.length ? `Showing ${first}–${last} of ${matching.length} ${filtered ? "matching " : ""}${matching.length === 1 ? "copy" : "copies"}` : "No matching copies"}</p>
+    {matching.length === 0 ? <div className="empty-state"><div className="empty-icon"><Search size={27}/></div><h2>No games match</h2><p>Try another title or platform.</p><button type="button" className="library-clear" onClick={() => { setQuery(""); setPlatformIds([]); setPage(1); }}>Clear filters</button></div> : <div className="game-grid library-grid">{visible.map((game) => {
       const openGame = () => setSelected(game);
       const coverUrl = Object.prototype.hasOwnProperty.call(coverOverrides, game.igdbId) ? coverOverrides[game.igdbId] : game.coverUrl;
       return <article className="game-card challenge-game-card" key={game.id}>
@@ -111,7 +135,8 @@ export default function PublicLibrary({ games, recipientId, viewerId, challengeR
         </button>
         <GameChallenges game={game} recipientId={recipientId} viewerId={viewerId} rows={challengeRows} canCreate={canCreateChallenges} canManage={canManageChallenges}/>
       </article>;
-    })}</div>
+    })}</div>}
+    {pageCount > 1 && <nav className="library-pagination" aria-label="Library pages"><span>Page {currentPage} of {pageCount}</span><div><button type="button" disabled={currentPage === 1} onClick={() => changePage(currentPage - 1)}>Previous</button><button type="button" disabled={currentPage === pageCount} onClick={() => changePage(currentPage + 1)}>Next</button></div></nav>}
     {selected && <GameDetailsDialog key={selectedCatalogId} game={{ ...selected, igdbId: selectedCatalogId!, platformOptions: [] } satisfies CatalogGame} saved={selectedCopies} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelected(null)} onAdd={(platformId) => addGame(selectedCatalogId!, platformId)} onRemove={removeGame} onPlaying={setPlaying}/>}
   </>;
 }

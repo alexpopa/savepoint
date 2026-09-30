@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Circle, Flag, Gamepad2, Plus, Star, Trophy, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, ChevronUp, Circle, Flag, Gamepad2, Pencil, Plus, Search, Star, X } from "lucide-react";
+import { challengeLogPageSize, filterChallenges } from "../lib/challenge-log";
+import { honorLimit } from "../lib/challenge-queries";
 import type { Challenge, ChallengeDetails } from "../lib/challenges";
 import type { ConfirmationParticipant } from "../lib/permissions";
 
@@ -9,13 +11,13 @@ type Game = { igdbId: number; name: string };
 
 function completed(row: Challenge) { return row.creatorConfirmed && row.recipientConfirmed && !row.declined; }
 
-async function patch(id: number, action: string, participant?: ConfirmationParticipant) {
-  const response = await fetch(`/api/challenges/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, participant }) });
+async function patch(id: number, action: string, participant?: ConfirmationParticipant, position?: number) {
+  const response = await fetch(`/api/challenges/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, participant, position }) });
   const result = await response.json() as { error?: string };
   if (!response.ok) throw new Error(result.error || "Could not update the challenge.");
 }
 
-function ChallengeCard({ row, viewerId, ownerControls = false, canManage = false, moveUp = false, moveDown = false, compact = false, onConfirmationChange, onOpen }: { row: Challenge; viewerId: string; ownerControls?: boolean; canManage?: boolean; moveUp?: boolean; moveDown?: boolean; compact?: boolean; onConfirmationChange?: (confirmed: boolean, participant: ConfirmationParticipant) => void; onOpen?: () => void }) {
+function ChallengeCard({ row, viewerId, ownerControls = false, canManage = false, hallFull = false, compact = false, onConfirmationChange, onOpen }: { row: Challenge; viewerId: string; ownerControls?: boolean; canManage?: boolean; hallFull?: boolean; compact?: boolean; onConfirmationChange?: (confirmed: boolean, participant: ConfirmationParticipant) => void; onOpen?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [coverUnavailable, setCoverUnavailable] = useState(false);
@@ -27,8 +29,8 @@ function ChallengeCard({ row, viewerId, ownerControls = false, canManage = false
   const cardStatus = compact ? "" : row.declined ? "Declined" : isComplete ? "" : "Pending";
   const canConfirm = (isRecipient || isCreator || canManage) && !row.declined;
   const canRemove = isRecipient || canManage;
-  const canFavorite = (isRecipient && ownerControls || canManage) && !row.declined;
-  const canRank = !compact && (isRecipient && ownerControls || canManage) && row.isFavorite && !row.declined;
+  // Only completed challenges earn a place in the Hall of Honor; a starred one that was later unconfirmed can still be unstarred.
+  const canFavorite = (isRecipient && ownerControls || canManage) && !row.declined && (row.isFavorite || isComplete);
   const cardState = row.declined ? "is-declined" : isComplete ? "is-complete" : "is-pending";
   async function act(action: string, selectedParticipant: ConfirmationParticipant = participant) {
     setBusy(true); setError("");
@@ -67,13 +69,9 @@ function ChallengeCard({ row, viewerId, ownerControls = false, canManage = false
     {canConfirm && confirmationButton(participant, isRecipient || isCreator)}
     {canConfirm && canManage && confirmationButton(otherParticipant, false)}
     {!compact && (canFavorite
-      ? <button type="button" className="challenge-icon-button" disabled={busy} aria-label={row.isFavorite ? `Remove ${row.title} from favorites` : `Favorite ${row.title}`} title={row.isFavorite ? "Unfavorite" : "Favorite"} onClick={() => void act(row.isFavorite ? "unfavorite" : "favorite")}><Star size={18} fill={row.isFavorite ? "currentColor" : "none"} aria-hidden="true"/></button>
-      : row.isFavorite && <span className="challenge-favorite" role="img" aria-label="Favorite"><Star size={18} fill="currentColor" aria-hidden="true"/></span>)}
+      ? <button type="button" className="challenge-icon-button" disabled={busy || !row.isFavorite && hallFull} aria-label={row.isFavorite ? `Remove ${row.title} from the Hall of Honor` : `Add ${row.title} to the Hall of Honor`} title={row.isFavorite ? "Remove from Hall of Honor" : hallFull ? `Hall of Honor is full (${honorLimit})` : "Add to Hall of Honor"} onClick={() => void act(row.isFavorite ? "unfavorite" : "favorite")}><Star size={18} fill={row.isFavorite ? "currentColor" : "none"} aria-hidden="true"/></button>
+      : row.isFavorite && <span className="challenge-favorite" role="img" aria-label="In the Hall of Honor"><Star size={18} fill="currentColor" aria-hidden="true"/></span>)}
     {canRemove && <button type="button" className="challenge-icon-button is-danger" disabled={busy} aria-label={`Remove ${row.title} completely`} title="Remove challenge" onClick={() => void remove()}><X size={19} aria-hidden="true"/></button>}
-  </div>;
-  const rankTools = canRank && <div className="challenge-rank-tools">
-    <button type="button" className="challenge-icon-button" disabled={busy || !moveUp} aria-label={`Move ${row.title} up`} title="Move up" onClick={() => void act("move_up")}><ArrowUp size={17} aria-hidden="true"/></button>
-    <button type="button" className="challenge-icon-button" disabled={busy || !moveDown} aria-label={`Move ${row.title} down`} title="Move down" onClick={() => void act("move_down")}><ArrowDown size={17} aria-hidden="true"/></button>
   </div>;
   if (compact) return <article className={`challenge-list-item ${cardState}`}>
     <button type="button" className="challenge-list-open" aria-label={`Open ${row.title} challenge details`} onClick={onOpen}><span role="heading" aria-level={3}>{row.title}</span><ChevronRight size={17} aria-hidden="true"/></button>
@@ -83,10 +81,7 @@ function ChallengeCard({ row, viewerId, ownerControls = false, canManage = false
   return <article className={`challenge-card ${cardState} ${row.isFavorite ? "is-favorite" : ""}`}>
     {(cardStatus || canConfirm || canFavorite || canRemove || row.isFavorite) && <div className="challenge-card-top">
       {cardStatus && <span className="challenge-status"><Flag size={15} aria-hidden="true"/> {cardStatus}</span>}
-      <div className="challenge-card-control-row">
-        {rankTools}
-        {tools}
-      </div>
+      <div className="challenge-card-control-row">{tools}</div>
     </div>}
     <div className="challenge-card-main">
       <button type="button" className="challenge-card-cover-open" aria-label={`View challenge details for ${row.title}`} onClick={onOpen}>
@@ -195,83 +190,156 @@ export function ChallengeDetailsDialog({ row, viewerId, onClose }: { row: Challe
   </dialog>;
 }
 
+
+// The Hall of Honor holds the recipient's starred completed challenges in their chosen order,
+// as covers in a wooden cabinet. Like the Top 10, a caption outside the cabinet names the hovered or
+// focused challenge, and Edit picks a challenge up and sets it down by click, keyboard, or drag.
+// Owners see the vacant places left until the limit.
+export function HallOfHonor({ received, viewerId, ownerControls = false, canManage = false }: { received: Challenge[]; viewerId: string; ownerControls?: boolean; canManage?: boolean }) {
+  const [honors, setHonors] = useState(() => received.filter((row) => completed(row) && row.isFavorite));
+  const [arranging, setArranging] = useState(false);
+  const [held, setHeld] = useState<number | null>(null);
+  const [over, setOver] = useState<number | null>(null);
+  const [lit, setLit] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+  if (!honors.length && !ownerControls) return null;
+  async function place(id: number, position: number) {
+    const from = honors.findIndex((row) => row.id === id);
+    setHeld(null); setOver(null);
+    if (from < 0 || from === position - 1) return;
+    const previous = honors, next = [...honors];
+    const [row] = next.splice(from, 1);
+    next.splice(position - 1, 0, row);
+    setHonors(next); setBusy(true); setError(""); setStatus(`${row.title} moved to ${position}.`);
+    try { await patch(id, "place", undefined, position); }
+    catch (cause) { setHonors(previous); setError(cause instanceof Error ? cause.message : "Could not update the challenge."); }
+    finally { setBusy(false); }
+  }
+  async function remove(row: Challenge) {
+    setBusy(true); setError(""); setHeld(null);
+    try { await patch(row.id, "unfavorite"); window.location.reload(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not update the challenge."); setBusy(false); }
+  }
+  function choose(row: Challenge, index: number) {
+    if (!arranging) return setSelectedChallenge(row);
+    if (busy) return;
+    if (held === null) { setHeld(row.id); setStatus(`${row.title} picked up. Choose its new spot, or press Escape.`); }
+    else if (held === row.id) { setHeld(null); setStatus(`${row.title} put back.`); }
+    else void place(held, index + 1);
+  }
+  function toggleArranging() {
+    setArranging(!arranging); setHeld(null); setOver(null);
+    setStatus(arranging ? "" : "Select a challenge, then select its new spot.");
+  }
+  const heldIndex = honors.findIndex((row) => row.id === held);
+  const heldRow = honors[heldIndex];
+  const litRow = honors.find((row) => row.id === lit);
+  const caption = arranging ? heldRow ? `Moving ${heldRow.title}` : "Select a challenge, then its new spot" : litRow?.title;
+  const vacant = ownerControls && !arranging ? Math.max(honorLimit - honors.length, 0) : 0;
+  return <section className="profile-section" aria-labelledby="hall-of-honor-title">
+    <div className="profile-section-head">
+      <h2 id="hall-of-honor-title" className="profile-label"><Star size={15} aria-hidden="true"/>Hall of Honor</h2>
+      {(ownerControls || canManage) && honors.length > 0 && <button type="button" className="profile-tool" aria-pressed={arranging} onClick={toggleArranging}>
+        {arranging ? <Check size={15} aria-hidden="true"/> : <Pencil size={15} aria-hidden="true"/>}{arranging ? "Done" : "Edit"}
+      </button>}
+    </div>
+    {error && <p className="notice error" role="alert">{error}</p>}
+    <div className={`honor-display${arranging ? " is-arranging" : ""}${held !== null ? " is-holding" : ""}`} onKeyDown={(event) => { if (event.key === "Escape" && held !== null) { setHeld(null); setStatus("Move cancelled."); } }}>
+      <div className="honor-cabinet"><div className="honor-screen"><ol className="honor-rack">
+        {honors.map((row, index) => {
+          const target = over === index && held !== null && held !== row.id ? (heldIndex < index ? " is-target-after" : " is-target-before") : "";
+          return <li key={row.id} className={`honor${held === row.id ? " is-held" : ""}${target}`}
+            onDragOver={(event) => { if (held === null) return; event.preventDefault(); setOver(index); }}
+            onDragLeave={() => setOver((current) => current === index ? null : current)}
+            onDrop={(event) => { event.preventDefault(); if (held !== null) void place(held, index + 1); }}>
+            <button type="button" className="honor-cover" draggable={arranging && !busy}
+              aria-label={arranging
+                ? held === null ? `${index + 1}. ${row.title}. Pick up to move` : held === row.id ? `${index + 1}. ${row.title}. Put back` : `Move ${heldRow?.title} to ${index + 1}, where ${row.title} is`
+                : `View challenge details for ${row.title}`}
+              aria-pressed={arranging ? held === row.id : undefined}
+              onMouseEnter={() => setLit(row.id)} onMouseLeave={() => setLit(null)} onFocus={() => setLit(row.id)} onBlur={() => setLit(null)}
+              onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", String(row.id)); setHeld(row.id); }}
+              onDragEnd={() => { setHeld(null); setOver(null); }}
+              onClick={() => choose(row, index)}>
+              <HonorCover row={row}/>
+            </button>
+            {arranging && <button type="button" className="shelf-remove" aria-label={`Remove ${row.title} from the Hall of Honor`} title="Remove from Hall of Honor" disabled={busy} onClick={() => void remove(row)}><X size={14} aria-hidden="true"/></button>}
+          </li>;
+        })}
+        {Array.from({ length: vacant }, (_, index) => <li key={`vacant-${index}`} className="honor is-vacant" aria-hidden="true"><span className="honor-cover"/></li>)}
+      </ol>
+      {ownerControls && !honors.length && <p className="honor-hint"><Star size={16} aria-hidden="true"/>Star a completed challenge to keep it here.</p>}
+      </div></div>
+      <p className="shelf-caption honor-caption" aria-hidden="true">{caption && <span>{caption}</span>}</p>
+    </div>
+    <p className="shelf-status" role="status">{status}</p>
+    {selectedChallenge && <ChallengeDetailsDialog row={selectedChallenge} viewerId={viewerId} onClose={() => setSelectedChallenge(null)}/>}
+  </section>;
+}
+
+function HonorCover({ row }: { row: Challenge }) {
+  const [failed, setFailed] = useState(false);
+  return row.gameCoverUrl && !failed
+    ? <img src={row.gameCoverUrl} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)}/>
+    : <span className="cover-fallback challenge-cover-fallback"><Gamepad2 size={25} aria-hidden="true"/><span>{row.gameName.slice(0, 1)}</span></span>;
+}
+
 type LogTab = "pending" | "completed" | "sent";
 
-// Favorite completed challenges are the player's trophies; everything else lives in the tabbed log.
+// Pending, completed, and sent challenges share one searchable log that shows a few at a time.
+// Challenges already in the Hall of Honor stay out of it.
 export function ProfileChallenges({ received, sent, viewerId, ownerControls = false, canManage = false }: { received: Challenge[]; sent?: Challenge[]; viewerId: string; ownerControls?: boolean; canManage?: boolean }) {
   const [receivedRows, setReceivedRows] = useState(received);
   const [sentRows, setSentRows] = useState(sent ?? []);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+  const [query, setQuery] = useState("");
+  const [shown, setShown] = useState(challengeLogPageSize);
+  const [honorIds] = useState(() => new Set(received.filter((row) => completed(row) && row.isFavorite).map((row) => row.id)));
   const active = receivedRows.filter((row) => !row.declined);
-  const pending = active.filter((row) => !completed(row));
-  const done = active.filter(completed);
-  const trophies = done.filter((row) => row.isFavorite);
+  const hallFull = active.filter((row) => row.isFavorite).length >= honorLimit;
   const tabs: { key: LogTab; label: string; items: Challenge[]; empty: string }[] = [
-    { key: "pending", label: "Pending", items: pending, empty: "Nothing pending." },
-    { key: "completed", label: "Completed", items: done, empty: "No completed challenges yet." },
+    { key: "pending", label: "Pending", items: active.filter((row) => !completed(row)), empty: "Nothing pending." },
+    { key: "completed", label: "Completed", items: active.filter((row) => completed(row) && !honorIds.has(row.id)), empty: honorIds.size ? "Every completed challenge is in the Hall of Honor." : "No completed challenges yet." },
     ...(sent ? [{ key: "sent" as const, label: "Sent", items: sentRows, empty: "No challenges sent yet." }] : []),
   ];
-  const [tab, setTab] = useState<LogTab>(pending.length || !done.length ? "pending" : "completed");
+  const [tab, setTab] = useState<LogTab>(tabs[0].items.length || !tabs[1].items.length ? "pending" : "completed");
   const current = tabs.find((item) => item.key === tab) ?? tabs[0];
+  const matching = filterChallenges(current.items, query);
+  const visible = matching.slice(0, shown);
+  const searchable = Boolean(query) || tabs.some((item) => item.items.length > 0);
   function updateConfirmation(id: number, confirmed: boolean, participant: ConfirmationParticipant) {
     const update = (rows: Challenge[]) => rows.map((row) => row.id !== id ? row
       : participant === "recipient" ? { ...row, recipientConfirmed: confirmed } : { ...row, creatorConfirmed: confirmed });
     setReceivedRows(update);
     setSentRows(update);
   }
+  function selectTab(key: LogTab) { setTab(key); setShown(challengeLogPageSize); }
   function focusTab(index: number) {
     const next = tabs[(index + tabs.length) % tabs.length];
-    setTab(next.key);
+    selectTab(next.key);
     document.getElementById(`challenge-tab-${next.key}`)?.focus();
   }
-  function cards(items: Challenge[], rankable: boolean) {
-    return <div className="challenge-grid">{items.map((row, index) => <ChallengeCard key={row.id} row={row} viewerId={viewerId} ownerControls={ownerControls && rankable} canManage={canManage} moveUp={index > 0} moveDown={index < items.length - 1} onConfirmationChange={(confirmed, participant) => updateConfirmation(row.id, confirmed, participant)} onOpen={() => setSelectedChallenge(row)}/>)}</div>;
-  }
-  function panel(items: Challenge[], rankable: boolean, empty: string) {
-    if (!items.length) return <p className="challenge-section-empty">{empty}</p>;
-    const favorites = rankable ? items.filter((row) => row.isFavorite) : [];
-    const others = rankable ? items.filter((row) => !row.isFavorite) : items;
-    return <>
-      {favorites.length > 0 && <div className="challenge-featured"><h3><Star size={17} fill="currentColor" aria-hidden="true"/> Favorites</h3>{cards(favorites, true)}</div>}
-      {others.length > 0 && cards(others, rankable)}
-    </>;
-  }
-  return <>
-    {(trophies.length > 0 || ownerControls) && <section className="profile-section" aria-labelledby="trophies-title">
-      <div className="profile-section-head"><h2 id="trophies-title" className="profile-label"><Trophy size={15} aria-hidden="true"/>Trophies</h2></div>
-      {trophies.length
-        ? <ol className="trophy-case">{trophies.map((row) => <TrophyCard key={row.id} row={row} viewerId={viewerId} onOpen={() => setSelectedChallenge(row)}/>)}</ol>
-        : <p className="trophy-empty"><Star size={16} aria-hidden="true"/>Star a completed challenge to keep it here.</p>}
-    </section>}
-    <section className="profile-section challenge-log" aria-labelledby="challenge-log-title">
-      <div className="profile-section-head"><h2 id="challenge-log-title" className="profile-label"><Flag size={15} aria-hidden="true"/>Challenges</h2></div>
-      <div className="profile-tabs" role="tablist" aria-labelledby="challenge-log-title">
-        {tabs.map((item, index) => <button key={item.key} type="button" role="tab" id={`challenge-tab-${item.key}`} aria-selected={item.key === current.key} aria-controls="challenge-log-panel" tabIndex={item.key === current.key ? 0 : -1} className="profile-tab" onClick={() => setTab(item.key)} onKeyDown={(event) => {
-          if (event.key === "ArrowRight") { event.preventDefault(); focusTab(index + 1); }
-          if (event.key === "ArrowLeft") { event.preventDefault(); focusTab(index - 1); }
-        }}>{item.label}<span className="profile-tab-count">{item.items.length}</span></button>)}
-      </div>
-      <div className="profile-tab-panel" role="tabpanel" id="challenge-log-panel" aria-labelledby={`challenge-tab-${current.key}`}>
-        {panel(current.items, current.key !== "sent", current.empty)}
-      </div>
-    </section>
-    {selectedChallenge && <ChallengeDetailsDialog row={selectedChallenge} viewerId={viewerId} onClose={() => setSelectedChallenge(null)}/>}
-  </>;
-}
-
-function TrophyCard({ row, viewerId, onOpen }: { row: Challenge; viewerId: string; onOpen: () => void }) {
-  const [coverUnavailable, setCoverUnavailable] = useState(false);
-  return <li className="trophy">
-    <button type="button" className="trophy-cover" aria-label={`View challenge details for ${row.title}`} onClick={onOpen}>
-      {row.gameCoverUrl && !coverUnavailable
-        ? <img src={row.gameCoverUrl} alt={`${row.gameName} cover`} loading="lazy" onError={() => setCoverUnavailable(true)}/>
-        : <span className="cover-fallback challenge-cover-fallback"><Gamepad2 size={25} aria-hidden="true"/><span>{row.gameName.slice(0, 1)}</span></span>}
-    </button>
-    <div className="trophy-body">
-      <p className="trophy-game">{row.gameName}</p>
-      <button type="button" className="trophy-title" onClick={onOpen}><span role="heading" aria-level={3}>{row.title}</span></button>
-      <p className="trophy-by"><span className="trophy-seal" role="img" aria-label="Completed by both players"><Circle size={9} fill="currentColor" aria-hidden="true"/><Circle size={9} fill="currentColor" aria-hidden="true"/></span>
-        {row.creatorId === viewerId ? "From you" : <>From <a className="inline-link" href={row.creatorProfilePath}>{row.creatorName}</a></>}</p>
+  return <section className="profile-section challenge-log" aria-labelledby="challenge-log-title">
+    <div className="profile-section-head"><h2 id="challenge-log-title" className="profile-label"><Flag size={15} aria-hidden="true"/>Challenges</h2></div>
+    <div className="profile-tabs" role="tablist" aria-labelledby="challenge-log-title">
+      {tabs.map((item, index) => <button key={item.key} type="button" role="tab" id={`challenge-tab-${item.key}`} aria-selected={item.key === current.key} aria-controls="challenge-log-panel" tabIndex={item.key === current.key ? 0 : -1} className="profile-tab" onClick={() => selectTab(item.key)} onKeyDown={(event) => {
+        if (event.key === "ArrowRight") { event.preventDefault(); focusTab(index + 1); }
+        if (event.key === "ArrowLeft") { event.preventDefault(); focusTab(index - 1); }
+      }}>{item.label}<span className="profile-tab-count">{item.items.length}</span></button>)}
     </div>
-  </li>;
+    {searchable && <div className="challenge-log-tools">
+      <label className="library-search"><span>Search challenges</span><span className="library-search-field"><Search size={17} aria-hidden="true"/><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setShown(challengeLogPageSize); }} placeholder="Game, challenge, or player" maxLength={100} autoComplete="off" spellCheck={false}/></span></label>
+      {current.items.length > 0 && <p className="library-results" role="status">{matching.length ? `Showing ${visible.length} of ${matching.length} ${query.trim() ? "matching " : ""}${matching.length === 1 ? "challenge" : "challenges"}` : "No matching challenges"}</p>}
+    </div>}
+    <div className="profile-tab-panel" role="tabpanel" id="challenge-log-panel" aria-labelledby={`challenge-tab-${current.key}`}>
+      {!current.items.length ? <p className="challenge-section-empty">{current.empty}</p>
+        : !matching.length ? <div className="challenge-section-empty challenge-no-match"><p>No {current.label.toLowerCase()} challenges match “{query.trim()}”.</p><button type="button" className="library-clear" onClick={() => setQuery("")}>Clear search</button></div>
+        : <div className="challenge-grid">{visible.map((row) => <ChallengeCard key={row.id} row={row} viewerId={viewerId} ownerControls={ownerControls && current.key !== "sent"} canManage={canManage} hallFull={hallFull} onConfirmationChange={(confirmed, participant) => updateConfirmation(row.id, confirmed, participant)} onOpen={() => setSelectedChallenge(row)}/>)}</div>}
+      {matching.length > shown && <button type="button" className="profile-tool challenge-more" onClick={() => setShown(shown + challengeLogPageSize)}>Show more ({matching.length - shown})</button>}
+    </div>
+    {selectedChallenge && <ChallengeDetailsDialog row={selectedChallenge} viewerId={viewerId} onClose={() => setSelectedChallenge(null)}/>}
+  </section>;
 }

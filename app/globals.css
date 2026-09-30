@@ -17,6 +17,9 @@
   --rgb-notification: #b4232e;
   --rgb-rule: #343d4b;
   --rgb-black: #08080b;
+  --rgb-wood: #6b4527;
+  --rgb-wood-grain: #56361e;
+  --rgb-wood-edge: #3a2414;
   --background: var(--rgb-page);
   --foreground: var(--rgb-ink);
   --muted: var(--rgb-muted);
@@ -346,8 +349,6 @@ button:disabled { cursor: default; }
 .challenge-list-item .challenge-icon-button { width: 32px; height: 32px; }
 .challenge-list-item .challenge-error { grid-column: 1 / -1; }
 .challenge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
-.challenge-featured { margin-bottom: 20px; padding: 16px; border: 1px solid var(--rgb-control-edge); border-radius: 4px; background: var(--rgb-panel-raised); }
-.challenge-featured > h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 1rem; }
 .challenge-card.is-favorite { border-color: var(--rgb-control-edge); }
 .challenge-section-empty { margin: 0; padding: 20px; border: 1px dashed var(--rgb-control-edge); border-radius: 4px; color: var(--rgb-muted); }
 .challenge-card { position: relative; min-width: 0; padding: 16px; border: 1px solid var(--rgb-control-edge); border-left: 4px solid var(--rgb-info); border-radius: 4px; background: var(--rgb-panel); overflow-wrap: anywhere; }
@@ -357,7 +358,6 @@ button:disabled { cursor: default; }
 .challenge-card-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 12px; }
 .challenge-card-control-row { display: flex; flex: 1 1 0; align-items: center; justify-content: space-between; gap: 6px; min-width: min-content; }
 .challenge-card-tools { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
-.challenge-rank-tools { display: inline-flex; align-items: center; gap: 6px; }
 .challenge-icon-button { display: grid; place-items: center; flex: none; width: 36px; height: 36px; padding: 0; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-panel-raised); color: var(--rgb-ink); }
 .challenge-icon-button:hover:not(:disabled) { border-color: var(--rgb-ink); }
 .challenge-icon-button:disabled { opacity: 0.55; }
@@ -558,10 +558,12 @@ button:disabled { cursor: default; }
 .game-favorite-action .platform-action { max-width: 100%; white-space: normal; }
 .game-favorite-action a { color: var(--rgb-info); }
 
-/* Profile: a player's nameplate, what they are playing, a bookshelf of their Top 10, trophies, then the challenge log. */
+/* Profile: a player's nameplate, what they are playing, a bookshelf of their Top 10, Hall of Honor, then the challenge log. */
 .profile-wrap { padding-top: 56px; }
 .profile-plate { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 28px; margin-bottom: 56px; }
-.pixel-avatar { display: block; width: 84px; height: 84px; outline: 1px solid var(--rgb-control-edge); outline-offset: 0; }
+.profile-avatar { display: flex; align-items: center; justify-content: center; width: 84px; aspect-ratio: 3 / 4; overflow: hidden; outline: 1px solid var(--rgb-control-edge); outline-offset: 0; background: var(--rgb-black); }
+.profile-avatar-cover { display: block; width: 100%; height: 100%; object-fit: contain; }
+.pixel-avatar { display: block; width: 100%; height: auto; }
 .profile-plate-id { min-width: 0; }
 .profile-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 24px; margin: 0; color: var(--rgb-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
 a.profile-chip:hover { color: var(--rgb-ink); text-decoration: underline; text-decoration-color: var(--rgb-action); text-underline-offset: 5px; }
@@ -664,33 +666,54 @@ a.profile-chip:hover { color: var(--rgb-ink); text-decoration: underline; text-d
 .profile-locked { min-height: 320px; }
 .profile-locked h2 { color: var(--rgb-ink); }
 
-.trophy-case { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
-.trophy { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 18px; min-width: 0; padding: 14px; border: 1px solid var(--rgb-rule); border-left: 4px solid var(--rgb-action); border-radius: 4px; background: var(--rgb-panel); }
-.trophy:hover, .trophy:focus-within { border-color: var(--rgb-control-edge); border-left-color: var(--rgb-action); }
-.trophy-cover { display: grid; place-items: center; width: 96px; aspect-ratio: 3 / 4; padding: 0; overflow: hidden; border: 1px solid var(--rgb-rule); border-radius: 2px; background: var(--rgb-black); color: inherit; line-height: 0; }
-.trophy-cover:hover { border-color: var(--rgb-ink); }
-.trophy-cover img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.trophy-body { min-width: 0; }
-.trophy-game { margin: 0 0 6px; color: var(--rgb-muted); font-size: 0.875rem; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
-.trophy-title { display: block; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; }
-.trophy-title > span { display: block; font-size: 1.1875rem; font-weight: 750; letter-spacing: -0.01em; line-height: 1.25; overflow-wrap: anywhere; }
-.trophy-title:hover > span { color: var(--rgb-action); }
-.trophy-by { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 10px 0 0; color: var(--rgb-muted); font-size: 0.875rem; }
-.trophy-seal { display: inline-flex; gap: 3px; color: var(--rgb-action); }
-.trophy-empty { display: flex; align-items: center; gap: 10px; margin: 0; padding: 20px; border: 1px dashed var(--rgb-control-edge); border-radius: 4px; color: var(--rgb-muted); }
+/* Hall of Honor: a wood-grain cabinet around a black screen, like a wooden CRT set; flat grain bands, no shine. */
+.honor-cabinet { padding: 14px; border: 1px solid var(--rgb-wood-edge); border-radius: 6px; background: repeating-linear-gradient(180deg, var(--rgb-wood) 0 5px, var(--rgb-wood-grain) 5px 6px, var(--rgb-wood) 6px 13px, var(--rgb-wood-grain) 13px 15px, var(--rgb-wood) 15px 22px, var(--rgb-wood-grain) 22px 23px, var(--rgb-wood) 23px 31px); }
+.honor-screen { padding: 24px; border: 2px solid var(--rgb-wood-edge); border-radius: 10px; background: var(--rgb-black); }
+.honor-rack { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: start; gap: 24px 20px; margin: 0; padding: 0; list-style: none; }
+.honor { position: relative; min-width: 0; }
+.honor-cover { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 3 / 4; padding: 0; overflow: hidden; border: 1px solid var(--rgb-rule); border-radius: 2px; background: var(--rgb-black); color: inherit; line-height: 0; transition: transform 140ms ease-out; }
+.honor-cover img { display: block; width: 100%; height: 100%; object-fit: contain; }
+button.honor-cover:focus-visible { transform: translateY(-6px); outline-offset: 2px; }
+@media (hover: hover) { button.honor-cover:hover { transform: translateY(-6px); border-color: var(--rgb-ink); } }
+.is-arranging .honor-cover { cursor: grab; }
+.is-holding .honor-cover { cursor: pointer; }
+.honor.is-held .honor-cover { transform: translateY(-8px); }
+.honor.is-held .honor-cover::after { content: ""; position: absolute; inset: 0; border: 3px solid var(--rgb-action); }
+.honor.is-target-before::before, .honor.is-target-after::before { content: ""; position: absolute; top: 0; bottom: 0; width: 3px; background: var(--rgb-action); }
+.honor.is-target-before::before { left: -12px; }
+.honor.is-target-after::before { right: -12px; }
+.shelf-caption.honor-caption { margin: 12px 0 0; padding: 0 16px; }
+.honor.is-vacant .honor-cover { border: 1px dashed var(--rgb-control-edge); background: transparent; }
+.honor-hint { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 24px 0 0; color: var(--rgb-muted); text-align: center; }
+@media (max-width: 760px) {
+  .honor-cabinet { padding: 10px; }
+  .honor-screen { padding: 16px; }
+  .honor-rack { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 12px; }
+  .shelf-caption.honor-caption { padding: 0 8px; }
+  .honor.is-target-before::before { left: -7px; }
+  .honor.is-target-after::before { right: -7px; }
+}
+@media (max-width: 480px) {
+  .honor-rack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
-.profile-tabs { display: flex; gap: 4px; margin-bottom: 20px; overflow-x: auto; border-bottom: 1px solid var(--rgb-rule); }
-.profile-tab { display: inline-flex; align-items: center; gap: 9px; flex: none; min-height: 46px; margin-bottom: -1px; padding: 8px 14px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--rgb-muted); font-size: 0.9375rem; font-weight: 700; }
+.profile-tabs { display: flex; gap: 4px; margin-bottom: 20px; overflow-x: auto; overflow-y: hidden; box-shadow: inset 0 -1px var(--rgb-rule); }
+.profile-tab { display: inline-flex; align-items: center; gap: 9px; flex: none; min-height: 46px; padding: 8px 14px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--rgb-muted); font-size: 0.9375rem; font-weight: 700; }
 .profile-tab:hover { color: var(--rgb-ink); }
 .profile-tab[aria-selected="true"] { border-bottom-color: var(--rgb-action); color: var(--rgb-ink); }
 .profile-tab:focus-visible { outline-offset: -3px; }
 .profile-tab-count { color: var(--rgb-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
 .profile-tab[aria-selected="true"] .profile-tab-count { color: var(--rgb-action); }
+.challenge-log-tools { display: grid; gap: 8px; margin-bottom: 16px; }
+.challenge-log-tools .library-results { margin: 0; }
+.challenge-no-match { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.challenge-no-match p { margin: 0; overflow-wrap: anywhere; }
+.challenge-more { display: flex; margin: 20px auto 0; }
 
 @media (max-width: 600px) {
   .profile-wrap { padding-top: 32px; }
   .profile-plate { grid-template-columns: auto minmax(0, 1fr); gap: 16px 18px; margin-bottom: 40px; }
-  .pixel-avatar { width: 63px; height: 63px; }
+  .profile-avatar { width: 63px; }
   .profile-plate h1 { margin-bottom: 8px; }
   .profile-stats { gap: 6px 16px; }
   .profile-stats dd { font-size: 1.25rem; }
@@ -711,6 +734,4 @@ a.profile-chip:hover { color: var(--rgb-ink); text-decoration: underline; text-d
   .game-picker-state { min-width: 0; }
   .playing-name { margin-top: 8px; font-size: 0.8125rem; }
   .playing-platform { font-size: 0.75rem; }
-  .trophy { grid-template-columns: 72px minmax(0, 1fr); gap: 14px; padding: 12px; }
-  .trophy-cover { width: 72px; }
 }

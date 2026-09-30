@@ -11,6 +11,7 @@ import { playingRequest } from "./currently-playing";
 import GamePicker, { libraryParams, pickerRequest, type PickerSource } from "./game-picker";
 import type { Platform } from "./platform-filter";
 import type { LibraryGame } from "../lib/library-copies-query";
+import { profileTopGameEvent } from "./profile-avatar";
 
 const shelves = [[0, 5], [5, favoriteLimit]];
 
@@ -50,6 +51,10 @@ export default function FavoriteGames({ initialFavorites, canManage, isOwner = f
   const [selected, setSelected] = useState<CatalogGame | null>(null);
   const [saved, setSaved] = useState<SavedGame[]>([]);
   const [picking, setPicking] = useState(false);
+  function updateFavorites(next: GameFavorite[]) {
+    setFavorites(next);
+    window.dispatchEvent(new CustomEvent(profileTopGameEvent, { detail: next[0] ? { name: next[0].name, coverUrl: next[0].coverUrl } : undefined }));
+  }
   async function place(id: number, position: number) {
     const from = favorites.findIndex((game) => game.id === id);
     setHeld(null); setOver(null);
@@ -57,16 +62,16 @@ export default function FavoriteGames({ initialFavorites, canManage, isOwner = f
     const previous = favorites, next = [...favorites];
     const [game] = next.splice(from, 1);
     next.splice(position - 1, 0, game);
-    setFavorites(next); setBusy(true); setError(""); setStatus(`${game.name} moved to ${position}.`);
-    try { setFavorites(await favoriteRequest(`/api/game-favorites/${id}`, { method: "PATCH", body: JSON.stringify({ position }) })); }
-    catch (error) { setFavorites(previous); setError(error instanceof Error ? error.message : "Could not update favorite games."); }
+    updateFavorites(next); setBusy(true); setError(""); setStatus(`${game.name} moved to ${position}.`);
+    try { updateFavorites(await favoriteRequest(`/api/game-favorites/${id}`, { method: "PATCH", body: JSON.stringify({ position }) })); }
+    catch (error) { updateFavorites(previous); setError(error instanceof Error ? error.message : "Could not update favorite games."); }
     finally { setBusy(false); }
   }
   async function remove(game: GameFavorite) {
     setBusy(true); setError(""); setHeld(null);
     try {
       const next = await favoriteRequest(`/api/game-favorites/${game.id}`, { method: "DELETE" });
-      setFavorites(next); setStatus(`${game.name} removed from Top 10.`);
+      updateFavorites(next); setStatus(`${game.name} removed from Top 10.`);
       if (!next.length) setArranging(false);
     }
     catch (error) { setError(error instanceof Error ? error.message : "Could not update favorite games."); }
@@ -150,10 +155,10 @@ export default function FavoriteGames({ initialFavorites, canManage, isOwner = f
       fullText={favorites.length >= favoriteLimit ? `Your Top 10 is full. Remove a game to add another.` : undefined}
       onToggle={async (item, add) => {
         const favorite = favorites.find((game) => game.igdbId === item.id);
-        setFavorites(await favoriteRequest(add ? "/api/game-favorites" : `/api/game-favorites/${favorite?.id}`, add ? { method: "POST", body: JSON.stringify({ igdbId: item.id }) } : { method: "DELETE" }));
+        updateFavorites(await favoriteRequest(add ? "/api/game-favorites" : `/api/game-favorites/${favorite?.id}`, add ? { method: "POST", body: JSON.stringify({ igdbId: item.id }) } : { method: "DELETE" }));
         setStatus(`${item.name} ${add ? "added to" : "removed from"} Top 10.`);
       }}/>}
-    {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={saved.filter((game) => game.igdbId === selected.igdbId)} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelected(null)} onFavoritesChange={isOwner ? setFavorites : undefined} onAdd={async (platformId) => { await libraryRequest({ method: "POST", body: JSON.stringify({ igdbId: selected.igdbId, platformId }) }); await libraryRequest(); }} onRemove={async (id) => { await libraryRequest({ method: "DELETE" }, id); await libraryRequest(); }} onPlaying={async (id, playing) => { await playingRequest(id, playing); await libraryRequest(); }}/>}
+    {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={saved.filter((game) => game.igdbId === selected.igdbId)} signedIn={signedIn} loginPath={loginPath} onClose={() => setSelected(null)} onFavoritesChange={isOwner ? updateFavorites : undefined} onAdd={async (platformId) => { await libraryRequest({ method: "POST", body: JSON.stringify({ igdbId: selected.igdbId, platformId }) }); await libraryRequest(); }} onRemove={async (id) => { await libraryRequest({ method: "DELETE" }, id); await libraryRequest(); }} onPlaying={async (id, playing) => { await playingRequest(id, playing); await libraryRequest(); }}/>}
   </section>;
 }
 

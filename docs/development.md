@@ -104,6 +104,8 @@ DELETE FROM account_roles WHERE user_id = 'confirmed-account-id';
 
 Hosted D1 is managed by Sites. Use its trusted database administration workflow or an explicitly authorized, narrowly targeted forward migration for a production role change; local Wrangler is not a production administration tool. Never add a UI or public endpoint for granting or revoking admins.
 
+Run `node --experimental-strip-types --test tests/challenge-honors.test.ts` for the six-challenge Hall of Honor limit, completion requirement, placement (including legacy rows sharing an order), and the challenge log search.
+
 Run `node --experimental-strip-types --test tests/permissions.test.ts` for the privacy and confirmation permission matrix, role constraints, deletion cascade, and targeted production grant. With local admin and regular sessions, verify a private non-friend profile, its Add friend button, pending and accepted friendships, admin challenge controls, unauthorized resource writes, role revocation within an existing session, and role omission from account/player responses. Authentication, origin checks, and input validation apply to both roles. See [architecture](architecture.md#roles-and-permissions) before adding a new permission check.
 
 ## Hosted configuration
