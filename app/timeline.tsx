@@ -13,7 +13,6 @@ import type { ChallengeDetails } from "../lib/challenges";
 function Cover({ src }: { src: string | null }) {
   const [failed, setFailed] = useState(false);
   return <span className="timeline-cover">{src && !failed
-    // eslint-disable-next-line @next/next/no-img-element
     ? <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} />
     : <Gamepad2 size={24} aria-hidden="true" />}</span>;
 }

@@ -88,6 +88,7 @@ Locally, `AUTH_EMAIL_MODE=console` in `.dev.vars` makes `sendEmail` print the re
 - Track `busy` to disable controls during a request. After a mutation, replace state with the server's response; `window.location.reload()` is acceptable where the server recomputes ordering.
 - Modals use native `<dialog>` with `showModal()` in an effect and close on unmount (see `ChallengeDetailsDialog`).
 - Links between pages are plain `<a href>`, not `next/link` (see settled decisions).
+- Game art uses plain `<img>` with the IGDB CDN URL (already sized, such as `t_cover_big`), `loading="lazy"` below the fold, and an `onError` fallback; not `next/image`, which would proxy every cover through the Worker's image optimizer. ESLint's `@next/next/no-img-element` is off for `app/` for this reason.
 - Icons come from `lucide-react`. Decorative icons get `aria-hidden="true"`; icon-only buttons get an `aria-label` and a `title`.
 - Every interactive element is keyboard reachable with a visible focus state. When one element duplicates another for pointer users (such as the Top 10 shelf caption), hide the duplicate from assistive technology and the tab order instead of exposing two.
 

@@ -18,6 +18,9 @@ const eslintConfig = defineConfig([
     rules: {
       // Vinext's current production Link bundle breaks route navigation.
       "@next/next/no-html-link-for-pages": "off",
+      // Game art is already sized by the IGDB CDN; next/image would proxy it
+      // through the Worker's Images binding. See docs/conventions.md.
+      "@next/next/no-img-element": "off",
     },
   },
   {
