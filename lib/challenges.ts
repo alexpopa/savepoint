@@ -1,6 +1,5 @@
-import { desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "../db";
-import { accounts, challenges, libraryItems } from "../db/schema";
+import { receivedChallengesQuery, sentChallengesQuery, type ChallengeRow } from "./challenge-queries";
 import { profilePath } from "./profile-path";
 import { accountDisplayName } from "./social";
 import { getIgdbGameCoversForGames } from "./igdb";
@@ -41,63 +40,64 @@ export function sortChallenges(rows: Challenge[]) {
   );
 }
 
-async function decorate(rows: (typeof challenges.$inferSelect)[]): Promise<Challenge[]> {
-  const ids = [...new Set(rows.flatMap((row) => [row.creatorId, row.recipientId]))];
-  const batches = await Promise.all(Array.from({ length: Math.ceil(ids.length / 400) }, (_, index) =>
-    getDb().select().from(accounts).where(inArray(accounts.userId, ids.slice(index * 400, (index + 1) * 400))),
-  ));
-  const people = batches.flat();
-  const gameIds = [...new Set(rows.map((row) => row.igdbId))];
-  const gameBatches = await Promise.all(Array.from({ length: Math.ceil(gameIds.length / 400) }, (_, index) =>
-    getDb().select({ userId: libraryItems.userId, igdbId: libraryItems.igdbId, coverUrl: libraryItems.coverUrl })
-      .from(libraryItems)
-      .where(inArray(libraryItems.igdbId, gameIds.slice(index * 400, (index + 1) * 400))),
-  ));
-  const currentCovers = new Map<number, string>();
-  for (const game of gameBatches.flat()) {
-    if (game.coverUrl && !currentCovers.has(game.igdbId)) currentCovers.set(game.igdbId, game.coverUrl);
-  }
-  const missingCoverGames = [...new Map(rows.filter((row) => !currentCovers.has(row.igdbId) && !row.gameCoverUrl)
+function player(userId: string, displayName: string | null, email: string | null) {
+  if (displayName === null || email === null) return { name: "Player", profilePath: `/users/${encodeURIComponent(userId)}` };
+  const account = { userId, displayName, email };
+  return { name: accountDisplayName(account), profilePath: profilePath(account) };
+}
+
+// Turns challenge rows into challenges, asking IGDB only for games no library or challenge has a
+// cover for. Several lists share one lookup.
+export async function toChallengeLists(...lists: ChallengeRow[][]): Promise<Challenge[][]> {
+  const covers = new Map<number, string>();
+  const missingCoverGames = [...new Map(lists.flat().filter((row) => !row.gameCoverUrl)
     .map((row) => [row.igdbId, { igdbId: row.igdbId, name: row.gameName, releaseYear: null }])).values()];
   if (missingCoverGames.length) {
     try {
-      const covers = await getIgdbGameCoversForGames(missingCoverGames);
-      for (const [igdbId, cover] of covers) if (cover.coverUrl) currentCovers.set(igdbId, cover.coverUrl);
+      for (const [igdbId, cover] of await getIgdbGameCoversForGames(missingCoverGames)) if (cover.coverUrl) covers.set(igdbId, cover.coverUrl);
     } catch {
       // Keep challenge lists available when IGDB artwork lookup fails.
     }
   }
-  const names = new Map(people.map((person) => [person.userId, accountDisplayName(person)]));
-  const profilePaths = new Map(people.map((person) => [person.userId, profilePath(person)]));
-  return rows.map((row) => ({
-    id: row.id,
-    recipientId: row.recipientId,
-    creatorId: row.creatorId,
-    recipientName: names.get(row.recipientId) ?? "Player",
-    creatorName: names.get(row.creatorId) ?? "Player",
-    recipientProfilePath: profilePaths.get(row.recipientId) ?? `/users/${encodeURIComponent(row.recipientId)}`,
-    creatorProfilePath: profilePaths.get(row.creatorId) ?? `/users/${encodeURIComponent(row.creatorId)}`,
-    igdbId: row.igdbId,
-    gameName: row.gameName,
-    // Prefer the current library cover; challenge rows may have been created before it was recovered.
-    gameCoverUrl: currentCovers.get(row.igdbId) ?? row.gameCoverUrl,
-    title: row.title,
-    description: row.description,
-    createdAt: row.createdAt,
-    creatorConfirmed: row.creatorConfirmed,
-    recipientConfirmed: row.recipientConfirmed,
-    declined: row.declinedAt !== null,
-    isFavorite: row.isFavorite,
-    sortOrder: row.sortOrder,
+  return lists.map((rows) => rows.map((row) => {
+    const recipient = player(row.recipientId, row.recipientDisplayName, row.recipientEmail);
+    const creator = player(row.creatorId, row.creatorDisplayName, row.creatorEmail);
+    return {
+      id: row.id,
+      recipientId: row.recipientId,
+      creatorId: row.creatorId,
+      recipientName: recipient.name,
+      creatorName: creator.name,
+      recipientProfilePath: recipient.profilePath,
+      creatorProfilePath: creator.profilePath,
+      igdbId: row.igdbId,
+      gameName: row.gameName,
+      gameCoverUrl: covers.get(row.igdbId) ?? row.gameCoverUrl,
+      title: row.title,
+      description: row.description,
+      createdAt: row.createdAt,
+      creatorConfirmed: Boolean(row.creatorConfirmed),
+      recipientConfirmed: Boolean(row.recipientConfirmed),
+      declined: Boolean(row.declined),
+      isFavorite: Boolean(row.isFavorite),
+      sortOrder: row.sortOrder,
+    };
   }));
 }
 
+// A creator's own log does not reveal which challenges the recipient starred; admins still see it.
+export function sentView(rows: Challenge[], includeRecipientFavorites: boolean) {
+  return rows.map((row) => ({ ...row, isFavorite: includeRecipientFavorites && row.isFavorite }));
+}
+
 export async function receivedChallenges(userId: string) {
-  const rows = await getDb().select().from(challenges).where(eq(challenges.recipientId, userId)).orderBy(desc(challenges.id));
-  return sortChallenges((await decorate(rows)).filter((row) => !row.declined));
+  const { results } = await getDb().$client.prepare(receivedChallengesQuery).bind(userId).all<ChallengeRow>();
+  const [rows] = await toChallengeLists(results);
+  return sortChallenges(rows);
 }
 
 export async function sentChallenges(userId: string, includeRecipientFavorites = false) {
-  const rows = await getDb().select().from(challenges).where(eq(challenges.creatorId, userId)).orderBy(desc(challenges.id));
-  return (await decorate(rows)).map((row) => ({ ...row, isFavorite: includeRecipientFavorites && row.isFavorite }));
+  const { results } = await getDb().$client.prepare(sentChallengesQuery).bind(userId).all<ChallengeRow>();
+  const [rows] = await toChallengeLists(results);
+  return sentView(rows, includeRecipientFavorites);
 }

@@ -27,3 +27,7 @@ UPDATE game_favorites SET sort_order = (
   FROM ordered, target WHERE ordered.id = game_favorites.id
 )
 WHERE user_id = ?1 AND EXISTS (SELECT 1 FROM target)`;
+
+export const gameFavoritesQuery = `SELECT id, igdb_id AS igdbId, name, cover_url AS coverUrl, release_year AS releaseYear,
+    favorited_at AS favoritedAt, sort_order AS sortOrder
+  FROM game_favorites WHERE user_id = ?1 ORDER BY sort_order, id`;

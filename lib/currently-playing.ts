@@ -1,12 +1,8 @@
-import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { getDb } from "../db";
-import { libraryItems } from "../db/schema";
+import { currentlyPlayingQuery } from "./currently-playing-queries";
 
 export type PlayingGame = { id: number; igdbId: number; name: string; coverUrl: string | null; releaseYear: number | null; platformName: string | null; playingSince: number; completedAt: number | null };
 
 export async function getCurrentlyPlaying(userId: string): Promise<PlayingGame[]> {
-  const rows = await getDb().select().from(libraryItems).where(and(eq(libraryItems.userId, userId), isNotNull(libraryItems.playingSince)))
-    .orderBy(desc(libraryItems.playingSince), desc(libraryItems.id));
-  return rows.map(({ id, igdbId, name, coverUrl, releaseYear, platformName, playingSince, completedAt }) =>
-    ({ id, igdbId, name, coverUrl, releaseYear, platformName, playingSince: playingSince!, completedAt }));
+  return (await getDb().$client.prepare(currentlyPlayingQuery).bind(userId).all<PlayingGame>()).results;
 }
