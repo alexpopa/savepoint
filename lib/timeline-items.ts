@@ -45,7 +45,59 @@ export function batchRatings(ratings: TimelineRating[]): RatingBatch[] {
   return batchByPerson(ratings, (rating) => rating.ratedAt, (rating): RatingBatch => ({ kind: "ratings", key: `ratings:${rating.id}`, at: rating.ratedAt, person: rating.person, games: [] }));
 }
 
-export function recentTimeline(games: TimelineGame[], challenges: TimelineChallenge[], favorites: TimelineFavorite[] = [], playing: TimelinePlaying[] = [], completed: TimelineCompleted[] = [], ratings: TimelineRating[] = []): TimelineItem[] {
-  return [...batchLibraryGames(games), ...challenges, ...favorites, ...playing, ...completed, ...batchRatings(ratings)]
-    .sort((a, b) => b.at - a.at || a.key.localeCompare(b.key)).slice(0, 30);
+export function mergeTimeline(games: TimelineGame[], challenges: TimelineChallenge[], favorites: TimelineFavorite[] = [], playing: TimelinePlaying[] = [], completed: TimelineCompleted[] = [], ratings: TimelineRating[] = []): TimelineItem[] {
+  return [...batchLibraryGames(games), ...challenges, ...favorites, ...playing, ...completed, ...batchRatings(ratings)].sort(timelineOrder);
+}
+
+export const timelinePageSize = 15;
+const timelineOrder = (a: Pick<TimelineItem, "at" | "key">, b: Pick<TimelineItem, "at" | "key">) => b.at - a.at || a.key.localeCompare(b.key);
+
+// `at`/`key` is the last entry shown. Floors hold, per friend, the start of their oldest shown batch window:
+// rows at or after it already belong to a shown batch, so later pages start that friend's next batch below it.
+export type TimelineCursor = { at: number; key: string; library: Record<string, number>; ratings: Record<string, number> };
+// Rows newest first, as read with a limit; `truncated` means the limit was reached and older rows may exist.
+export type TimelineSource<T> = { rows: T[]; truncated: boolean };
+export type TimelineSources = {
+  games: TimelineSource<TimelineGame>; challenges: TimelineSource<TimelineChallenge>; favorites: TimelineSource<TimelineFavorite>;
+  playing: TimelineSource<TimelinePlaying>; completed: TimelineSource<TimelineCompleted>; ratings: TimelineSource<TimelineRating>;
+};
+
+// Returns null when truncated sources leave too few entries known to be complete, so the caller reads more rows.
+export function timelinePage(sources: TimelineSources, cursor: TimelineCursor | null, size = timelinePageSize) {
+  const { games, challenges, favorites, playing, completed, ratings } = sources;
+  // Entries newer than the horizon are exact: a batch is complete once its whole 24-hour window was read.
+  const horizon = Math.max(-Infinity,
+    ...[challenges, favorites, playing, completed].flatMap((source) => source.truncated ? [source.rows.at(-1)!.at] : []),
+    ...(games.truncated ? [games.rows.at(-1)!.addedAt + BATCH_WINDOW] : []),
+    ...(ratings.truncated ? [ratings.rows.at(-1)!.ratedAt + BATCH_WINDOW] : []));
+  const entries = mergeTimeline(games.rows, challenges.rows, favorites.rows, playing.rows, completed.rows, ratings.rows)
+    .filter((item) => item.at > horizon && (!cursor || timelineOrder(cursor, item) < 0));
+  if (entries.length < size && horizon > -Infinity) return null;
+  const items = entries.slice(0, size);
+  const last = items.at(-1);
+  const more = entries.length > size || horizon > -Infinity;
+  return { items, next: more && last ? JSON.stringify(nextCursor(cursor, items, last)) : null };
+}
+
+function nextCursor(cursor: TimelineCursor | null, items: TimelineItem[], last: TimelineItem): TimelineCursor {
+  const floors = (kind: "library" | "ratings") => {
+    const result = { ...cursor?.[kind] };
+    for (const item of items) if (item.kind === kind) result[item.person.id] = Math.min(result[item.person.id] ?? Infinity, item.at - BATCH_WINDOW);
+    // Rows newer than the cursor are never read again, so floors above it no longer matter.
+    return Object.fromEntries(Object.entries(result).filter(([, floor]) => floor <= last.at));
+  };
+  return { at: last.at, key: last.key, library: floors("library"), ratings: floors("ratings") };
+}
+
+const maxCursorFloors = 500;
+// Returns null for malformed input so the route can answer 400 instead of guessing.
+export function parseTimelineCursor(raw: string): TimelineCursor | null {
+  let value: unknown;
+  try { value = JSON.parse(raw); } catch { return null; }
+  const { at, key, library, ratings } = (value ?? {}) as Record<string, unknown>;
+  const validFloors = (floors: unknown): floors is Record<string, number> => typeof floors === "object" && floors !== null && !Array.isArray(floors)
+    && Object.keys(floors).length <= maxCursorFloors && Object.entries(floors).every(([id, floor]) => id.length <= 100 && Number.isSafeInteger(floor));
+  if (typeof at !== "number" || !Number.isSafeInteger(at) || typeof key !== "string" || !/^(library|challenge|favorite|playing|completed|ratings):\d+$/.test(key)
+    || !validFloors(library) || !validFloors(ratings)) return null;
+  return { at, key, library, ratings };
 }
