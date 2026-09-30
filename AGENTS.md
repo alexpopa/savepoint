@@ -13,6 +13,7 @@ Read what the task touches before changing anything. The code is the final autho
 | Behavior, request flow, API, data model, permissions | [docs/architecture.md](docs/architecture.md) |
 | Sending email (Resend, local console mode, adding a new email) | [docs/conventions.md#email](docs/conventions.md#email) |
 | Local setup, commands, database and roles | [docs/development.md](docs/development.md) |
+| Signing in and checking UI in a browser (test account, local SQL) | [docs/browser-testing.md](docs/browser-testing.md) |
 | Visual design, brand, accessibility | [docs/style-guide.md](docs/style-guide.md) — read before any UI change |
 | Friends timeline rules | [docs/timeline-design.md](docs/timeline-design.md) |
 | Releases | [docs/deployment.md](docs/deployment.md) — only when asked to publish |
@@ -27,6 +28,7 @@ Read what the task touches before changing anything. The code is the final autho
 
 - `npm run dev` — local preview at `http://localhost:5173/`. Use this for any "preview", "refresh", "restart", or "redeploy locally" request; reuse a running dev server rather than starting a second one.
 - `npm run check` — lint, type check, and unit tests. Run it before you finish; a change is not done while it fails.
+- `npm run test-account`, then `npm run browser -- <path>` — sign in as the local `AgentTester` account and screenshot a page; see [browser testing](docs/browser-testing.md) for scripted checks.
 - `npm run build` then `npm run start` — the built Worker through local Wrangler, only when explicitly asked.
 - `npm run db:generate` — generate a migration after editing `db/schema.ts` (see [development](docs/development.md#database-changes)).
 
@@ -57,7 +59,7 @@ Read what the task touches before changing anything. The code is the final autho
 
 1. The change follows [docs/conventions.md](docs/conventions.md) and matches its neighbors.
 2. `npm run check` passes. Behavior changes to pure logic or SQL have a test in `tests/`.
-3. UI changes were reviewed against the style guide at desktop, 320px width, keyboard focus, and reduced motion.
+3. UI changes were checked in a browser ([browser testing](docs/browser-testing.md)) against the style guide at desktop, 320px width, keyboard focus, and reduced motion.
 4. README, architecture, development, and style guide say what the code now does; instructions that no longer apply are removed.
 5. Your final message lists what changed, what you verified, what you could not verify, and any uncommitted work you found.
 

@@ -75,6 +75,8 @@ The repository's migration order is:
 
 13. `drizzle/0012_hard_terrax.sql` — nullable `playing_since` on library rows for currently playing; existing rows start unmarked.
 
+14. `drizzle/0013_sparkling_serpent_society.sql` — game ratings (one 1–5 score per player and game) and nullable `completed_at` on library rows; existing rows start unrated and not completed.
+
 When a Sites version containing new Drizzle migrations is published, Sites applies and records each pending migration against its hosted D1 database **before** uploading the Worker. No separate hosted `wrangler d1 execute` command is part of this repository's Sites release flow. A new Site starts with an empty hosted database; publishing does not copy local `.wrangler/state` records into it.
 
 Review every new migration for complete, D1-compatible, bounded schema statements. Avoid sample seed data or large backfills in migration files. `0010` is a narrowly targeted, explicitly authorized production role grant, checked against the confirmed account ID, email, password-backed account, and verification. It does not seed users or apply an email-based grant to future registrations. Plan schema changes so the previous live Worker can tolerate a migration that lands before its replacement. A failed publish can leave some migrations applied even if the new Worker never becomes live. Inspect the deployment failure and migration state before retrying; do not replay an applied migration or rewrite its SQL or metadata. If Sites reports a deterministic `SQLITE_*` error for a specifically failed, unapplied migration, correct that unapplied migration and publish a new version. If the applied boundary is unclear, stop and establish it before making another schema change.

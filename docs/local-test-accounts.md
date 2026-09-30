@@ -2,6 +2,10 @@
 
 This page describes the sample accounts currently stored in this checkout's local D1 database under `.wrangler/state`. These records are local database state, not migration seed data, so a fresh or reset local database will not automatically contain them.
 
+## AgentTester
+
+`AgentTester` (`agent.tester@savepoint.test`) is the account agents sign in as for browser checks. `npm run test-account` creates it with 12 real IGDB games and an accepted friendship with CozyCritic; its password is in the gitignored `docs/agent-test-account.local.md`. Agents may change its data freely. See [browser testing](browser-testing.md).
+
 ## Replacement accounts
 
 The five legacy fixture accounts were replaced with new email accounts using the same display names and test email addresses. Their local email status is verified, their existing public/private settings were preserved, and each has 20 saved games.

@@ -1,0 +1,9 @@
+{
+  "name": "rgboner-browser-tools",
+  "private": true,
+  "description": "Local-only browser driver for agents. Kept outside the root package so ChatGPT Sites installs and builds never see it.",
+  "type": "module",
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  }
+}

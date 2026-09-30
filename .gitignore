@@ -45,3 +45,7 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+
+# Local-only agent testing: browser driver install and test account credentials.
+/tools/browser/node_modules/
+/docs/*.local.md

@@ -14,7 +14,11 @@
     "typecheck": "tsc --noEmit --incremental false",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "check": "npm run lint && npm run typecheck && npm test",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "d1": "node scripts/local-dev.mjs",
+    "test-account": "node scripts/test-account.mjs",
+    "browser:install": "npm ci --prefix tools/browser --no-audit --no-fund",
+    "browser": "node tools/browser/browser.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
