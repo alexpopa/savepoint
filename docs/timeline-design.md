@@ -2,7 +2,7 @@
 
 The signed-in home page shows the latest 30 entries from accepted friends, newest first. Guests still go to search. **My library** lives at `/library`, under the account icon; the wordmark returns to the timeline.
 
-This is a view of current activity, not a permanent history. It reads the existing library, currently playing, game-favorite, and challenge records when the page loads. There is no activity table, queue, push delivery, pagination, notification system, friendship announcement, or unread marker.
+This is a view of current activity, not a permanent history. It reads the existing library, currently playing, completed, game-rating, game-favorite, and challenge records when the page loads. There is no activity table, queue, push delivery, pagination, notification system, friendship announcement, or unread marker.
 
 ## What belongs in the timeline
 
@@ -36,7 +36,7 @@ All eligibility is checked on the server. Library additions require an accepted 
 
 Current friendship and account visibility are rechecked on each read. Pending requests grant no access to regular players; admin profile access is independent of friendship. Removing a friendship can remove activity. A private profile remains visible to accepted friends. Challenge IDs prevent duplication when both participants are friends.
 
-After grouping, merge library batches, currently playing entries, game favorites, and challenges, sort by timestamp descending with a stable type/ID tie-breaker, and take 30. The initial implementation reads eligible current records directly; revisit query limits or indexing only if measured usage warrants it. Do not truncate library rows before grouping, which would split large imports or produce incomplete batches.
+After grouping, merge library batches, rating batches, currently playing and completed entries, game favorites, and challenges, sort by timestamp descending with a stable type/ID tie-breaker, and take 30. The initial implementation reads eligible current records directly; revisit query limits or indexing only if measured usage warrants it. Do not truncate library rows before grouping, which would split large imports or produce incomplete batches.
 
 ## Presentation
 
@@ -51,3 +51,11 @@ Each platform copy a verified accepted friend marks as currently playing contrib
 ## Game favorites
 
 Each current game favorite by a verified accepted friend contributes one entry: “[Player] favorited a game”, with its cover and clickable title. Favorites are independent of library platform copies. `favorited_at` determines ordering; moving a favorite or repeating an add does not bump it. Removing a favorite removes its entry; adding it again creates a fresh timestamp. Favorites share the same 30-entry limit and friendship visibility rules as library additions. Public strangers and the viewer's own favorites do not enter the friend feed.
+
+## Completed games
+
+Each platform copy a verified accepted friend marks completed contributes its own entry: “[Player] completed a game”, with the cover, a clickable title, and the platform, like a currently playing entry. `completed_at` determines ordering; repeating the mark does not bump it. Completing a copy does not remove it from Currently playing, and the two entries are independent. Clearing the mark or removing the copy removes the entry; marking it again creates a fresh timestamp. The viewer's own games are excluded.
+
+## Game ratings
+
+Scores from a verified accepted friend are batched per friend exactly like library additions: the newest ungrouped rating starts a batch holding every rating from the preceding 24 hours. The entry reads “[Player] rated a game” or “rated N games” and shows four covers with titles and read-only stars, with the rest behind the same disclosure. `rated_at` is the first time the player scored the game; changing the score shows the new score without bumping the entry. Clearing the score removes it, and rating again creates a fresh timestamp. Ratings are independent of library copies, so a friend can rate a game they do not own.

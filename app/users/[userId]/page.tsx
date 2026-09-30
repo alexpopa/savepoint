@@ -2,7 +2,7 @@ import CurrentlyPlaying from "../../currently-playing";
 import FavoriteGames from "../../favorite-games";
 import { getCurrentlyPlaying } from "../../../lib/currently-playing";
 import { getGameFavorites } from "../../../lib/game-favorites";
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { Gamepad2, Lock, UserPlus } from "lucide-react";
 import SiteHeader from "../../site-header";
@@ -12,11 +12,11 @@ import { ProfileNameplate } from "../../profile-nameplate";
 import PublicLibrary from "./public-library";
 import { getCurrentUser } from "../../auth";
 import { getDb } from "../../../db";
-import { accounts, libraryItems } from "../../../db/schema";
+import { accounts } from "../../../db/schema";
 import { isComplete, receivedChallenges } from "../../../lib/challenges";
 import { getIgdbGameCoversForGames } from "../../../lib/igdb";
 import { profilePath } from "../../../lib/profile-path";
-import { accountDisplayName, ensureAccount, getFriendship, serializeGame } from "../../../lib/social";
+import { accountDisplayName, ensureAccount, getFriendship, getLibraryGames } from "../../../lib/social";
 import { canViewProfile, hasPermission } from "../../../lib/permissions";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +39,7 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
   const canManageChallenges = hasPermission(user, false);
   const loginPath = `/login?return_to=${encodeURIComponent(profilePath(target))}`;
   const [games, challengeRows, favorites, playing] = canView ? await Promise.all([
-    getDb().select().from(libraryItems).where(eq(libraryItems.userId, targetId)).orderBy(desc(libraryItems.addedAt)).then((rows) => rows.map(serializeGame)),
+    getLibraryGames(targetId),
     receivedChallenges(targetId),
     getGameFavorites(targetId),
     getCurrentlyPlaying(targetId),

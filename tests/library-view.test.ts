@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { filterLibraryGames, libraryPageSize, paginateLibraryGames } from "../lib/library-view.ts";
+import { filterLibraryGames, libraryPageSize, paginateLibraryGames, sortLibraryGames } from "../lib/library-view.ts";
 
 const games = [
   { id: 1, name: "100% Orange_Juice", platformId: 6 },
@@ -40,4 +40,17 @@ test("a stale page clamps after deletion or filtering", () => {
 
 test("an empty result has no pages or positions", () => {
   assert.deepEqual(paginateLibraryGames([], 7), { items: [], page: 1, pageCount: 0, first: 0, last: 0 });
+});
+
+test("sorting by score or completion keeps newest-first order among ties", () => {
+  const copies = [
+    { id: 1, score: null, completedAt: null },
+    { id: 2, score: 3, completedAt: 100 },
+    { id: 3, score: 5, completedAt: null },
+    { id: 4, score: 3, completedAt: 300 },
+    { id: 5 },
+  ];
+  assert.deepEqual(sortLibraryGames(copies, "newest").map((game) => game.id), [1, 2, 3, 4, 5]);
+  assert.deepEqual(sortLibraryGames(copies, "score").map((game) => game.id), [3, 2, 4, 1, 5]);
+  assert.deepEqual(sortLibraryGames(copies, "completed").map((game) => game.id), [4, 2, 1, 3, 5]);
 });

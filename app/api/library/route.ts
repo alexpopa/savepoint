@@ -1,18 +1,17 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "../../auth";
 import { getDb } from "../../../db";
 import { libraryItems } from "../../../db/schema";
 import { getIgdbGame } from "../../../lib/igdb";
 import { isSameOriginWrite } from "../../../lib/request-security";
-import { ensureAccount, serializeGame } from "../../../lib/social";
+import { ensureAccount, getLibraryGames } from "../../../lib/social";
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return Response.json({ error: "Sign in to view your library." }, { status: 401 });
   try {
     await ensureAccount(user);
-    const rows = await getDb().select().from(libraryItems).where(eq(libraryItems.userId, user.userId)).orderBy(desc(libraryItems.addedAt), desc(libraryItems.id));
-    return Response.json({ games: rows.map(serializeGame) }, { headers: { "cache-control": "private, no-store" } });
+    return Response.json({ games: await getLibraryGames(user.userId) }, { headers: { "cache-control": "private, no-store" } });
   } catch { return Response.json({ error: "Your library is temporarily unavailable." }, { status: 503 }); }
 }
 

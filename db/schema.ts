@@ -66,6 +66,8 @@ export const libraryItems = sqliteTable("library_items", {
   addedAt: integer("added_at").notNull(),
   // Set while this platform copy is currently playing; removing the copy removes the mark.
   playingSince: integer("playing_since"),
+  // Set once this platform copy is completed; it is independent of currently playing.
+  completedAt: integer("completed_at"),
 }, (table) => [
   uniqueIndex("idx_library_user_game_platform").on(table.userId, table.igdbId, table.platformId),
   index("idx_library_added_at_game_user").on(table.addedAt, table.igdbId, table.userId),
@@ -104,3 +106,18 @@ export const gameFavorites = sqliteTable("game_favorites", {
   favoritedAt: integer("favorited_at").notNull(),
   sortOrder: integer("sort_order").notNull(),
 }, (table) => [uniqueIndex("idx_game_favorites_user_game").on(table.userId, table.igdbId)]);
+
+// One score per player and game, independent of library copies like favorites.
+export const gameRatings = sqliteTable("game_ratings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  igdbId: integer("igdb_id").notNull(),
+  name: text("name").notNull(),
+  coverUrl: text("cover_url"),
+  releaseYear: integer("release_year"),
+  score: integer("score").notNull(),
+  ratedAt: integer("rated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_game_ratings_user_game").on(table.userId, table.igdbId),
+  check("ck_game_ratings_score", sql`${table.score} BETWEEN 1 AND 5`),
+]);

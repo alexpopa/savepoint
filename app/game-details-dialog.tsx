@@ -5,6 +5,7 @@ import { CalendarDays, Check, Gamepad2, LoaderCircle, Play, Plus, Trash2, X } fr
 import type { CatalogGame, SavedGame } from "../lib/game-types";
 
 import GameFavoriteButton from "./game-favorite-button";
+import GameRating from "./game-rating";
 import type { GameFavorite } from "../lib/game-favorites";
 
 type Props = {
@@ -17,9 +18,10 @@ type Props = {
   onAdd?: (platformId: number) => Promise<void>;
   onRemove?: (id: number) => Promise<void>;
   onPlaying?: (id: number, playing: boolean) => Promise<void>;
+  onRatingChange?: () => void;
 };
 
-export default function GameDetailsDialog({ game, saved, signedIn, loginPath, onClose, onAdd, onRemove, onPlaying, onFavoritesChange }: Props) {
+export default function GameDetailsDialog({ game, saved, signedIn, loginPath, onClose, onAdd, onRemove, onPlaying, onFavoritesChange, onRatingChange }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [details, setDetails] = useState<CatalogGame>(game);
   const [loading, setLoading] = useState(true);
@@ -60,6 +62,7 @@ export default function GameDetailsDialog({ game, saved, signedIn, loginPath, on
         <div className="game-dialog-art">{coverUrl ? <img src={coverUrl} alt={`${details.name} cover`}/> : <div className="cover-fallback"><Gamepad2 size={44}/><span>NO COVER</span></div>}</div>
         <div className="game-dialog-intro"><p className="game-dialog-kicker">{details.genres?.slice(0, 2).join(" / ") || "VIDEO GAME"}</p><h2 id="game-dialog-title">{details.name}</h2>
           <div className="game-dialog-facts"><span><CalendarDays size={16}/>{details.releaseDate ? new Date(`${details.releaseDate}T00:00:00Z`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) : details.releaseYear || "Release date unknown"}</span><span><Gamepad2 size={16}/>{details.platformOptions.length} {details.platformOptions.length === 1 ? "platform" : "platforms"}</span></div>
+          {signedIn && <GameRating igdbId={game.igdbId} name={details.name} onChange={onRatingChange}/>}
           {signedIn && <GameFavoriteButton igdbId={game.igdbId} name={details.name} onChange={onFavoritesChange}/>}
           {details.summary && <p className="game-dialog-summary">{details.summary}</p>}
           {loading && <p className="game-dialog-loading"><LoaderCircle className="spin" size={16}/> Loading full game details…</p>}

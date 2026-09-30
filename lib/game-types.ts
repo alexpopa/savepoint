@@ -26,4 +26,6 @@ export type SavedGame = Omit<CatalogGame, "platformOptions"> & {
   platformId: number;
   platformName: string | null;
   playingSince?: number | null;
+  completedAt?: number | null;
+  score?: number | null;
 };

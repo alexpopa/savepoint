@@ -1,6 +1,6 @@
-import { and, eq, isNotNull, or } from "drizzle-orm";
+import { and, desc, eq, isNotNull, or } from "drizzle-orm";
 import { getDb } from "../db";
-import { accounts, friendships, libraryItems } from "../db/schema";
+import { accounts, friendships, gameRatings, libraryItems } from "../db/schema";
 import type { AppUser } from "../app/auth";
 
 export const privateResponse = { "cache-control": "private, no-store" };
@@ -59,7 +59,7 @@ export async function getSocialState(userId: string) {
   });
 }
 
-export function serializeGame(row: typeof libraryItems.$inferSelect) {
+export function serializeGame(row: typeof libraryItems.$inferSelect, score: number | null = null) {
   return {
     id: row.id,
     igdbId: row.igdbId,
@@ -70,5 +70,15 @@ export function serializeGame(row: typeof libraryItems.$inferSelect) {
     platformId: row.platformId,
     platformName: row.platformName,
     playingSince: row.playingSince,
+    completedAt: row.completedAt,
+    score,
   };
+}
+
+// A player's saved copies, newest first, each with that player's score for the game.
+export async function getLibraryGames(userId: string) {
+  const rows = await getDb().select({ item: libraryItems, score: gameRatings.score }).from(libraryItems)
+    .leftJoin(gameRatings, and(eq(gameRatings.userId, libraryItems.userId), eq(gameRatings.igdbId, libraryItems.igdbId)))
+    .where(eq(libraryItems.userId, userId)).orderBy(desc(libraryItems.addedAt), desc(libraryItems.id));
+  return rows.map(({ item, score }) => serializeGame(item, score));
 }

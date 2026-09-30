@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { batchLibraryGames, recentTimeline, BATCH_WINDOW, type TimelineGame, type TimelineChallenge } from "../lib/timeline-items.ts";
+import { batchLibraryGames, batchRatings, recentTimeline, BATCH_WINDOW, type TimelineGame, type TimelineChallenge } from "../lib/timeline-items.ts";
 
 const person = { id: "friend", name: "Friend", href: "/users/Friend" };
 const game = (id: number, addedAt: number, owner = person): TimelineGame => ({ id, igdbId: id, addedAt, person: owner, name: "Game", releaseYear: null, platformName: "SNES", coverUrl: null });
@@ -47,4 +47,13 @@ test("currently playing adds one entry per platform copy, outside library batche
   const rows = recentTimeline([game(1, 10), game(2, 10)], [], [], [playing(1, 50, "SNES"), playing(2, 40, "N64")]);
   assert.deepEqual(rows.map((row) => row.key), ["playing:1", "playing:2", "library:2"]);
   assert.equal(rows[2].kind === "library" && rows[2].games.length, 2);
+});
+
+test("completed copies get their own entries, and ratings batch per friend like library additions", () => {
+  const completed = { kind: "completed" as const, key: "completed:1", at: 5 * BATCH_WINDOW, person, igdbId: 1, name: "Game", coverUrl: null, releaseYear: 2000, platformName: "SNES" };
+  const rating = (id: number, ratedAt: number, owner = person) => ({ id, igdbId: id, name: "Game", releaseYear: null, coverUrl: null, score: 4, ratedAt, person: owner });
+  const batches = batchRatings([rating(3, 0), rating(2, BATCH_WINDOW), rating(1, BATCH_WINDOW * 2), rating(4, BATCH_WINDOW * 2, { ...person, id: "other" })]);
+  assert.deepEqual(batches.map((batch) => [batch.key, batch.games.map((row) => row.id)]), [["ratings:4", [4]], ["ratings:1", [1, 2]], ["ratings:3", [3]]]);
+  const rows = recentTimeline([game(1, 10)], [], [], [], [completed], [rating(1, BATCH_WINDOW * 2), rating(2, BATCH_WINDOW)]);
+  assert.deepEqual(rows.map((row) => row.key), ["completed:1", "ratings:1", "library:1"]);
 });

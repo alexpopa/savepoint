@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, ChevronUp, Gamepad2, Pencil, Play, Plus, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, CircleCheck, Gamepad2, Pencil, Play, Plus, X } from "lucide-react";
 import type { PlayingGame } from "../lib/currently-playing";
 import type { CatalogGame, SavedGame } from "../lib/game-types";
 import GameDetailsDialog from "./game-details-dialog";
@@ -48,6 +48,19 @@ export default function CurrentlyPlaying({ initialGames, canManage, isOwner = fa
     catch (error) { setError(error instanceof Error ? error.message : "Could not update currently playing."); }
     finally { setBusy(false); }
   }
+  // Completing a game leaves it in Currently playing; only the mark on its cover changes.
+  async function toggleCompleted(game: PlayingGame) {
+    setBusy(true); setError("");
+    try {
+      const response = await fetch(`/api/library/${game.id}/completed`, { method: game.completedAt ? "DELETE" : "PUT", headers: { "content-type": "application/json" } });
+      const data = await response.json() as { completedAt: number | null; error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not update this game.");
+      setGames((current) => current.map((row) => row.id === game.id ? { ...row, completedAt: data.completedAt } : row));
+      setStatus(`${game.name} ${data.completedAt ? "marked completed" : "marked not completed"}.`);
+    }
+    catch (error) { setError(error instanceof Error ? error.message : "Could not update this game."); }
+    finally { setBusy(false); }
+  }
   async function libraryRequest(init?: RequestInit, id?: number) {
     const response = await fetch(`/api/library${id ? `/${id}` : ""}`, { ...init, headers: { "content-type": "application/json" } });
     const data = await response.json() as { games: SavedGame[]; error?: string };
@@ -80,6 +93,8 @@ export default function CurrentlyPlaying({ initialGames, canManage, isOwner = fa
             <span className="playing-name">{game.name}</span>
             <span className="playing-platform">{game.platformName || "Platform not set"}</span>
           </button>
+          {canManage ? <button type="button" className="playing-complete" aria-pressed={Boolean(game.completedAt)} aria-label={`Completed ${game.name} on ${game.platformName || "an unspecified platform"}`} title={game.completedAt ? "Completed. Select to undo" : "Mark as completed"} disabled={busy} onClick={() => void toggleCompleted(game)}><CircleCheck size={16} aria-hidden="true"/></button>
+            : game.completedAt ? <span className="playing-complete" role="img" aria-label="Completed" title="Completed"><CircleCheck size={16} aria-hidden="true"/></span> : null}
           {editing && <button type="button" className="shelf-remove playing-remove" aria-label={`Remove ${game.name} on ${game.platformName || "an unspecified platform"} from Currently playing`} title="Remove from Currently playing" disabled={busy} onClick={() => void remove(game)}><X size={14} aria-hidden="true"/></button>}
         </li>)}
         {canAdd && <li className="playing-slot">
