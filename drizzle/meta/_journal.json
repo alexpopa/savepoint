@@ -99,6 +99,13 @@
       "when": 1790744356504,
       "tag": "0013_sparkling_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1790782091724,
+      "tag": "0014_easy_kid_colt",
+      "breakpoints": true
     }
   ]
 }

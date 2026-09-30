@@ -72,6 +72,10 @@ export const libraryItems = sqliteTable("library_items", {
   uniqueIndex("idx_library_user_game_platform").on(table.userId, table.igdbId, table.platformId),
   index("idx_library_added_at_game_user").on(table.addedAt, table.igdbId, table.userId),
   index("idx_library_game_added_at").on(table.igdbId, table.addedAt),
+  // The friends timeline reads each friend's rows newest first; partial indexes keep the mostly empty marks small.
+  index("idx_library_user_added_at").on(table.userId, table.addedAt),
+  index("idx_library_user_playing_since").on(table.userId, table.playingSince).where(sql`${table.playingSince} IS NOT NULL`),
+  index("idx_library_user_completed_at").on(table.userId, table.completedAt).where(sql`${table.completedAt} IS NOT NULL`),
 ]);
 
 export const challenges = sqliteTable("challenges", {
@@ -119,5 +123,6 @@ export const gameRatings = sqliteTable("game_ratings", {
   ratedAt: integer("rated_at").notNull(),
 }, (table) => [
   uniqueIndex("idx_game_ratings_user_game").on(table.userId, table.igdbId),
+  index("idx_game_ratings_user_rated_at").on(table.userId, table.ratedAt),
   check("ck_game_ratings_score", sql`${table.score} BETWEEN 1 AND 5`),
 ]);
