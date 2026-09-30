@@ -526,7 +526,7 @@ button:disabled { cursor: default; }
 .timeline-challenge-add { flex: none; white-space: nowrap; }
 .timeline-game-title { display: block; max-width: 100%; padding: 0; border: 0; background: transparent; color: inherit; font-size: 1rem; font-weight: 700; line-height: 1.35; text-align: left; overflow-wrap: anywhere; }
 .timeline-game-title:hover { color: var(--rgb-action); text-decoration: underline; text-underline-offset: 4px; }
-.timeline-cover { display: grid; place-items: center; flex: none; width: 60px; aspect-ratio: 3 / 4; background: var(--rgb-black); border: 1px solid var(--rgb-rule); color: var(--rgb-muted); }
+.timeline-cover { display: grid; place-items: center; flex: none; width: 63px; aspect-ratio: 3 / 4; background: var(--rgb-black); border: 1px solid var(--rgb-rule); color: var(--rgb-muted); }
 .timeline-cover img { width: 100%; height: 100%; object-fit: contain; }
 .timeline-game small { display: block; margin-top: 4px; color: var(--rgb-muted); font-size: 0.875rem; }
 .timeline-score { margin-top: 6px; }
