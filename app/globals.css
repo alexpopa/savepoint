@@ -706,6 +706,8 @@ button.honor-cover:focus-visible { transform: translateY(-6px); outline-offset: 
 .honor.is-target-after::before { right: -12px; }
 .shelf-caption.honor-caption { margin: 12px 0 0; padding: 0 16px; }
 .honor.is-vacant .honor-cover { border: 1px dashed var(--rgb-control-edge); background: transparent; }
+.honor-empty { display: flex; align-items: center; gap: 10px; }
+.honor-empty svg { flex: none; }
 .honor-hint { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 24px 0 0; color: var(--rgb-muted); text-align: center; }
 @media (max-width: 760px) {
   .honor-cabinet { padding: 10px; }

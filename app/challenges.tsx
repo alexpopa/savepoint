@@ -239,6 +239,8 @@ export function HallOfHonor({ received, viewerId, ownerControls = false, canMana
   const litRow = honors.find((row) => row.id === lit);
   const caption = arranging ? heldRow ? `Moving ${heldRow.title}` : "Select a challenge, then its new spot" : litRow?.title;
   const vacant = ownerControls && !arranging ? Math.max(honorLimit - honors.length, 0) : 0;
+  // With nothing completed yet there is nothing to star, so the owner sees a note instead of an empty cabinet.
+  const nothingToStar = !honors.length && !received.some(completed);
   return <section className="profile-section" aria-labelledby="hall-of-honor-title">
     <div className="profile-section-head">
       <h2 id="hall-of-honor-title" className="profile-label"><Star size={15} aria-hidden="true"/>Hall of Honor</h2>
@@ -247,6 +249,7 @@ export function HallOfHonor({ received, viewerId, ownerControls = false, canMana
       </button>}
     </div>
     {error && <p className="notice error" role="alert">{error}</p>}
+    {nothingToStar ? <p className="challenge-section-empty honor-empty"><Star size={16} aria-hidden="true"/>Complete a challenge to proudly display it here.</p> : <>
     <div className={`honor-display${arranging ? " is-arranging" : ""}${held !== null ? " is-holding" : ""}`} onKeyDown={(event) => { if (event.key === "Escape" && held !== null) { setHeld(null); setStatus("Move cancelled."); } }}>
       <div className="honor-cabinet"><div className="honor-screen"><ol className="honor-rack">
         {honors.map((row, index) => {
@@ -276,6 +279,7 @@ export function HallOfHonor({ received, viewerId, ownerControls = false, canMana
       <p className="shelf-caption honor-caption" aria-hidden="true">{caption && <span>{caption}</span>}</p>
     </div>
     <p className="shelf-status" role="status">{status}</p>
+    </>}
     {selectedChallenge && <ChallengeDetailsDialog row={selectedChallenge} viewerId={viewerId} onClose={() => setSelectedChallenge(null)}/>}
   </section>;
 }
