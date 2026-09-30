@@ -59,13 +59,12 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
   }
   const relationship = friendship ? { status: friendship.status, direction: friendship.requesterId === user?.userId ? "outgoing" as const : "incoming" as const } : null;
   const name = accountDisplayName(target);
-  const cleared = challengeRows.filter(isComplete).length;
   const status = friendship?.status === "accepted" ? "friend" : target.isPublic ? "public" : "private";
   return <main className="library-page"><SiteHeader email={user?.email}/><div className="library-wrap profile-wrap">
     <ProfileNameplate seed={targetId} name={name} status={status} topGame={canView ? favorites[0] : undefined} stats={canView ? [
       { label: "Games", value: new Set(games.map((game) => game.igdbId)).size, href: "#library" },
-      { label: "Cleared", value: cleared },
-      { label: "Pending", value: challengeRows.length - cleared },
+      { label: "Completed", value: new Set(games.filter((game) => game.completedAt).map((game) => game.igdbId)).size },
+      { label: "Challenges cleared", value: challengeRows.filter(isComplete).length },
     ] : undefined}>
       {user ? friendship?.status !== "accepted" && <FriendButton userId={targetId} initialRelationship={relationship} refreshOnAccept/>
         : <a className="friend-button" href={loginPath}><UserPlus size={16} aria-hidden="true"/> Sign in to Add Friend</a>}

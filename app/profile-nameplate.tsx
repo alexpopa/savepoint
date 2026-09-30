@@ -14,14 +14,16 @@ export function ProfileNameplate({ seed, name, status, statusHref, stats, topGam
   return <header className="profile-plate">
     <ProfileAvatar seed={seed} game={topGame}/>
     <div className="profile-plate-id">
-      {statusHref
-        ? <a className="profile-chip" href={statusHref} title="Change who can view your profile">{chip}</a>
-        : <p className="profile-chip">{chip}</p>}
       <h1>{name}</h1>
-      {stats && <dl className="profile-stats">{stats.map((stat) => <div key={stat.label}>
-        <dt>{stat.label}</dt>
-        <dd>{stat.href ? <a href={stat.href}>{stat.value.toString().padStart(2, "0")}</a> : stat.value.toString().padStart(2, "0")}</dd>
-      </div>)}</dl>}
+      <div className="profile-meta">
+        {statusHref
+          ? <a className="profile-chip" href={statusHref} title="Change who can view your profile">{chip}</a>
+          : <p className="profile-chip">{chip}</p>}
+        {stats && <dl className="profile-stats">{stats.map((stat) => <div key={stat.label}>
+          <dt>{stat.label}</dt>
+          <dd>{stat.href ? <a href={stat.href}>{stat.value}</a> : stat.value}</dd>
+        </div>)}</dl>}
+      </div>
     </div>
     {children && <div className="profile-plate-actions">{children}</div>}
   </header>;

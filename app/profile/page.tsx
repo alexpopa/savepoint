@@ -23,14 +23,16 @@ export default async function ProfilePage() {
     sentChallenges(user.userId, hasPermission(user, false)),
     getGameFavorites(user.userId),
     getCurrentlyPlaying(user.userId),
-    getDb().select({ games: sql<number>`count(distinct ${libraryItems.igdbId})` }).from(libraryItems).where(eq(libraryItems.userId, user.userId)),
+    getDb().select({
+      games: sql<number>`count(distinct ${libraryItems.igdbId})`,
+      completed: sql<number>`count(distinct case when ${libraryItems.completedAt} is not null then ${libraryItems.igdbId} end)`,
+    }).from(libraryItems).where(eq(libraryItems.userId, user.userId)),
   ]);
-  const cleared = received.filter(isComplete).length;
   return <main className="library-page"><SiteHeader email={user.email}/><div className="library-wrap profile-wrap">
     <ProfileNameplate seed={user.userId} name={accountDisplayName(account)} status={account.isPublic ? "public" : "private"} statusHref="/settings" topGame={favorites[0]} stats={[
       { label: "Games", value: library?.games ?? 0, href: "/library" },
-      { label: "Cleared", value: cleared },
-      { label: "Pending", value: received.length - cleared },
+      { label: "Completed", value: library?.completed ?? 0 },
+      { label: "Challenges cleared", value: received.filter(isComplete).length },
     ]}/>
     <CurrentlyPlaying initialGames={playing} canManage isOwner/>
     <HallOfHonor received={received} viewerId={user.userId} canManage={hasPermission(user, false)} ownerControls/>
