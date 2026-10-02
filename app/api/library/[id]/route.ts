@@ -37,7 +37,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (!platform) return Response.json({ error: "Choose an available platform for this game." }, { status: 400 });
     const [existing] = await db.select({ id: libraryItems.id }).from(libraryItems).where(and(eq(libraryItems.userId, item.userId), eq(libraryItems.igdbId, item.igdbId), eq(libraryItems.platformId, platform.id)));
     if (existing && existing.id !== id) return Response.json({ error: "This platform is already in your library." }, { status: 409 });
-    await db.update(libraryItems).set({ platformId: platform.id, platformName: platform.name, platformsJson: JSON.stringify(game.platforms) }).where(and(eq(libraryItems.id, id), eq(libraryItems.userId, item.userId)));
+    await db.update(libraryItems).set({ platformId: platform.id, platformName: platform.name, platformsJson: JSON.stringify(game.platforms), updatedAt: item.platformId === platform.id ? item.updatedAt : Date.now() }).where(and(eq(libraryItems.id, id), eq(libraryItems.userId, item.userId)));
     return Response.json({ ok: true });
   } catch (error) {
     if (error instanceof Error && /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i.test(error.message))

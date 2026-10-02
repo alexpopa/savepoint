@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   if (!hasPermission(user, true) || !user) return response({ error: "Sign in to view your Steam connection." }, 401);
   const url = new URL(request.url);
   const view = url.searchParams.get("view") ?? "all";
-  if (!["all", "ready", "review", "imported"].includes(view)) return response({ error: "Choose a valid import view." }, 400);
+  if (!["all", "ready", "review", "imported", "updated"].includes(view)) return response({ error: "Choose a valid import view." }, 400);
   const page = Number(url.searchParams.get("page") ?? 0);
   const search = url.searchParams.get("search") ?? "";
   if (!Number.isSafeInteger(page) || page < 0 || page > 10000 || search.length > 100) return response({ error: "Choose a valid preview page or search." }, 400);
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return response({ error: "Choose a valid Steam action." }, 400);
   const input = payload as Record<string, unknown>;
   const view = input.view ?? "all", page = input.page ?? 0, search = input.search ?? "";
-  if (typeof view !== "string" || !["all", "ready", "review", "imported"].includes(view) || typeof page !== "number" || !Number.isSafeInteger(page) || page < 0 || page > 10000 || typeof search !== "string" || search.length > 100)
+  if (typeof view !== "string" || !["all", "ready", "review", "imported", "updated"].includes(view) || typeof page !== "number" || !Number.isSafeInteger(page) || page < 0 || page > 10000 || typeof search !== "string" || search.length > 100)
     return response({ error: "Choose a valid preview page or search." }, 400);
   try {
     if (input.action === "refresh") await refreshSteam(user.userId);

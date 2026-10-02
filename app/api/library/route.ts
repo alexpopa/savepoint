@@ -34,8 +34,10 @@ export async function POST(request: Request) {
     const db = getDb();
     const [existing] = await db.select({ id: libraryItems.id }).from(libraryItems).where(and(eq(libraryItems.userId, user.userId), eq(libraryItems.igdbId, igdbId), eq(libraryItems.platformId, platformId)));
     if (existing) return Response.json({ error: "This platform is already in your library." }, { status: 409 });
-    const [inserted] = await db.insert(libraryItems).values({ userId: user.userId, igdbId: game.igdbId, name: game.name, coverUrl: game.coverUrl, releaseYear: game.releaseYear, platformsJson: JSON.stringify(game.platforms), platformId, platformName, addedAt: Date.now() }).onConflictDoNothing().returning({ id: libraryItems.id });
+    const now = Date.now();
+    const [inserted] = await db.insert(libraryItems).values({ userId: user.userId, igdbId: game.igdbId, name: game.name, coverUrl: game.coverUrl, releaseYear: game.releaseYear, platformsJson: JSON.stringify(game.platforms), platformId, platformName, addedAt: now, updatedAt: now }).onConflictDoNothing().returning({ id: libraryItems.id });
     if (!inserted) return Response.json({ error: "This platform is already in your library." }, { status: 409 });
+    await db.update(libraryItems).set({ updatedAt: now }).where(and(eq(libraryItems.userId, user.userId), eq(libraryItems.igdbId, igdbId)));
     return Response.json({ ok: true, id: inserted.id }, { status: 201 });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Could not add the game." }, { status: 503 });

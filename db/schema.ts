@@ -64,6 +64,7 @@ export const libraryItems = sqliteTable("library_items", {
   platformId: integer("platform_id").notNull().default(0),
   platformName: text("platform_name"),
   addedAt: integer("added_at").notNull(),
+  updatedAt: integer("updated_at"),
   // Set while this platform copy is currently playing; removing the copy removes the mark.
   playingSince: integer("playing_since"),
   // Set once this platform copy is completed; it is independent of currently playing.
@@ -73,6 +74,7 @@ export const libraryItems = sqliteTable("library_items", {
   index("idx_library_added_at_game_user").on(table.addedAt, table.igdbId, table.userId),
   index("idx_library_game_added_at").on(table.igdbId, table.addedAt),
   // The friends timeline reads each friend's rows newest first; partial indexes keep the mostly empty marks small.
+  index("idx_library_user_updated_at").on(table.userId, table.updatedAt, table.id),
   index("idx_library_user_added_at").on(table.userId, table.addedAt),
   index("idx_library_user_playing_since").on(table.userId, table.playingSince).where(sql`${table.playingSince} IS NOT NULL`),
   index("idx_library_user_completed_at").on(table.userId, table.completedAt).where(sql`${table.completedAt} IS NOT NULL`),
@@ -187,4 +189,4 @@ export const steamGames = sqliteTable("steam_games", {
   ignored: integer("ignored", { mode: "boolean" }).notNull().default(false),
   importedAt: integer("imported_at"),
   libraryItemId: integer("library_item_id").references(() => libraryItems.id, { onDelete: "set null" }),
-}, (table) => [primaryKey({ columns: [table.connectionId, table.appId] })]);
+}, (table) => [primaryKey({ columns: [table.connectionId, table.appId] }), index("idx_steam_connection_library").on(table.connectionId, table.libraryItemId, table.appId)]);

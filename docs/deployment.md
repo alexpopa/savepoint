@@ -6,7 +6,7 @@ This runbook covers publishing the [`alexpopa/savepoint`](https://github.com/ale
 
 - A Sites-enabled account or workspace with permission to create and publish Sites. Public publishing, external invitations, and custom domains depend on the account and workspace settings. Check the current Sites beta limits against the expected traffic and storage needs.
 - Node.js 22.13 or newer and the locked npm dependencies for local checks and the Worker build.
-- Optional Steam imports: configure `STEAM_API_KEY` as a Site secret and include `0016_workable_millenium_guard.sql` (four Steam integration tables). The existing HTTPS `AUTH_PUBLIC_URL` is the OpenID callback origin. Without the key, Steam linking and refresh are disabled; the rest of the site continues to work.
+- Optional Steam imports: configure `STEAM_API_KEY` as a Site secret and include both `0016_workable_millenium_guard.sql` (four Steam integration tables) and `0017_moaning_psylocke.sql` (library update timestamps and indexes). Migration `0017` is required for ordinary library use even without Steam configured. The existing HTTPS `AUTH_PUBLIC_URL` is the OpenID callback origin. Without the key, Steam linking and refresh are disabled; the rest of the site continues to work.
 - A Twitch developer application's IGDB client ID and client secret. Configure both as **Site secrets** named `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET`; the checked-in `.dev.vars.example` is only a local template.
 - A verified sending domain with Resend and a sending-access API key. Configure `RESEND_API_KEY` as a Site secret, `AUTH_EMAIL_FROM` as a sender on that domain, and `AUTH_PUBLIC_URL` as the exact HTTPS Site origin. See [Resend send email](https://resend.com/docs/api-reference/emails/send-email) and [verified domains](https://resend.com/docs/dashboard/domains/introduction).
 - The logical D1 binding `DB` declared in [`.openai/hosting.json`](../.openai/hosting.json). Sites provisions and connects the hosted database. `r2` is `null` because this app has no file uploads.
@@ -19,8 +19,8 @@ If the manifest has no `project_id`, check whether RGBoner already exists in the
 1. Register a user Web API key through [Steam's developer page](https://steamcommunity.com/dev/apikey), using `retrogameboner.com` for the domain. A publisher key is not required.
 2. Save the key in the existing RGBoner Site's runtime settings as `STEAM_API_KEY`, marked as a secret. Keep it out of chat, source control, and the hosting manifest. Local `.dev.vars` is not uploaded to Sites.
 3. Keep `AUTH_PUBLIC_URL=https://retrogameboner.com`. The app constructs the callback as `https://retrogameboner.com/api/steam/callback` with a per-attempt state parameter and the OpenID realm as `https://retrogameboner.com/`; no callback code change is needed for this domain.
-4. Publish the source with the Steam migration through the release sequence below. Saving a secret alone does not update the running Worker; deployment applies the runtime revision and pending migrations.
-5. For production QA, connect Steam from a signed-in RGBoner account on the canonical domain, complete Steam verification, refresh/import, and reload to verify persistence. Check SteamVR matching after an import or platform change.
+4. Publish the source with both Steam migrations through the release sequence below. Saving a secret alone does not update the running Worker; deployment applies the runtime revision and pending migrations.
+5. For production QA, connect Steam from a signed-in RGBoner account on the canonical domain, complete Steam verification, refresh/import, and reload to verify persistence. Check SteamVR matching and Recently updated after an import or platform change.
 
 ## Prepare a release
 
@@ -92,6 +92,7 @@ The repository's migration order is:
 
 17. `drizzle/0016_workable_millenium_guard.sql` — Steam connections, single-use link states, catalog mappings, and personal source games.
 
+18. `drizzle/0017_moaning_psylocke.sql` — nullable library update timestamps and indexes for library updates and Steam source lookups, without backfilling existing rows.
 
 When a Sites version containing new Drizzle migrations is published, Sites applies and records each pending migration against its hosted D1 database **before** uploading the Worker. No separate hosted `wrangler d1 execute` command is part of this repository's Sites release flow. A new Site starts with an empty hosted database; publishing does not copy local `.wrangler/state` records into it.
 

@@ -6,7 +6,7 @@ import { parseSteamGames, steamRequest } from "../lib/steam-api.ts";
 import { steamAssertion, steamAssertionFailure, steamLoginUrl, verifySteamAssertion } from "../lib/steam-openid.ts";
 import { defaultSteamPlatform, steamPlatforms } from "../lib/steam-types.ts";
 import type { CatalogGame } from "../lib/game-types.ts";
-import { readySteamGames, steamMatchCounts, setSteamMatch, acquireSteamLock, attachSteamGame, consumeSteamState, importSteamGame, linkSteamConnection, saveSteamGame } from "../lib/steam-queries.ts";
+import { recentSteamCount, recentSteamGames, readySteamGames, steamMatchCounts, setSteamMatch, acquireSteamLock, attachSteamGame, consumeSteamState, importSteamGame, linkSteamConnection, saveSteamGame } from "../lib/steam-queries.ts";
 
 const returnTo = "https://rgboner.test/api/steam/callback?state=abc";
 function assertion() {
@@ -233,5 +233,23 @@ test("SteamVR imports retain SteamVR, while console and standalone VR platforms 
   db.prepare("UPDATE steam_games SET game_json=?,matched_at=100").run(JSON.stringify({ platformOptions: [{ id: 163, name: "SteamVR" }] }));
   assert.equal(db.prepare(steamMatchCounts).get("one")!.ready, 1);
   assert.equal(db.prepare(readySteamGames).all("connection").length, 1);
+  db.close();
+});
+
+test("recent Steam changes are owner scoped, newest first, searchable, paged, and index ordered", () => {
+  const db = database();
+  for (let id = 1; id <= 65; id++) {
+    db.prepare("INSERT INTO library_items(id,user_id,igdb_id,name,added_at,updated_at) VALUES(?, 'one', ?, 'Game', 10, ?)").run(id, id, id === 65 ? null : id * 100);
+    db.prepare("INSERT INTO steam_games(connection_id,app_id,name,observed_at,imported_at,library_item_id) VALUES('connection', ?, ?, 100, 10, ?)").run(id, `Game ${id}`, id);
+  }
+  const list = (user: string, offset = 0, search = "") => runRows(user, offset, search);
+  function runRows(user: string, offset: number, search: string) { return db.prepare(recentSteamGames).all({1:user,2:"connection",3:search,4:offset}).map((r) => r.appId); }
+  assert.equal(db.prepare(recentSteamCount).get({1:"one",2:"connection",3:""})!.total,64);
+  assert.deepEqual(list("one").slice(0,3), [64,63,62]);
+  assert.equal(list("one").length,30); assert.equal(list("one",30)[0],34);
+  assert.deepEqual(list("two"), []); assert.deepEqual(list("one",0,"Game 61"), [61]);
+  db.exec("UPDATE library_items SET updated_at=99999 WHERE id=1"); assert.equal(list("one")[0],1);
+  const plan = db.prepare("EXPLAIN QUERY PLAN " + recentSteamGames).all({1:"one",2:"connection",3:"",4:0}).map((r)=>r.detail).join(" ");
+  assert.match(plan,/idx_library_user_updated_at/); assert.match(plan,/idx_steam_connection_library/); assert.doesNotMatch(plan,/TEMP B-TREE/);
   db.close();
 });

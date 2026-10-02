@@ -180,7 +180,7 @@ export default function SteamSettings() {
 
       </section>
       <section aria-label="Steam games">
-        <div className="steam-toolbar"><div className="steam-filters" role="group" aria-label="Filter Steam games">{[["all", "All games"], ["review", "Unresolved"], ["imported", "Imported"]].map(([id, label]) => <button className="secondary" key={id} aria-pressed={view === id} disabled={working} onClick={() => void load(0, activeSearch, id)}>{label}</button>)}</div>
+        <div className="steam-toolbar"><div className="steam-filters" role="group" aria-label="Filter Steam games">{[["all", "All games"], ["review", "Unresolved"], ["imported", "Imported"], ["updated", "Recently updated"]].map(([id, label]) => <button className="secondary" key={id} aria-pressed={view === id} disabled={working} onClick={() => void load(0, activeSearch, id)}>{label}</button>)}</div>
           <label className="library-search steam-library-search"><span className="sr-only">Search your Steam games</span><span className="library-search-field"><Search size={17} aria-hidden="true"/><input type="search" placeholder="Search titles" value={search} maxLength={100} autoComplete="off" spellCheck={false} disabled={busy || Boolean((state.pending || state.ready) && !autoPaused)} onChange={(event) => setSearch(event.target.value)}/></span></label>
 
         </div>

@@ -4,7 +4,7 @@ import { getDb } from "../db";
 import { libraryItems, steamConnections, steamGames, steamMappings } from "../db/schema";
 import { getIgdbGame, getSteamCatalogMatches } from "./igdb";
 import { steamRequest, SteamError } from "./steam-api";
-import { acquireSteamLock, attachSteamGame, importSteamGame, readySteamGames, saveSteamGame, setSteamMatch, steamMatchCounts } from "./steam-queries";
+import { acquireSteamLock, attachSteamGame, importSteamGame, recentSteamCount, recentSteamGames, readySteamGames, saveSteamGame, setSteamMatch, steamMatchCounts } from "./steam-queries";
 import { defaultSteamPlatform, steamPlatforms, steamPlatformIds } from "./steam-types";
 import type { SteamState } from "./steam-types";
 import type { CatalogGame } from "./game-types";
@@ -25,13 +25,16 @@ export async function getSteamState(userId: string, page = 0, search = "", view 
     : view === "imported" ? isNotNull(steamGames.libraryItemId) : undefined;
   const filter = and(scope, category, search ? sql`instr(lower(${steamGames.name}), lower(${search})) > 0` : undefined);
   const [counts, pendingRows, matchCounts] = await Promise.all([
-    db.select({ total: sql<number>`count(*)` }).from(steamGames).where(filter),
+    view === "updated" ? db.$client.prepare(recentSteamCount).bind(userId, connection.connectionId, search).all<{ total: number }>().then((result) => result.results) : db.select({ total: sql<number>`count(*)` }).from(steamGames).where(filter),
     db.select({ total: sql<number>`count(*)` }).from(steamGames).where(and(scope, isNull(steamGames.matchedAt), eq(steamGames.ignored, false), eq(steamGames.observedAt, connection.syncedAt ?? -1))),
     db.$client.prepare(steamMatchCounts).bind(userId).first<{ ready: number; review: number; imported: number }>(),
   ]);
   const total = counts[0].total;
   page = Math.min(page, Math.max(0, Math.ceil(total / steamPageSize) - 1));
-  const rows = await db.select().from(steamGames).where(filter).orderBy(asc(steamGames.name), asc(steamGames.appId)).limit(steamPageSize).offset(page * steamPageSize);
+  const recentIds = view === "updated" ? (await db.$client.prepare(recentSteamGames).bind(userId, connection.connectionId, search, page * steamPageSize).all<{ appId: number }>()).results.map((row) => row.appId) : null;
+  const rows = recentIds ? recentIds.length ? await db.select().from(steamGames).where(and(scope, inArray(steamGames.appId, recentIds))) : []
+    : await db.select().from(steamGames).where(filter).orderBy(asc(steamGames.name), asc(steamGames.appId)).limit(steamPageSize).offset(page * steamPageSize);
+  if (recentIds) { const ranks = new Map(recentIds.map((id, i) => [id, i])); rows.sort((a, b) => ranks.get(a.appId)! - ranks.get(b.appId)!); }
   const games = rows.map((row) => ({ ...row, game: row.gameJson ? JSON.parse(row.gameJson) as CatalogGame : null }));
   const ids = games.flatMap((row) => row.game ? [row.game.igdbId] : []);
   const existing = ids.length ? await db.select({ igdbId: libraryItems.igdbId, platformId: libraryItems.platformId }).from(libraryItems).where(and(eq(libraryItems.userId, userId), inArray(libraryItems.igdbId, ids))) : [];
