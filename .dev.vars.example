@@ -1,3 +1,6 @@
 IGDB_CLIENT_ID=your_twitch_client_id
 IGDB_CLIENT_SECRET=your_twitch_client_secret
 AUTH_EMAIL_MODE=console
+
+# Optional: enables Steam account linking and library refreshes. Never expose this key to the browser.
+STEAM_API_KEY=

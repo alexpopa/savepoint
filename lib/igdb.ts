@@ -38,7 +38,7 @@ async function getToken() {
   return data.access_token;
 }
 
-async function request<T>(endpoint: "games" | "platforms", query: string): Promise<T[]> {
+async function request<T>(endpoint: "games" | "platforms" | "external_games" | "external_game_sources", query: string): Promise<T[]> {
   const clientId = env.IGDB_CLIENT_ID!;
   const token = await getToken();
   const response = await fetch(`https://api.igdb.com/v4/${endpoint}`, {
@@ -224,5 +224,22 @@ export async function refreshIgdbGameCover(id: number, fallback?: Omit<GameCover
     recentCoverRefreshes.delete(oldestId);
   }
 
+  return result;
+}
+
+
+// Steam mappings use stable external IDs; ambiguous editions stay unselected for review.
+export async function getSteamCatalogMatches(appIds: number[]) {
+  const sources = await request<{ id: number; name: string }>("external_game_sources", 'fields id,name; where name ~ "steam"; limit 20;');
+  const source = sources.find((entry) => entry.name.toLowerCase() === "steam");
+  if (!source) throw new Error("Steam catalog source is unavailable.");
+  const rows = await request<{ uid: string; game?: IgdbGame }>("external_games",
+    `fields uid,game.id,game.name,game.first_release_date,game.cover.image_id,game.platforms.id,game.platforms.name; where external_game_source = ${source.id} & uid = (${appIds.map((id) => '"' + id + '"').join(",")}); limit 500;`);
+  if (rows.length === 500) throw new Error("Steam catalog response was truncated.");
+  const result = new Map(appIds.map((id) => [id, [] as ReturnType<typeof serialize>[]]));
+  for (const row of rows) {
+    const candidates = result.get(Number(row.uid));
+    if (candidates && row.game && Number.isSafeInteger(row.game.id) && row.game.name && !candidates.some((game) => game.igdbId === row.game!.id)) candidates.push(serialize(row.game));
+  }
   return result;
 }

@@ -3,6 +3,7 @@ declare namespace Cloudflare {
     DB?: D1Database;
     BUCKET?: R2Bucket;
     IGDB_CLIENT_ID?: string;
+    STEAM_API_KEY?: string;
     RESEND_API_KEY?: string;
     AUTH_EMAIL_FROM?: string;
     AUTH_PUBLIC_URL?: string;

@@ -145,3 +145,46 @@ export const messages = sqliteTable("messages", {
   check("ck_messages_participants", sql`(${table.senderId} = ${table.userLow} AND ${table.recipientId} = ${table.userHigh}) OR (${table.senderId} = ${table.userHigh} AND ${table.recipientId} = ${table.userLow})`),
   check("ck_messages_body", sql`length(${table.body}) BETWEEN 1 AND 2000`),
 ]);
+
+export const steamConnections = sqliteTable("steam_connections", {
+  userId: text("user_id").primaryKey().references(() => accounts.userId, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().unique(),
+  steamId: text("steam_id").notNull().unique(),
+  linkedAt: integer("linked_at").notNull(),
+  syncedAt: integer("synced_at"),
+  attemptedAt: integer("attempted_at"),
+  lockToken: text("lock_token"),
+  lockUntil: integer("lock_until"),
+  recentJson: text("recent_json"),
+  activityAt: integer("activity_at"),
+  syncError: text("sync_error"),
+});
+
+export const steamLinkStates = sqliteTable("steam_link_states", {
+  userId: text("user_id").primaryKey().references(() => accounts.userId, { onDelete: "cascade" }),
+  stateHash: text("state_hash").notNull(),
+  returnTo: text("return_to").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
+
+// Shared catalog cache; player choices belong to steam_games, never to this cache.
+export const steamMappings = sqliteTable("steam_mappings", {
+  appId: integer("app_id").primaryKey(),
+  candidatesJson: text("candidates_json").notNull(),
+  checkedAt: integer("checked_at").notNull(),
+});
+
+export const steamGames = sqliteTable("steam_games", {
+  connectionId: text("connection_id").notNull().references(() => steamConnections.connectionId, { onDelete: "cascade" }),
+  appId: integer("app_id").notNull(),
+  name: text("name").notNull(),
+  playtimeMinutes: integer("playtime_minutes"),
+  recentMinutes: integer("recent_minutes"),
+  lastPlayedAt: integer("last_played_at"),
+  observedAt: integer("observed_at").notNull(),
+  matchedAt: integer("matched_at"),
+  gameJson: text("game_json"),
+  ignored: integer("ignored", { mode: "boolean" }).notNull().default(false),
+  importedAt: integer("imported_at"),
+  libraryItemId: integer("library_item_id").references(() => libraryItems.id, { onDelete: "set null" }),
+}, (table) => [primaryKey({ columns: [table.connectionId, table.appId] })]);

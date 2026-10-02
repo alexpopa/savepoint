@@ -13,6 +13,9 @@ export type PickerSource = {
 };
 type Props = {
   title: string;
+  initialQuery?: string;
+  description?: string;
+  actionLabel?: string;
   searchLabel: string;
   source: PickerSource;
   selectedLabel: string;
@@ -49,10 +52,10 @@ function loadPage(pending: { current: AbortController | null }, source: PickerSo
 
 // A searchable, filterable list of games in a modal. Each row toggles in place, so the page behind
 // updates without reloading. `fullText` disables adding (not removing) when the target is full.
-export default function GamePicker({ title, searchLabel, source, selectedLabel, isSelected, onToggle, onClose, emptyText, fullText }: Props) {
+export default function GamePicker({ title, searchLabel, source, selectedLabel, isSelected, onToggle, onClose, emptyText, fullText, initialQuery = "", actionLabel = "Add", description }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const pending = useRef<AbortController | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [platformIds, setPlatformIds] = useState<number[]>([]);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [heading, setHeading] = useState("");
@@ -106,6 +109,7 @@ export default function GamePicker({ title, searchLabel, source, selectedLabel, 
       <label className="game-picker-search"><Search size={16} aria-hidden="true"/><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={searchLabel} aria-label={searchLabel} maxLength={100} autoComplete="off" spellCheck={false}/></label>
       <PlatformFilter platforms={platforms} selected={platformIds} onChange={setPlatformIds} loading={!loaded && !platforms.length} className="is-end"/>
     </div>
+    {description && <p className="game-picker-note">{description}</p>}
     {fullText && <p className="game-picker-note">{fullText}</p>}
     <div className="game-dialog-scroll game-picker-scroll">
       {error && <p className="game-dialog-error" role="alert">{error}</p>}
@@ -119,7 +123,7 @@ export default function GamePicker({ title, searchLabel, source, selectedLabel, 
             return <li key={item.id}><button type="button" className="game-picker-item" aria-pressed={selected} disabled={busy === item.id || (!selected && Boolean(fullText))} onClick={() => void toggle(item)}>
               <PickerCover item={item}/>
               <span className="game-picker-text"><span className="playing-name">{item.name}</span><span className="playing-platform">{item.detail}</span></span>
-              <span className="game-picker-state">{busy === item.id ? <LoaderCircle className="spin" size={15} aria-hidden="true"/> : selected ? <Check size={15} aria-hidden="true"/> : <Plus size={15} aria-hidden="true"/>}{selected ? selectedLabel : "Add"}</span>
+              <span className="game-picker-state">{busy === item.id ? <LoaderCircle className="spin" size={15} aria-hidden="true"/> : selected ? <Check size={15} aria-hidden="true"/> : <Plus size={15} aria-hidden="true"/>}{selected ? selectedLabel : actionLabel}</span>
             </button></li>;
           })}
         </ul>}

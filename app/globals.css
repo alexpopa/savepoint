@@ -846,3 +846,91 @@ button.honor-cover:focus-visible { transform: translateY(-6px); outline-offset: 
   .playing-name { margin-top: 8px; font-size: 0.8125rem; }
   .playing-platform { font-size: 0.75rem; }
 }
+
+/* Steam account connection and catalog matching */
+.library-wrap.steam-wrap { max-width: 1120px; padding-top: 32px; }
+.steam-wrap h1 { margin: 16px 0 24px; }
+.steam-settings .notice { margin: 16px 0; }
+.steam-settings button, .steam-settings select, .steam-settings summary { cursor: pointer; }
+.steam-settings button { min-height: 44px; padding: 8px 16px; border: 1px solid var(--rgb-action); border-radius: 3px; background: var(--rgb-action); color: var(--rgb-black); font-size: .875rem; font-weight: 700; }
+.steam-settings button.secondary, .steam-settings button.tool-button { border-color: var(--rgb-control-edge); background: var(--rgb-panel-raised); color: var(--rgb-ink); }
+.steam-settings button.tool-button { background: transparent; border-color: transparent; color: var(--rgb-muted); }
+.steam-settings button:hover:not(:disabled) { border-color: var(--rgb-ink); }
+.steam-settings button:disabled { opacity: .68; }
+.steam-settings button:focus-visible { outline: 3px solid var(--rgb-focus); outline-offset: 3px; }
+.steam-settings button:disabled, .steam-settings select:disabled { cursor: default; }
+.steam-settings :where(select, input:not([type="search"]), summary):focus-visible { outline: 3px solid var(--rgb-focus); outline-offset: 3px; }
+.steam-connection, .steam-import-heading, .steam-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.steam-connection { padding: 16px 0; margin-bottom: 24px; border-block: 1px solid var(--rgb-rule); }
+.steam-connection p, .steam-game p, .steam-activity p { color: var(--rgb-muted); font-size: .875rem; }
+.steam-import { padding: 24px; margin-bottom: 32px; background: var(--rgb-panel); border: 1px solid var(--rgb-rule); border-radius: 4px; }
+.steam-import-heading h2 { font-size: 1.25rem; font-weight: 700; letter-spacing: -.04em; margin: 8px 0; }
+.steam-import-heading p { color: var(--rgb-muted); font-size: .875rem; }
+.steam-import-heading .person-actions { align-items: center; gap: 24px; }
+.steam-import-heading .inline-link { flex-shrink: 0; }
+.steam-activity summary { min-height: 32px; }
+.steam-progress { margin: 24px 0; }
+.steam-progress > div { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.steam-progress p { color: var(--rgb-muted); font-size: .875rem; }
+.steam-progress progress { appearance: none; width: 100%; height: 6px; margin-top: 12px; border: 0; background: var(--rgb-rule); accent-color: var(--rgb-action); }
+.steam-progress progress::-webkit-progress-bar { background: var(--rgb-rule); }
+.steam-progress progress::-webkit-progress-value { background: var(--rgb-action); }
+.steam-progress progress::-moz-progress-bar { background: var(--rgb-action); }
+.steam-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.steam-library-search { flex: 1; max-width: 360px; }
+.steam-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.steam-filters button[aria-pressed="true"] { color: var(--rgb-ink); border-color: var(--rgb-action); box-shadow: inset 0 -2px var(--rgb-action); }
+.steam-disconnect { margin: 24px 0; padding: 16px; border: 1px solid var(--rgb-control-edge); }
+.steam-disconnect p { margin-bottom: 12px; }
+.steam-count { margin: 16px 0; color: var(--rgb-muted); font-size: .875rem; }
+.steam-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; gap: 16px; }
+.steam-game { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--rgb-rule); border-radius: 4px; overflow: hidden; background: var(--rgb-panel); }
+.steam-art { position: relative; flex-shrink: 0; display: flex; align-items: center; justify-content: center; aspect-ratio: 3 / 4; background: var(--rgb-black); color: var(--rgb-muted); overflow: hidden; }
+.steam-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.steam-art svg { width: 48px; height: 48px; }
+.steam-game-body { display: flex; flex-direction: column; flex: 1; padding: 16px; min-height: 0; }
+.steam-badge { display: inline-block; color: var(--rgb-muted); font: .75rem ui-monospace, monospace; margin-bottom: 8px; }
+.steam-badge.is-matched { color: var(--rgb-action); }
+.steam-game h3 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.7em; font-size: 1rem; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; margin-bottom: 8px; }
+.steam-game p { overflow-wrap: anywhere; }
+.steam-footer { margin: 24px 0 32px; }
+.steam-activity { padding: 24px 0; border-top: 1px solid var(--rgb-rule); }
+.steam-activity > summary { font-size: 1.25rem; font-weight: 700; }
+.steam-recent { list-style: none; padding: 0; }
+.steam-recent { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+.steam-recent li { display: flex; align-items: center; gap: 16px; min-width: 0; overflow-wrap: anywhere; }
+.steam-recent .steam-art { width: 64px; flex: none; }
+@media (max-width: 1000px) { .steam-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .steam-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .steam-toolbar { display: block; }
+  .steam-library-search { max-width: none; margin-top: 16px; }
+  .steam-recent { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .steam-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .steam-import { padding: 20px; }
+  .steam-import-heading { flex-direction: column; align-items: stretch; gap: 12px; }
+  .steam-import-heading h2 { font-size: 1.25rem; }
+  .steam-connection, .steam-search, .steam-footer, .steam-progress > div { flex-direction: column; align-items: stretch; gap: 12px; }
+  .steam-connection .person-actions { margin-top: 0; }
+  .steam-recent { grid-template-columns: 1fr; }
+}
+@media (max-width: 380px) {
+  .steam-grid { grid-template-columns: 1fr; }
+  .steam-game { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: start; }
+  .steam-game-body { display: flex; flex-direction: column; flex: 1; padding: 16px; min-height: 0; }
+  .steam-game .steam-art { margin-top: 12px; }
+}
+
+.steam-settings .steam-game-open { display: block; width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--rgb-ink); text-align: left; font-weight: inherit; }
+.steam-settings .steam-game-open:focus-visible { outline-offset: -3px; }
+.steam-game-open h3 { margin: 0 0 8px; }
+.steam-game-open:hover h3 { color: var(--rgb-info); }
+.steam-card-actions { display: grid; gap: 4px; margin: auto 16px 16px; }
+
+@media (max-width: 380px) {
+  .steam-game { display: flex; }
+  .steam-settings .steam-game-open { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: start; }
+  .steam-card-actions { margin-left: 104px; }
+}

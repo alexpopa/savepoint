@@ -14,6 +14,8 @@ Group saved platform copies separately for each friend. Start with their newest 
 
 For example, additions Monday at 18:00, Monday at 09:00, and Sunday at 19:00 form one batch; Sunday at 17:00 starts the next. Different players never share a batch. A game saved on two platforms counts as two copies, with each platform shown. A batch takes one timeline slot regardless of how many games it contains. The first four covers and titles are visible; the rest expand in place. Select a game name to open its details and add it to your own library. Each game has a compact **+ Add challenge** action at the end of its existing row. It opens the same challenge form as the friend's library card and creates a challenge for that friend and game; it does not change the batch grid or cover size.
 
+Steam imports enter these same batches at the time new RGBoner copies are created, not a guessed Steam purchase date. Linking an existing copy preserves its timestamp and produces no new entry. Steam refreshes, mapping choices, exclusions, and recent-play snapshots do not change the manual currently-playing mark or add timeline entries.
+
 A batch uses its newest addition's `added_at` for ordering. Platform edits do not bump it. Deleted copies disappear on the next page load, and batches are recalculated from the remaining rows. New additions can regroup earlier entries; that is intentional for this current-state view.
 
 ## Challenges
