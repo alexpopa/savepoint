@@ -8,7 +8,7 @@ A retro, RGB-styled social library for video games.
 - **Steam import** — connect Steam, automatically match your collection to IGDB, automatically import matched games, and resolve and import unmatched games in one click, and manage games through the shared library popup, including SteamVR and a Recently updated filter
 - **Status and ratings** — mark games as playing or completed, and score them 1–5 stars
 - **Top 10** — pin your favorites; your #1 cover becomes your profile picture
-- **Friends** — timeline, direct messages, and private profiles shared with friends
+- **Friends** — timeline with gradual library-batch expansion capped at 100 copies, direct messages, and private profiles shared with friends
 - **Challenges** — dare friends on games in their library and keep the best in your Hall of Honor
 
 Anyone can browse games and public profiles; sign in to build a library.

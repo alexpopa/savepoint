@@ -23,6 +23,32 @@ test("a large import occupies one slot, with no truncated batch", () => {
   assert.equal(rows.length, 1);
   assert.equal(rows[0].kind === "library" && rows[0].games.length, 200);
 });
+test("library pages count the complete batch but send at most the newest 100 games", () => {
+  for (const count of [4, 5, 99, 100, 101, 200]) {
+    const games = Array.from({ length: count }, (_, i) => game(i + 1, i));
+    const page = timelinePage(fullSources(games, []), null)!;
+    assert.equal(page.items.length, 1);
+    const batch = page.items[0];
+    assert.equal(batch.kind, "library");
+    if (batch.kind !== "library") return;
+    assert.equal(batch.gameCount, count);
+    assert.deepEqual(batch.games.map((row) => row.id), games.slice().reverse().slice(0, 100).map((row) => row.id));
+    assert.equal(page.next, null);
+  }
+});
+test("capping an import still waits for its full count and skips its remaining games on later pages", () => {
+  const games = [game(1, 0), ...Array.from({ length: 150 }, (_, i) => game(i + 2, BATCH_WINDOW * 2))];
+  const all = { games, ratings: [], challenges: [] };
+  assert.equal(timelinePage(readSources(all, null, 16, 100), null, 1), null);
+  const first = timelinePage(readSources(all, null, 16, 400), null, 1)!;
+  assert.equal(first.items[0].kind === "library" && first.items[0].gameCount, 150);
+  assert.equal(first.items[0].kind === "library" && first.items[0].games.length, 100);
+  const cursor = parseTimelineCursor(first.next!);
+  assert.ok(cursor);
+  const second = timelinePage(readSources(all, cursor, 16, 100), cursor, 1)!;
+  assert.deepEqual(second.items.map((item) => item.key), ["library:1"]);
+  assert.equal(second.next, null);
+});
 test("the page limit is applied after grouping and merging challenge updates", () => {
   const games = Array.from({ length: 40 }, (_, i) => game(i, i * BATCH_WINDOW * 2));
   const challenge: TimelineChallenge = { kind: "challenge", key: "challenge:1", id: 1, at: 100 * BATCH_WINDOW, createdAt: 0, title: "Challenge", description: "Description", gameName: "Game", coverUrl: null, creator: person, recipient: person, state: "completed" };

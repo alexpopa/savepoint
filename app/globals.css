@@ -544,6 +544,9 @@ button:disabled { cursor: default; }
 .timeline-more summary { cursor: pointer; width: fit-content; min-height: 32px; padding-block: 4px; color: var(--rgb-info); font-size: 0.875rem; }
 .timeline-more summary:focus-visible { outline: 3px solid var(--rgb-focus); outline-offset: 3px; }
 .timeline-more[open] summary { margin-bottom: 16px; }
+.timeline-batch-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.timeline-library-link { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: var(--rgb-info); font-size: 0.875rem; overflow-wrap: anywhere; }
+.timeline-library-link svg { flex: none; }
 .timeline-challenge { display: flex; align-items: start; gap: 16px; padding: 16px; background: var(--rgb-panel); border-left: 2px solid var(--rgb-info); }
 .is-completed .timeline-challenge { border-left-color: var(--rgb-action); }
 .timeline-challenge-cover-open { display: block; flex: none; padding: 0; border: 0; background: transparent; color: inherit; line-height: 0; }
@@ -571,6 +574,9 @@ button:disabled { cursor: default; }
   .timeline-entry { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 20px 12px; }
   .timeline-marker { width: 28px; height: 28px; }
   .timeline-games { grid-template-columns: minmax(0, 1fr); }
+  .timeline-games .timeline-game { display: grid; grid-template-columns: 63px minmax(0, 1fr); gap: 8px 12px; }
+  .timeline-games .timeline-cover { grid-row: 1 / span 2; }
+  .timeline-games .timeline-challenge-add { grid-column: 2; justify-self: start; }
   .timeline-challenge { padding: 12px; gap: 12px; }
   .timeline-challenge .timeline-cover { width: 48px; }
 }

@@ -64,6 +64,8 @@ Local D1 state is stored under `.wrangler/state`. Keep the `--persist-to .wrangl
 | `npm run browser:install` | Install the local browser driver into `tools/browser/` (outside the root package). |
 | `npm run browser -- <path>` | Screenshot a page at 1280px and 320px as `AgentTester` and report overflow and console errors. See [browser testing](browser-testing.md). |
 
+For timeline browser checks, exercise library batches below, at, and above 100 copies: four show initially, each **Show more** adds at most 12, and larger batches link to the player’s Library section after 100. Verify the full batch count, collapse, keyboard focus, and that later activity pages do not repeat capped copies. See [browser testing](browser-testing.md) for local fixtures and scripts.
+
 `scripts/execution-profile.mjs` reads the ignored `.sites-runtime/execution-profile.json`. A missing file means `portable`. The `managed-linux` profile uses a different build and development runner. Both profiles use the same D1-backed email authentication.
 
 ### Open the local preview on a phone with Tailscale

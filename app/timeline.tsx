@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Gamepad2, Flag, Check, ArrowUpRight, ChevronRight, CircleCheck, LoaderCircle, Play, Star, Stars } from "lucide-react";
 import { ChallengeDetailsDialog, TimelineChallengeButton } from "./challenges";
 import GameDetailsDialog from "./game-details-dialog";
 import { ScoreStars } from "./game-rating";
 import SiteHeader from "./site-header";
-import type { TimelineGame, TimelineItem, TimelineRating } from "../lib/timeline-items";
+import type { LibraryBatch, TimelineGame, TimelineItem, TimelineRating } from "../lib/timeline-items";
 import type { CatalogGame, SavedGame } from "../lib/game-types";
 import type { ChallengeDetails } from "../lib/challenges";
 
@@ -23,6 +23,25 @@ function Game({ game, onOpen }: { game: TimelineGame; onOpen: (game: TimelineGam
 
 function RatedGame({ game, onOpen }: { game: TimelineRating; onOpen: (game: TimelineRating) => void }) {
   return <li className="timeline-game"><Cover src={game.coverUrl} /><span className="timeline-game-copy"><button type="button" className="timeline-game-title" aria-label={`View details for ${game.name}`} onClick={() => onOpen(game)}>{game.name}</button><ScoreStars score={game.score} className="timeline-score"/></span></li>;
+}
+
+function LibraryGames({ batch, onOpen }: { batch: LibraryBatch; onOpen: (game: TimelineGame) => void }) {
+  const [shown, setShown] = useState(4);
+  const [focusIndex, setFocusIndex] = useState<number | null>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const listId = useId();
+  const more = Math.min(12, batch.games.length - shown);
+  useEffect(() => {
+    if (focusIndex !== null) list.current?.children[focusIndex]?.querySelector<HTMLButtonElement>(".timeline-game-title")?.focus();
+  }, [shown, focusIndex]);
+
+  return <><ul ref={list} id={listId} className="timeline-games">{batch.games.slice(0, shown).map((game) => <Game key={game.id} game={game} onOpen={onOpen}/>)}</ul>
+    {batch.games.length > 4 && <div className="timeline-batch-controls">
+      {more > 0 ? <button type="button" className="profile-tool" aria-controls={listId} onClick={() => { setFocusIndex(shown); setShown(shown + more); }}>Show {more} more {more === 1 ? "game" : "games"}</button>
+        : batch.gameCount > batch.games.length && <a className="timeline-library-link" href={`${batch.person.href}#library`}>View the remaining {batch.gameCount - batch.games.length} {batch.gameCount - batch.games.length === 1 ? "game" : "games"} in {batch.person.name}’s library <ArrowUpRight size={16} aria-hidden="true"/></a>}
+      {shown > 4 && <button type="button" className="profile-tool" aria-controls={listId} onClick={() => { setFocusIndex(0); setShown(4); }}>Show fewer</button>}
+    </div>}
+  </>;
 }
 
 function Stamp({ at, updated }: { at: number; updated?: boolean }) {
@@ -120,8 +139,8 @@ export default function Timeline({ email, viewerId, showAdmin, items: firstItems
           : <ol ref={list} className="timeline-list">{items.map((item) => <li key={item.key} data-key={item.key} className={`timeline-entry ${item.kind === "challenge" ? `is-${item.state}` : "is-library"}`}>
             <span className="timeline-marker" aria-hidden="true">{item.kind === "library" ? <Gamepad2 size={18} /> : item.kind === "favorite" ? <Star size={18}/> : item.kind === "playing" ? <Play size={18}/> : item.kind === "completed" ? <CircleCheck size={18}/> : item.kind === "ratings" ? <Stars size={18}/> : item.state === "completed" ? <Check size={18} /> : <Flag size={18} />}</span>
             <article>
-              <div className="timeline-entry-heading"><h2>{item.kind === "library" ? <><a href={item.person.href}>{item.person.name}</a> added {item.games.length === 1 ? "a game" : `${item.games.length} games`}</> : item.kind === "favorite" ? <><a href={item.person.href}>{item.person.name}</a> favorited a game</> : item.kind === "playing" ? <><a href={item.person.href}>{item.person.name}</a> started playing</> : item.kind === "completed" ? <><a href={item.person.href}>{item.person.name}</a> completed a game</> : item.kind === "ratings" ? <><a href={item.person.href}>{item.person.name}</a> rated {item.games.length === 1 ? "a game" : `${item.games.length} games`}</> : <><a href={item.creator.href}>{item.creator.name}</a><span className="timeline-versus"> challenged </span><a href={item.recipient.href}>{item.recipient.name}</a></>}</h2><Stamp at={item.at} updated={item.kind === "challenge" && item.at !== item.createdAt} /></div>
-              {item.kind === "library" ? <><ul className="timeline-games">{item.games.slice(0, 4).map((game) => <Game key={game.id} game={game} onOpen={openGame}/>)}</ul>{item.games.length > 4 && <details className="timeline-more"><summary>Show {item.games.length - 4} more games</summary><ul className="timeline-games">{item.games.slice(4).map((game) => <Game key={game.id} game={game} onOpen={openGame}/>)}</ul></details>}</>
+              <div className="timeline-entry-heading"><h2>{item.kind === "library" ? <><a href={item.person.href}>{item.person.name}</a> added {item.gameCount === 1 ? "a game" : `${item.gameCount} games`}</> : item.kind === "favorite" ? <><a href={item.person.href}>{item.person.name}</a> favorited a game</> : item.kind === "playing" ? <><a href={item.person.href}>{item.person.name}</a> started playing</> : item.kind === "completed" ? <><a href={item.person.href}>{item.person.name}</a> completed a game</> : item.kind === "ratings" ? <><a href={item.person.href}>{item.person.name}</a> rated {item.games.length === 1 ? "a game" : `${item.games.length} games`}</> : <><a href={item.creator.href}>{item.creator.name}</a><span className="timeline-versus"> challenged </span><a href={item.recipient.href}>{item.recipient.name}</a></>}</h2><Stamp at={item.at} updated={item.kind === "challenge" && item.at !== item.createdAt} /></div>
+              {item.kind === "library" ? <LibraryGames batch={item} onOpen={openGame}/>
                 : item.kind === "ratings" ? <><ul className="timeline-games">{item.games.slice(0, 4).map((game) => <RatedGame key={game.id} game={game} onOpen={openGame}/>)}</ul>{item.games.length > 4 && <details className="timeline-more"><summary>Show {item.games.length - 4} more games</summary><ul className="timeline-games">{item.games.slice(4).map((game) => <RatedGame key={game.id} game={game} onOpen={openGame}/>)}</ul></details>}</>
                 : item.kind === "playing" || item.kind === "completed" ? <div className="timeline-game"><button type="button" className="timeline-challenge-cover-open" onClick={() => openGame(item)} aria-label={`Open ${item.name} details`}><Cover src={item.coverUrl}/></button><span className="timeline-game-copy"><button type="button" className="timeline-game-title" onClick={() => openGame(item)} aria-label={`View details for ${item.name}`}>{item.name}</button><small>{item.platformName || "Platform not set"}</small></span></div>
                 : item.kind === "favorite" ? <div className="timeline-game"><button type="button" className="timeline-challenge-cover-open" onClick={() => openGame(item)} aria-label={`Open ${item.name} details`}><Cover src={item.coverUrl}/></button><button type="button" className="timeline-game-title" onClick={() => openGame(item)} aria-label={`View details for ${item.name}`}>{item.name}</button></div>

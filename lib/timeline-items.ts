@@ -1,7 +1,8 @@
 export const BATCH_WINDOW = 24 * 60 * 60 * 1000;
 export type TimelinePerson = { id: string; name: string; href: string };
 export type TimelineGame = { id: number; igdbId: number; name: string; releaseYear: number | null; platformName: string | null; coverUrl: string | null; addedAt: number; person: TimelinePerson };
-export type LibraryBatch = { kind: "library"; key: string; at: number; person: TimelinePerson; games: TimelineGame[] };
+export const timelineLibraryLimit = 100;
+export type LibraryBatch = { kind: "library"; key: string; at: number; person: TimelinePerson; games: TimelineGame[]; gameCount: number };
 export type TimelineChallenge = {
   kind: "challenge"; key: string; id: number; at: number; createdAt: number;
   title: string; description: string; gameName: string; coverUrl: string | null;
@@ -38,7 +39,8 @@ function batchByPerson<T extends { id: number; person: TimelinePerson }, B exten
 }
 
 export function batchLibraryGames(games: TimelineGame[]): LibraryBatch[] {
-  return batchByPerson(games, (game) => game.addedAt, (game): LibraryBatch => ({ kind: "library", key: `library:${game.id}`, at: game.addedAt, person: game.person, games: [] }));
+  return batchByPerson(games, (game) => game.addedAt, (game): LibraryBatch => ({ kind: "library", key: `library:${game.id}`, at: game.addedAt, person: game.person, games: [], gameCount: 0 }))
+    .map((batch) => ({ ...batch, gameCount: batch.games.length }));
 }
 
 export function batchRatings(ratings: TimelineRating[]): RatingBatch[] {
@@ -73,7 +75,8 @@ export function timelinePage(sources: TimelineSources, cursor: TimelineCursor | 
   const entries = mergeTimeline(games.rows, challenges.rows, favorites.rows, playing.rows, completed.rows, ratings.rows)
     .filter((item) => item.at > horizon && (!cursor || timelineOrder(cursor, item) < 0));
   if (entries.length < size && horizon > -Infinity) return null;
-  const items = entries.slice(0, size);
+  // Count the entire window before capping the serialized games, so imports stay one entry and cursors skip the whole batch.
+  const items = entries.slice(0, size).map((item) => item.kind === "library" ? { ...item, games: item.games.slice(0, timelineLibraryLimit) } : item);
   const last = items.at(-1);
   const more = entries.length > size || horizon > -Infinity;
   return { items, next: more && last ? JSON.stringify(nextCursor(cursor, items, last)) : null };
