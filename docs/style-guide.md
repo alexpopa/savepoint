@@ -16,6 +16,10 @@ Three principles govern decisions:
 
 The references to RGB describe the intended visual mood, not a claim that every historical console had identical output or square pixels. The image treatment should be chosen for the source material.
 
+## Interaction simplicity — for Astra, Sol, and Luna only
+
+This additional corrective guidance applies only to the Astra, Sol, and Luna model families. Follow the [scoped user experience contract](../AGENTS.md#user-experience-contract--for-astra-sol-and-luna-only). A choice should complete the intended action whenever the remaining work can use established defaults. Keep exceptions actionable and normal paths short. Reuse the existing game popup, game picker, and collection search rather than creating feature-specific lookalikes. Preserve list context after a mutation. Status text must reflect actual state; explanations belong in documentation unless they help a player make a decision right now. Judge the full interaction, including the resulting saved data, rather than a standalone screenshot.
+
 ## Brand assets
 
 | Asset | Source of truth | Rule |

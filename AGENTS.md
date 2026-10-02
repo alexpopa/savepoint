@@ -24,6 +24,21 @@ Read what the task touches before changing anything. The code is the final autho
 2. Read the relevant sources above and the code you will change, including its nearest existing sibling (another route, page, or component doing the same kind of job). Copy that sibling's pattern.
 3. If the request conflicts with a rule here or a settled decision in `docs/conventions.md`, say so and ask before proceeding.
 
+## User experience contract — for Astra, Sol, and Luna only
+
+This corrective checklist applies only to the Astra, Sol, and Luna model families. Other models are not subject to this additional checklist; the ordinary project instructions and documented product behavior still apply to everyone.
+
+For Astra, Sol, and Luna, apply these rules to every feature and refinement, not just Steam:
+
+- Start with the player's intended outcome and the shortest sensible path to it. Selecting a game to resolve an import should finish that import, not create another task to confirm, select, or submit it again.
+- Reuse the actual established components and interactions. Game covers/titles open the shared game details; search uses the existing search field and its focus behavior. Similar colors alone do not make an interaction consistent.
+- Automate reliable work; ask the player only for decisions the app cannot safely make. Use established defaults, preserve existing data, and keep optional management in the existing game popup.
+- Keep intermediate processing states out of navigation unless they help the player act. Do not add steps, tabs, checkboxes, disclosures, or confirmation screens merely because the backend has separate operations.
+- Keep visible text brief and actionable. Do not repeat a status in an explanatory paragraph, expose implementation terminology, or repurpose an established term (for example game reviews) for something unrelated.
+- Derive progress and success messages from actual results. Never announce work that is not pending. Keep search, filters, and position when completing an item in a list.
+- Standardize artwork frames and align neighboring cards without reserving blank controls or forcing all rows to the tallest expanded card. Check populated, imported, unresolved, empty, and loading states with varied title lengths and artwork.
+- Before finishing, walk through the complete task as a player: count required decisions and clicks, remove avoidable steps, compare against the nearest existing interaction, and verify the final saved result. Passing tests and screenshots alone do not establish good UX. Address feedback as a principle across the flow, not only as a local cosmetic patch.
+
 ## Commands
 
 - `npm run dev` — local preview at `http://localhost:5173/`. Use this for any "preview", "refresh", "restart", or "redeploy locally" request; reuse a running dev server rather than starting a second one.
