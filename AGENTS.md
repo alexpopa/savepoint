@@ -1,6 +1,6 @@
 # Working on RGBoner
 
-RGBoner is a retro RGB-styled social game library: verified email accounts, IGDB-backed game search, per-platform libraries, friendships, challenges, a Top 10 of favorite games, currently playing status, a friends timeline, and direct messages between friends. It is a Vinext (Next.js App Router on Vite) Cloudflare Worker with D1 via Drizzle, deployed through ChatGPT Sites. Several AI coding agents work on this repository, so this file is the shared contract. Instructions here outrank habits from other projects.
+RGBoner is a retro RGB-styled social game library: verified email accounts, IGDB-backed game search, per-platform libraries, friendships, challenges, a Top 10 of favorite games, currently playing status, Steam imports, Xbox played games and achievements, a friends timeline, and direct messages between friends. It is a Vinext (Next.js App Router on Vite) Cloudflare Worker with D1 via Drizzle, deployed through ChatGPT Sites. Several AI coding agents work on this repository, so this file is the shared contract. Instructions here outrank habits from other projects.
 
 ## Sources of truth
 
