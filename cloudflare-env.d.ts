@@ -7,6 +7,7 @@ declare namespace Cloudflare {
     XBOX_CLIENT_ID?: string;
     XBOX_CLIENT_SECRET?: string;
     XBOX_TOKEN_KEY?: string;
+    PSN_TOKEN_KEY?: string;
     RESEND_API_KEY?: string;
     AUTH_EMAIL_FROM?: string;
     AUTH_PUBLIC_URL?: string;

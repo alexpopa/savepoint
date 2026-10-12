@@ -2,7 +2,7 @@
 
 The signed-in home page shows the latest 15 entries from accepted friends, newest first, and a **Show more** button loads the next 15 below them. Guests still go to search. **My library** lives at `/library`, under the account icon; the wordmark returns to the timeline.
 
-This is a view of current activity, not a permanent history. It reads the existing library, currently playing, completed, game-rating, game-favorite, Xbox achievement, and challenge records when the page loads. There is no activity table, queue, push delivery, friendship announcement, or unread marker in the timeline.
+This is a view of current activity, not a permanent history. It reads the existing library, currently playing, completed, game-rating, game-favorite, Xbox achievement, PlayStation trophy, and challenge records when the page loads. There is no activity table, queue, push delivery, friendship announcement, or unread marker in the timeline.
 
 ## What belongs in the timeline
 
@@ -38,11 +38,11 @@ All eligibility is checked on the server. Library additions require an accepted 
 
 Current friendship and account visibility are rechecked on each read. Pending requests grant no access to regular players; admin profile access is independent of friendship. Removing a friendship can remove activity. A private profile remains visible to accepted friends. Challenge IDs prevent duplication when both participants are friends.
 
-After grouping, merge library batches, rating batches, Xbox achievement batches and completions, currently playing and completed entries, game favorites, and challenges, sort by timestamp descending with a stable type/entry-key tie-breaker, and take one page of 15.
+After grouping, merge library batches, rating batches, Xbox achievement batches and completions, PlayStation trophy batches and completions, currently playing and completed entries, game favorites, and challenges, sort by timestamp descending with a stable type/entry-key tie-breaker, and take one page of 15.
 
 ## Pages
 
-Each page reads only what it needs, starting from the viewer's accepted friends through per-player indexes rather than scanning everyone's activity, and sends all eight reads to D1 in one batch. Challenges, favorites, currently playing, completed entries, and Xbox completions are read newest first, 16 at a time. Library additions, ratings, and Xbox unlocks are read newest first, 100 rows at a time, but never shown incomplete: a batch is complete only once its whole 24-hour window has been read, so entries are kept only if they are newer than every source's cut-off (the oldest single entry read, or the oldest batched row plus 24 hours). If fewer than a page's entries are certain, all limits grow fourfold and the page is read again, so a large import still appears as one batch with an exact total count. Only its newest 100 library copies are serialized; the cursor skips the entire batch window, including copies beyond that cap.
+Each page reads only what it needs, starting from the viewer's accepted friends through per-player indexes rather than scanning everyone's activity, and sends all ten reads to D1 in one batch. Challenges, favorites, currently playing, completed entries, and Xbox and PlayStation completions are read newest first, 16 at a time. Library additions, ratings, Xbox unlocks, and PlayStation trophies are read newest first, 100 rows at a time, but never shown incomplete: a batch is complete only once its whole 24-hour window has been read, so entries are kept only if they are newer than every source's cut-off (the oldest single entry read, or the oldest batched row plus 24 hours). If fewer than a page's entries are certain, all limits grow fourfold and the page is read again, so a large import still appears as one batch with an exact total count. Only its newest 100 library copies are serialized; the cursor skips the entire batch window, including copies beyond that cap.
 
 The server returns an opaque `next` cursor with each page, and `GET /api/timeline?cursor=…` returns the next one. The cursor holds the last entry's timestamp and key, plus, for each friend whose library or rating batch was shown within the last 24 hours before it, the start of that batch's window. The next page reads only rows at or before the cursor and, for those friends, strictly before their window start, so every friend's next batch starts from their newest ungrouped row, exactly as if the whole feed had been read at once. Pages are computed from current records, so activity added or removed between clicks can shift entries; the client skips keys it already shows.
 
@@ -76,3 +76,12 @@ Achievements appear only for Xbox games a verified accepted friend added to thei
 - **Every achievement earned** contributes one entry per game, “[Player] earned every achievement”, timed by the final unlock. A later add-on with new achievements hides it until those are earned too; it then returns with the new final unlock time.
 
 The viewer's own achievements are excluded. Implementation: `timelineAchievementsQuery` and `timelineMasteredQuery` in `lib/timeline-queries.ts`, and `batchAchievements` in `lib/timeline-items.ts`.
+
+## PlayStation trophies
+
+Trophies follow the Xbox rules: only for PlayStation games a verified accepted friend added to their library, gone when that copy is removed or PlayStation is disconnected, and never the viewer's own.
+
+- **Earned trophies** batch per friend and game within 24 hours, “[Player] earned N trophies”, with the cover, a clickable title, and the first three trophy names. Each keeps the time Sony reports. Cursor floors for these batches are keyed by friend and game, separately from Xbox.
+- **Completion** adds one entry per game, “[Player] earned a platinum trophy”, timed by the platinum; lists without a platinum read “earned every trophy”, timed by the final base-game trophy. Add-on trophies never count, so the entry stays when DLC arrives.
+
+Implementation: `timelineTrophiesQuery` and `timelinePlatinumQuery` in `lib/timeline-queries.ts`, and `batchTrophies` in `lib/timeline-items.ts`.

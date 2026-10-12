@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { authorizeXbox, exchangeXboxCode, fetchAchievements, parseLegacyAchievements, parseModernAchievements, parseTitleHistory, pkceChallenge, xboxLoginUrl, type XboxAuth } from "../lib/xbox-api.ts";
-import { openToken, sealToken } from "../lib/xbox-crypto.ts";
+import { openToken, sealToken } from "../lib/token-crypto.ts";
 import { defaultXboxPlatform, devicePlatformIds, xbox360MarketplaceIds, xboxPlatforms } from "../lib/xbox-types.ts";
 import {
   acquireXboxLock, attachXboxGame, consumeXboxState, finishXboxAchievements, importXboxGame, linkXboxConnection, playXboxGame, readyXboxGames, removeXboxCopies, saveXboxAchievement,

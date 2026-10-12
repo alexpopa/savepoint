@@ -277,3 +277,99 @@ export const xboxUnlocks = sqliteTable("xbox_unlocks", {
   uniqueIndex("idx_xbox_unlocks_title_achievement").on(table.titleRowId, table.achievementId),
   index("idx_xbox_unlocks_user_unlocked_at").on(table.userId, table.unlockedAt),
 ]);
+
+export const psnConnections = sqliteTable("psn_connections", {
+  userId: text("user_id").primaryKey().references(() => accounts.userId, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().unique(),
+  accountId: text("account_id").notNull().unique(),
+  onlineId: text("online_id").notNull(),
+  // AES-GCM ciphertext of the Sony refresh token and cached access token; the NPSSO itself is never stored.
+  tokenCipher: text("token_cipher").notNull(),
+  linkedAt: integer("linked_at").notNull(),
+  syncedAt: integer("synced_at"),
+  attemptedAt: integer("attempted_at"),
+  lockToken: text("lock_token"),
+  lockUntil: integer("lock_until"),
+  syncError: text("sync_error"),
+  syncPaused: integer("sync_paused", { mode: "boolean" }).notNull().default(false),
+  // Set when Sony rejects the stored sign-in; cleared by reconnecting the same PSN account.
+  needsReconnect: integer("needs_reconnect", { mode: "boolean" }).notNull().default(false),
+  trophyLevel: integer("trophy_level"),
+  earnedPlatinum: integer("earned_platinum").notNull().default(0),
+  earnedGold: integer("earned_gold").notNull().default(0),
+  earnedSilver: integer("earned_silver").notNull().default(0),
+  earnedBronze: integer("earned_bronze").notNull().default(0),
+});
+
+// Shared catalog cache keyed by PlayStation title key; player choices belong to psn_titles.
+export const psnMappings = sqliteTable("psn_mappings", {
+  titleKey: text("title_key").primaryKey(),
+  candidatesJson: text("candidates_json").notNull(),
+  checkedAt: integer("checked_at").notNull(),
+});
+
+// One row per merged game: the trophy list ID when there is one, otherwise the played concept.
+export const psnTitles = sqliteTable("psn_titles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  connectionId: text("connection_id").notNull().references(() => psnConnections.connectionId, { onDelete: "cascade" }),
+  titleKey: text("title_key").notNull(),
+  name: text("name").notNull(),
+  imageUrl: text("image_url"),
+  platformsJson: text("platforms_json").notNull().default("[]"),
+  npCommunicationId: text("np_communication_id"),
+  npServiceName: text("np_service_name"),
+  conceptId: integer("concept_id"),
+  titleIdsJson: text("title_ids_json").notNull().default("[]"),
+  // Whether Sony was already asked which trophy list these played title IDs belong to.
+  linksChecked: integer("links_checked", { mode: "boolean" }).notNull().default(false),
+  lastPlayedAt: integer("last_played_at"),
+  playSeconds: integer("play_seconds"),
+  earnedPlatinum: integer("earned_platinum").notNull().default(0),
+  earnedGold: integer("earned_gold").notNull().default(0),
+  earnedSilver: integer("earned_silver").notNull().default(0),
+  earnedBronze: integer("earned_bronze").notNull().default(0),
+  definedPlatinum: integer("defined_platinum").notNull().default(0),
+  definedGold: integer("defined_gold").notNull().default(0),
+  definedSilver: integer("defined_silver").notNull().default(0),
+  definedBronze: integer("defined_bronze").notNull().default(0),
+  progress: integer("progress").notNull().default(0),
+  observedAt: integer("observed_at").notNull(),
+  matchedAt: integer("matched_at"),
+  gameJson: text("game_json"),
+  importedAt: integer("imported_at"),
+  libraryItemId: integer("library_item_id").references(() => libraryItems.id, { onDelete: "set null" }),
+  // Earned count when the trophy list was last read, so refreshes only reread titles that changed.
+  trophiesSyncedCount: integer("trophies_synced_count"),
+  // Platinum time, or the final base-game trophy for lists without a platinum.
+  completedAt: integer("completed_at"),
+}, (table) => [
+  uniqueIndex("idx_psn_titles_connection_title").on(table.connectionId, table.titleKey),
+  index("idx_psn_titles_connection_library").on(table.connectionId, table.libraryItemId),
+  index("idx_psn_titles_connection_played").on(table.connectionId, table.lastPlayedAt),
+  index("idx_psn_titles_connection_completed").on(table.connectionId, table.completedAt).where(sql`${table.completedAt} IS NOT NULL`),
+]);
+
+// Shared trophy definitions, stored once per trophy list for every player.
+export const psnTrophies = sqliteTable("psn_trophies", {
+  npCommunicationId: text("np_communication_id").notNull(),
+  trophyId: integer("trophy_id").notNull(),
+  groupId: text("group_id").notNull().default("default"),
+  name: text("name").notNull(),
+  description: text("description"),
+  iconUrl: text("icon_url"),
+  grade: text("grade").notNull(),
+  isHidden: integer("is_hidden", { mode: "boolean" }).notNull().default(false),
+  rarity: integer("rarity"),
+  checkedAt: integer("checked_at").notNull(),
+}, (table) => [primaryKey({ columns: [table.npCommunicationId, table.trophyId] })]);
+
+export const psnUnlocks = sqliteTable("psn_unlocks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  titleRowId: integer("title_row_id").notNull().references(() => psnTitles.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  trophyId: integer("trophy_id").notNull(),
+  earnedAt: integer("earned_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_psn_unlocks_title_trophy").on(table.titleRowId, table.trophyId),
+  index("idx_psn_unlocks_user_earned_at").on(table.userId, table.earnedAt),
+]);

@@ -130,8 +130,8 @@ test("paging with small reads shows every entry once, with the same batches as t
 });
 
 test("timeline cursors reject malformed input", () => {
-  // Cursors issued before achievement floors existed still parse, with none.
-  assert.deepEqual(parseTimelineCursor(JSON.stringify({ at: 5, key: "library:3", library: { friend: 1 }, ratings: {} })), { at: 5, key: "library:3", library: { friend: 1 }, ratings: {}, achievements: {} });
+  // Cursors issued before achievement and trophy floors existed still parse, with none.
+  assert.deepEqual(parseTimelineCursor(JSON.stringify({ at: 5, key: "library:3", library: { friend: 1 }, ratings: {} })), { at: 5, key: "library:3", library: { friend: 1 }, ratings: {}, achievements: {}, trophies: {} });
   assert.deepEqual(parseTimelineCursor(JSON.stringify({ at: 5, key: "achievements:3", library: {}, ratings: {}, achievements: { "friend:7": 1 } }))?.achievements, { "friend:7": 1 });
   assert.equal(parseTimelineCursor(JSON.stringify({ at: 5, key: "mastered:3", library: {}, ratings: {}, achievements: { "friend:7": "1" } })), null);
   for (const raw of ["", "{", "null", "[]", JSON.stringify({ at: 1.5, key: "library:3", library: {}, ratings: {} }), JSON.stringify({ at: 5, key: "other:3", library: {}, ratings: {} }), JSON.stringify({ at: 5, key: "library:3", library: { friend: "1" }, ratings: {} }), JSON.stringify({ at: 5, key: "library:3", library: [] , ratings: {} })])

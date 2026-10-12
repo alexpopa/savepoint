@@ -70,6 +70,28 @@ export const timelineMasteredQuery = `SELECT t.id, t.id AS titleRowId, t.complet
   WHERE row.user_id IN ${friendIds} AND t.completed_at IS NOT NULL AND t.completed_at <= ?2 AND t.current_achievements = t.total_achievements AND ${verified("account")}
   ORDER BY t.completed_at DESC, t.id DESC LIMIT ?4`;
 
+export type TimelineTrophyRow = TimelinePersonRow & { id: number; titleRowId: number; igdbId: number; name: string; coverUrl: string | null; releaseYear: number | null; platformName: string | null;
+  trophyName: string; grade: string; at: number };
+export type TimelinePlatinumRow = TimelineCopyRow & { titleRowId: number; hasPlatinum: number; totalTrophies: number };
+
+// PlayStation entries follow the Xbox rules: added games only, gone with the copy, unlocks batched per friend and game.
+export const timelineTrophiesQuery = `SELECT row.id, row.earned_at AS at, t.id AS titleRowId, ${xboxGame},
+    COALESCE(d.name, 'Trophy') AS trophyName, COALESCE(d.grade, 'bronze') AS grade, ${person("account")}
+  FROM psn_unlocks AS row JOIN psn_titles AS t ON t.id = row.title_row_id JOIN library_items AS l ON l.id = t.library_item_id
+  JOIN accounts AS account ON account.user_id = row.user_id
+  LEFT JOIN psn_trophies AS d ON d.np_communication_id = t.np_communication_id AND d.trophy_id = row.trophy_id
+  WHERE row.user_id IN ${friendIds} AND row.earned_at <= ?2 AND ${verified("account")}
+    AND NOT EXISTS (SELECT 1 FROM json_each(?3) AS floor WHERE floor.key = row.user_id || ':' || t.id AND row.earned_at >= floor.value)
+  ORDER BY row.earned_at DESC, row.id DESC LIMIT ?4`;
+
+// The platinum, or every base-game trophy for lists without one.
+export const timelinePlatinumQuery = `SELECT t.id, t.id AS titleRowId, t.completed_at AS at, ${xboxGame}, t.defined_platinum > 0 AS hasPlatinum,
+    t.defined_platinum + t.defined_gold + t.defined_silver + t.defined_bronze AS totalTrophies, ${person("account")}
+  FROM psn_connections AS row JOIN psn_titles AS t ON t.connection_id = row.connection_id JOIN library_items AS l ON l.id = t.library_item_id
+  JOIN accounts AS account ON account.user_id = row.user_id
+  WHERE row.user_id IN ${friendIds} AND t.completed_at IS NOT NULL AND t.completed_at <= ?2 AND ${verified("account")}
+  ORDER BY t.completed_at DESC, t.id DESC LIMIT ?4`;
+
 // A private participant who is not the viewer or a friend hides the whole challenge, unless ?5 allows it.
 const visible = (account: string) => `(?5 OR ${account}.user_id = ?1 OR ${account}.is_public
   OR EXISTS (SELECT 1 FROM friendships WHERE status = 'accepted'

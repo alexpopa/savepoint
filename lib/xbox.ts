@@ -4,7 +4,7 @@ import { getDb } from "../db";
 import { libraryItems, xboxConnections, xboxMappings, xboxTitles } from "../db/schema";
 import { getIgdbGame, getXboxCatalogMatches } from "./igdb";
 import { authorizeXbox, fetchAchievements, fetchTitleHistory, refreshMicrosoftToken, XboxError, type XboxAuth } from "./xbox-api";
-import { openToken, sealToken } from "./xbox-crypto";
+import { openToken, sealToken } from "./token-crypto";
 import {
   acquireXboxLock, attachXboxGame, finishXboxAchievements, importXboxGame, playXboxGame, readyXboxGames, removeXboxCopies, saveXboxAchievement, saveXboxTitle, saveXboxToken,
   saveXboxUnlock, setXboxMatch, staleXboxAchievements, xboxAchievementListQuery, xboxCounts, xboxPage, xboxPageCount, xboxShowcaseQuery, xboxShowcaseTotals, type XboxView,

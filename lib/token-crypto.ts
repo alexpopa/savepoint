@@ -1,4 +1,4 @@
-// Tokens are sealed with AES-GCM and bound to their connection ID, so a ciphertext copied to another row will not open.
+// Service sign-ins (Xbox, PlayStation) are sealed with AES-GCM and bound to their connection ID, so a ciphertext copied to another row will not open.
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -7,8 +7,8 @@ function bytes(value: string) { return Uint8Array.from(atob(value), (char) => ch
 
 async function importKey(secret: string) {
   let raw: Uint8Array<ArrayBuffer>;
-  try { raw = bytes(secret); } catch { throw new Error("XBOX_TOKEN_KEY must be base64."); }
-  if (raw.length !== 32) throw new Error("XBOX_TOKEN_KEY must be 32 bytes of base64.");
+  try { raw = bytes(secret); } catch { throw new Error("The token key must be base64."); }
+  if (raw.length !== 32) throw new Error("The token key must be 32 bytes of base64.");
   return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
 }
 

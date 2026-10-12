@@ -10,3 +10,7 @@ STEAM_API_KEY=
 XBOX_CLIENT_ID=
 XBOX_CLIENT_SECRET=
 XBOX_TOKEN_KEY=
+
+# Optional: enables PlayStation linking with a pasted NPSSO token. PSN_TOKEN_KEY is 32 random bytes in base64
+# (for example `openssl rand -base64 32`) and encrypts stored Sony sign-ins. Never expose it to the browser.
+PSN_TOKEN_KEY=

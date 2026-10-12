@@ -83,7 +83,7 @@ Locally, `AUTH_EMAIL_MODE=console` in `.dev.vars` makes `sendEmail` print the re
 
 ## Connected services
 
-Steam, Xbox, and any new integration share one sync workflow: matching never adds games, pause is saved on the connection, and Remove all games pauses sync. Follow [integration sync](integration-sync.md) and copy the Steam settings page.
+Steam, Xbox, PlayStation, and any new integration share one sync workflow: matching never adds games, pause is saved on the connection, and Remove all games pauses sync. Follow [integration sync](integration-sync.md) and copy the Steam settings page.
 
 ## Client components
 

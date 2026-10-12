@@ -9,10 +9,11 @@ import { baselineSql, migrationArgs, migrationNames } from "../scripts/migrate.m
 test("migration files match the complete ordered Drizzle journal", () => {
   const names = migrationNames(new URL("../drizzle/", import.meta.url).pathname);
   assert.equal(names[0], "0000_marvelous_wolverine.sql");
-  assert.equal(names.at(-1), "0020_known_rhodey.sql");
+  assert.equal(names.at(-1), "0021_slippery_skin.sql");
   const db = new DatabaseSync(":memory:");
   for (const name of names) db.exec(readFileSync(new URL(`../drizzle/${name}`, import.meta.url), "utf8"));
   assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE name = 'xbox_unlocks'").get());
+  assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE name = 'psn_unlocks'").get());
   assert.ok(db.prepare("SELECT name FROM pragma_table_info('steam_connections') WHERE name = 'sync_paused'").get());
   assert.ok(db.prepare("SELECT name FROM pragma_table_info('xbox_connections') WHERE name = 'sync_paused'").get());
   db.close();

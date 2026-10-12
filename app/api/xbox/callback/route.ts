@@ -6,7 +6,7 @@ import { xboxLinkStates } from "../../../../db/schema";
 import { publicOrigin } from "../../../../lib/email";
 import { xboxConfigured, type XboxTokens } from "../../../../lib/xbox";
 import { authorizeXbox, exchangeXboxCode, XboxError } from "../../../../lib/xbox-api";
-import { sealToken } from "../../../../lib/xbox-crypto";
+import { sealToken } from "../../../../lib/token-crypto";
 import { consumeXboxState, linkXboxConnection } from "../../../../lib/xbox-queries";
 
 // Microsoft's browser redirect is the intentional exception to JSON API responses.

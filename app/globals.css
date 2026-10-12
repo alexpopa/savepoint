@@ -890,6 +890,14 @@ button.honor-cover:focus-visible { transform: translateY(-6px); outline-offset: 
 .steam-filters button[aria-pressed="true"] { color: var(--rgb-ink); border-color: var(--rgb-action); box-shadow: inset 0 -2px var(--rgb-action); }
 .steam-disconnect { margin: 24px 0; padding: 16px; border: 1px solid var(--rgb-control-edge); }
 .steam-disconnect p { margin-bottom: 12px; }
+/* PlayStation NPSSO form, used to connect and reconnect */
+.psn-connect { display: grid; gap: 16px; max-width: 68ch; }
+.psn-connect ol { margin: 0; padding-left: 1.25rem; list-style: decimal; color: var(--rgb-muted); font-size: 0.9375rem; line-height: 1.6; }
+.psn-connect code { overflow-wrap: anywhere; color: var(--rgb-ink); }
+.psn-connect label { display: grid; gap: 6px; font-size: 0.875rem; font-weight: 700; }
+.psn-connect input { min-height: 44px; padding: 9px 13px; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-page); color: var(--rgb-ink); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.psn-connect .muted { margin: 0; font-size: 0.875rem; }
+.psn-connect .person-actions { margin-top: 0; }
 .steam-count { margin: 16px 0; color: var(--rgb-muted); font-size: .875rem; }
 .steam-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; gap: 16px; }
 .steam-game { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--rgb-rule); border-radius: 4px; overflow: hidden; background: var(--rgb-panel); }
@@ -943,7 +951,7 @@ button.honor-cover:focus-visible { transform: translateY(-6px); outline-offset: 
   .steam-card-actions { margin-left: 104px; }
 }
 
-/* Xbox achievements on profiles: flat progress meters beside covers, and a plain achievement list in the game-file dialog. */
+/* Xbox achievements and PlayStation trophies on profiles: flat progress meters beside covers, and a plain list in the game-file dialog. */
 .xbox-totals { margin: 0; color: var(--rgb-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8125rem; }
 .xbox-showcase { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
 .xbox-game { display: flex; align-items: center; gap: 14px; width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--rgb-rule); border-radius: 4px; background: var(--rgb-panel); color: var(--rgb-ink); text-align: left; cursor: pointer; }
