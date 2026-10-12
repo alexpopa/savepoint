@@ -205,6 +205,7 @@ export const xboxConnections = sqliteTable("xbox_connections", {
   lockToken: text("lock_token"),
   lockUntil: integer("lock_until"),
   syncError: text("sync_error"),
+  syncPaused: integer("sync_paused", { mode: "boolean" }).notNull().default(false),
 });
 
 export const xboxLinkStates = sqliteTable("xbox_link_states", {

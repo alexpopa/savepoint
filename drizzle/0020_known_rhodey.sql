@@ -1,0 +1,1 @@
+ALTER TABLE `xbox_connections` ADD `sync_paused` integer DEFAULT false NOT NULL;

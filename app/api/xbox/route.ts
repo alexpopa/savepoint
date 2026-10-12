@@ -2,7 +2,7 @@ import { getCurrentUser } from "../../auth";
 import { hasPermission } from "../../../lib/permissions";
 import { isSameOriginWrite } from "../../../lib/request-security";
 import { privateResponse } from "../../../lib/social";
-import { addAllXboxGames, addXboxGame, disconnectXbox, getXboxState, matchXboxGames, refreshXbox, removeXboxLibrary, syncXboxAchievements } from "../../../lib/xbox";
+import { addAllXboxGames, addXboxGame, disconnectXbox, getXboxState, matchXboxGames, refreshXbox, removeXboxLibrary, setXboxSyncPaused, syncXboxAchievements } from "../../../lib/xbox";
 import { XboxError } from "../../../lib/xbox-api";
 import { xboxViews, type XboxView } from "../../../lib/xbox-queries";
 import { xboxPlatformIds } from "../../../lib/xbox-types";
@@ -47,6 +47,7 @@ export async function POST(request: Request) {
       && (input.playing === undefined || typeof input.playing === "boolean") && (input.platformId === undefined || xboxPlatformIds.includes(input.platformId as number)))
       await addXboxGame(user.userId, input.titleId, input.igdbId as number | undefined, input.playing === true, input.platformId as number | undefined);
     else if (input.action === "add-all" && typeof input.syncedAt === "number" && Number.isSafeInteger(input.syncedAt) && input.syncedAt > 0) await addAllXboxGames(user.userId, input.syncedAt);
+    else if (input.action === "pause" && typeof input.paused === "boolean") await setXboxSyncPaused(user.userId, input.paused);
     else if (input.action === "remove-library") await removeXboxLibrary(user.userId);
     else if (input.action === "disconnect") await disconnectXbox(user.userId);
     else return response({ error: "Choose a valid Xbox action." }, 400);

@@ -10,7 +10,7 @@ export type XboxPreview = Omit<XboxTitle, "productId" | "achievementVersion"> & 
 };
 export type XboxState = {
   configured: boolean;
-  connection: { gamertag: string; syncedAt: number | null; attemptedAt: number | null; syncError: string | null } | null;
+  connection: { gamertag: string; syncedAt: number | null; attemptedAt: number | null; syncError: string | null; paused: boolean } | null;
   games: XboxPreview[];
   total: number;
   pending: number;

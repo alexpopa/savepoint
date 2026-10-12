@@ -55,7 +55,6 @@ export default function XboxSettings() {
   const [detailGame, setDetailGame] = useState<CatalogGame | null>(null);
   const [copies, setCopies] = useState<SavedGame[]>([]);
   const [matching, setMatching] = useState<number | null>(null);
-  const [autoPaused, setAutoPaused] = useState(false);
   // Imported count when the player chose Add all, so the finish message reports what was actually added.
   const [addingFrom, setAddingFrom] = useState<number | null>(null);
   const alive = useRef(true);
@@ -64,6 +63,8 @@ export default function XboxSettings() {
   const [syncing, setSyncing] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // Saved on the connection, so a pause survives leaving or reloading the page.
+  const paused = state?.connection?.paused ?? false;
 
   useEffect(() => {
     let active = true;
@@ -79,7 +80,7 @@ export default function XboxSettings() {
   // They never disable the page. Leaving the page stops scheduling; reopening resumes saved work.
   const step = !state?.connection ? null : state.pending ? "match" : addingFrom !== null && state.ready ? "add-all" : state.configured && state.achievementsPending ? "achievements" : null;
   useEffect(() => {
-    if (!state?.connection || !step || busy || syncing || searchLoading || autoPaused || matching !== null || detailGame) return;
+    if (!state?.connection || !step || busy || syncing || searchLoading || paused || matching !== null || detailGame) return;
     const count = (data: XboxState) => step === "match" ? data.pending : step === "add-all" ? data.ready : data.achievementsPending;
     const timer = window.setTimeout(() => {
       const started = epoch.current;
@@ -89,11 +90,11 @@ export default function XboxSettings() {
         if (count(fresh) >= count(state)) throw new Error("Xbox sync could not make progress. Please try again.");
         setState(fresh);
         if (step === "add-all" && !fresh.ready && addingFrom !== null) { setNotice(`Added ${(fresh.imported - addingFrom).toLocaleString()} games to your library.`); setAddingFrom(null); }
-      }).catch((e) => { if (alive.current && epoch.current === started) { setError(e.message); setAutoPaused(true); } })
+      }).catch((e) => { if (alive.current && epoch.current === started) { setError(e.message); void setPaused(true); } })
         .finally(() => { if (alive.current) setSyncing(false); });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [state, step, busy, syncing, searchLoading, autoPaused, matching, detailGame, view, activeSearch, addingFrom]);
+  }, [state, step, busy, syncing, searchLoading, paused, matching, detailGame, view, activeSearch, addingFrom]);
 
   useEffect(() => {
     if (search === activeSearch || busy) return;
@@ -126,9 +127,14 @@ export default function XboxSettings() {
     try {
       const fresh = await api<XboxState>("/api/xbox", { ...payload, view, page: state?.page ?? 0, search: activeSearch });
       setState(fresh); setMatching(null); setConfirmDisconnect(false); setConfirmRemove(false); setNotice(message(fresh));
-      if (payload.action === "refresh") setAutoPaused(false);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not update Xbox."); }
     finally { setBusy(false); }
+  }
+  async function setPaused(value: boolean) {
+    epoch.current += 1;
+    setState((current) => current?.connection ? { ...current, connection: { ...current.connection, paused: value } } : current);
+    try { await api<XboxState>("/api/xbox", { action: "pause", paused: value }); }
+    catch (e) { setError(e instanceof Error ? e.message : "Could not save the sync state."); }
   }
   async function connect() {
     setBusy(true); setError("");
@@ -191,15 +197,15 @@ export default function XboxSettings() {
       </section> : <>
       <section className="steam-connection" aria-label="Connected account">
         <div><strong>{state.connection.gamertag}</strong><p>Last refreshed {date(state.connection.syncedAt)}</p></div>
-        <div className="person-actions"><button className="secondary" disabled={working || !state.configured} onClick={() => void act({ action: "refresh" }, (fresh) => fresh.pending ? `Refreshed. Matching ${fresh.pending.toLocaleString()} games…` : "Refreshed. No new games to match.")}>Refresh</button>{state.imported > 0 && <button className="tool-button" disabled={working || Boolean(step)} onClick={() => { setConfirmRemove(!confirmRemove); setConfirmDisconnect(false); }}>Remove all games</button>}<button className="tool-button" disabled={working} onClick={() => { setConfirmDisconnect(!confirmDisconnect); setConfirmRemove(false); }}>Disconnect</button></div>
+        <div className="person-actions"><button className="secondary" disabled={working || !state.configured} onClick={() => void act({ action: "refresh" }, (fresh) => fresh.pending ? `Refreshed. Matching ${fresh.pending.toLocaleString()} games…` : "Refreshed. No new games to match.")}>Refresh</button>{state.imported > 0 && <button className="tool-button" disabled={working} onClick={() => { setConfirmRemove(!confirmRemove); setConfirmDisconnect(false); if (!confirmRemove) { setAddingFrom(null); void setPaused(true); } }}>Remove all games</button>}<button className="tool-button" disabled={working} onClick={() => { setConfirmDisconnect(!confirmDisconnect); setConfirmRemove(false); }}>Disconnect</button></div>
       </section>
       {state.connection.syncError && <p className="notice" role="status">{state.connection.syncError}</p>}
-      {confirmRemove && <div className="steam-disconnect"><p>Remove the {state.imported.toLocaleString()} Xbox games from your library? Ratings and favorites stay; currently playing and completed marks go with the copies. They won’t be added again automatically.</p><div className="person-actions"><button disabled={busy} onClick={() => void act({ action: "remove-library" }, () => "Removed from your library.")}>Confirm remove</button><button className="secondary" onClick={() => setConfirmRemove(false)}>Cancel</button></div></div>}
+      {confirmRemove && <div className="steam-disconnect"><p>Remove the {state.imported.toLocaleString()} Xbox games from your library? Ratings and favorites stay; currently playing and completed marks go with the copies. They won’t be added again automatically.</p><div className="person-actions"><button disabled={busy || syncing} onClick={() => void act({ action: "remove-library" }, () => "Removed from your library.")}>Confirm remove</button><button className="secondary" onClick={() => setConfirmRemove(false)}>Cancel</button></div></div>}
       {confirmDisconnect && <div className="steam-disconnect"><p>Erase Xbox data and achievements? Games you added stay in your library.</p><div className="person-actions"><button disabled={busy} onClick={() => void act({ action: "disconnect" }, () => "Xbox disconnected. Your games were kept.")}>Confirm disconnect</button><button className="secondary" onClick={() => setConfirmDisconnect(false)}>Cancel</button></div></div>}
       <section className="steam-import" aria-labelledby="xbox-import-title">
         <div className="steam-import-heading"><div><h2 id="xbox-import-title">Xbox games</h2><p>{state.imported.toLocaleString()} in library · {state.ready.toLocaleString()} ready to add{state.unresolved ? ` · ${state.unresolved.toLocaleString()} need a match` : ""}</p></div>
-          <div className="person-actions">{state.ready > 0 && addingFrom === null && <button disabled={working || Boolean(step)} onClick={() => { setAddingFrom(state.imported); setAutoPaused(false); setNotice(""); setError(""); }}>Add all {state.ready.toLocaleString()}</button>}<a className="inline-link" href="/library">My library →</a></div></div>
-        {step && <div className="steam-progress"><div><p role="status">{autoPaused ? "Progress saved." : step === "match" ? "Matching games…" : step === "add-all" ? "Adding games…" : "Loading achievements…"}{!autoPaused && ` ${remaining.toLocaleString()} left`}</p><button className="tool-button" onClick={() => { setAutoPaused(!autoPaused); setError(""); }}>{autoPaused ? "Resume" : "Pause"}</button></div>{progressMax > 0 ? <progress aria-label="Xbox sync" value={progressValue} max={progressMax}/> : <progress aria-label="Xbox sync"/>}</div>}
+          <div className="person-actions">{state.ready > 0 && addingFrom === null && <button disabled={working || Boolean(step)} onClick={() => { setAddingFrom(state.imported); if (paused) void setPaused(false); setNotice(""); setError(""); }}>Add all {state.ready.toLocaleString()}</button>}<a className="inline-link" href="/library">My library →</a></div></div>
+        {step && <div className="steam-progress"><div><p role="status">{paused ? "Progress saved." : step === "match" ? "Matching games…" : step === "add-all" ? "Adding games…" : "Loading achievements…"}{!paused && ` ${remaining.toLocaleString()} left`}</p><button className="tool-button" onClick={() => { void setPaused(!paused); setError(""); }}>{paused ? "Resume" : "Pause"}</button></div>{progressMax > 0 ? <progress aria-label="Xbox sync" value={progressValue} max={progressMax}/> : <progress aria-label="Xbox sync"/>}</div>}
       </section>
       <section aria-label="Xbox games">
         <div className="steam-toolbar"><div className="steam-filters" role="group" aria-label="Filter Xbox games">{views.map(([id, label]) => <button className="secondary" key={id} aria-pressed={view === id} disabled={working} onClick={() => void load(0, id)}>{label}</button>)}</div>

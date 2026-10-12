@@ -36,7 +36,7 @@ export async function getXboxState(userId: string, page = 0, search = "", view: 
   const games = results.map(({ devicesJson, gameJson, available, ...row }) => ({ ...row, devices: JSON.parse(devicesJson) as string[], game: gameJson ? JSON.parse(gameJson) as CatalogGame : null, available: Boolean(available) }));
   const ids = games.flatMap((row) => row.game ? [row.game.igdbId] : []);
   const existing = ids.length ? await db.select({ igdbId: libraryItems.igdbId, platformId: libraryItems.platformId }).from(libraryItems).where(and(eq(libraryItems.userId, userId), inArray(libraryItems.igdbId, ids))) : [];
-  return { configured: xboxConfigured(), connection: { gamertag: connection.gamertag, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, syncError: connection.syncError },
+  return { configured: xboxConfigured(), connection: { gamertag: connection.gamertag, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, syncError: connection.syncError, paused: connection.syncPaused },
     total, page, pending: counts?.pending ?? 0, ready: counts?.ready ?? 0, unresolved: counts?.unresolved ?? 0, imported: counts?.imported ?? 0, achievementsPending: counts?.achievementsPending ?? 0,
     games: games.map((row) => ({ ...row, existingPlatforms: existing.filter((copy) => copy.igdbId === row.game?.igdbId).map((copy) => copy.platformId) })) };
 }
@@ -85,7 +85,7 @@ export async function refreshXbox(userId: string) {
           title.productId, JSON.stringify(title.devices), title.lastPlayedAt, title.currentAchievements, title.totalAchievements, title.currentGamerscore, title.totalGamerscore,
           title.achievementVersion, now, Date.now())));
       }
-      const saved = await db.update(xboxConnections).set({ syncedAt: now, syncError: null })
+      const saved = await db.update(xboxConnections).set({ syncedAt: now, syncError: null, syncPaused: false })
         .where(and(eq(xboxConnections.connectionId, connection.connectionId), eq(xboxConnections.lockToken, token))).returning({ id: xboxConnections.connectionId });
       if (!saved.length) throw new XboxError("The refresh expired or the connection changed. Please refresh again.", 409);
     } catch (error) {
@@ -94,6 +94,11 @@ export async function refreshXbox(userId: string) {
       throw error instanceof XboxError ? error : new XboxError(message);
     }
   });
+}
+
+// Saved on the connection so a pause survives leaving or reloading the page.
+export async function setXboxSyncPaused(userId: string, paused: boolean) {
+  await getDb().update(xboxConnections).set({ syncPaused: paused }).where(eq(xboxConnections.userId, userId));
 }
 
 export async function matchXboxGames(userId: string) {
