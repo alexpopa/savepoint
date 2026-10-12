@@ -205,6 +205,26 @@ button:disabled { cursor: default; }
 .page-footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--rgb-rule); color: var(--rgb-muted); font-size: 0.8125rem; }
 .page-footer span:last-child { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; letter-spacing: 0.04em; text-align: right; }
 
+/* Connected libraries overview */
+.settings-wrap.connections-wrap { max-width: 1120px; }
+.connections-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.settings-card.connection-card { display: flex; flex-direction: column; align-items: flex-start; margin: 0; padding: 24px; }
+.connection-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.settings-card .connection-heading h2 { margin: 0; }
+.connection-icon { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--rgb-rule); border-radius: 4px; background: var(--rgb-panel-raised); color: var(--rgb-muted); }
+.connection-status { padding: 5px 9px; border: 1px solid var(--rgb-rule); border-radius: 4px; color: var(--rgb-muted); font-size: 0.8125rem; }
+.connection-status.connected { color: var(--rgb-action); }
+.connection-status.reconnect { color: var(--rgb-danger); }
+.connection-card > .connection-account { margin: 12px 0 0; color: var(--rgb-ink); overflow-wrap: anywhere; }
+.connection-card > .connection-description { margin: 18px 0 24px; }
+.connection-action { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; margin-top: auto; padding: 12px 14px; border: 1px solid var(--rgb-control-edge); border-radius: 4px; background: var(--rgb-panel-raised); color: var(--rgb-ink); font-weight: 600; text-decoration: none; }
+.connection-action:hover { border-color: var(--rgb-info); color: var(--rgb-info); }
+.connection-action:focus-visible { outline: 2px solid var(--rgb-focus); outline-offset: 3px; }
+.connections-note { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 24px; color: var(--rgb-muted); font-size: 0.9375rem; }
+@media (max-width: 760px) {
+  .connections-grid { grid-template-columns: 1fr; }
+}
+
 .settings-wrap { max-width: 880px; padding-top: 56px; }
 .settings-wrap > .subcopy { margin-bottom: 32px; }
 .settings-card { margin: 14px 0; padding: 24px 28px; border: 1px solid var(--rgb-rule); border-radius: 4px; background: var(--rgb-panel); }
@@ -212,7 +232,6 @@ button:disabled { cursor: default; }
 .settings-card > p { max-width: 68ch; margin: 0 0 20px; color: var(--rgb-muted); font-size: 0.9375rem; line-height: 1.6; }
 .settings-card > p:last-child { margin-bottom: 0; }
 .settings-card code { overflow-wrap: anywhere; color: var(--rgb-ink); }
-.settings-links { display: flex; flex-wrap: wrap; gap: 8px 24px; }
 .visibility-options { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .visibility-options button, .friend-form button, .person-actions button, .friend-button { min-height: 44px; padding: 9px 16px; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-panel-raised); color: var(--rgb-ink); font-size: 0.875rem; font-weight: 700; }
 .visibility-options button:hover:not(:disabled), .person-actions button.secondary:hover:not(:disabled) { border-color: var(--rgb-ink); }
