@@ -5,7 +5,7 @@ A retro, RGB-styled social library for video games.
 ## Features
 
 - **Library** — track the games you own, per platform
-- **Steam import** — connect Steam, automatically match your collection to IGDB, automatically import matched games, and resolve and import unmatched games in one click, and manage games through the shared library popup, including SteamVR and a Recently updated filter
+- **Steam import** — connect Steam, automatically match your collection to IGDB, add matched games with one Import all games button, and resolve and import unmatched games in one click, and manage games through the shared library popup, including SteamVR and a Recently updated filter
 - **Xbox games and achievements** — sign in with Microsoft to see the games you’ve played on Xbox and PC, most recent first; add them one at a time, as currently playing, or all at once; and show achievement progress on your profile and in your friends’ timeline
 - **Status and ratings** — mark games as playing or completed, and score them 1–5 stars
 - **Top 10** — pin your favorites; your #1 cover becomes your profile picture
