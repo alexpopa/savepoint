@@ -41,6 +41,18 @@ test("Steam requests use the public API and include played free games without fo
   await assert.rejects(steamRequest("GetOwnedGames", "76561198000000000", "key", async () => new Response("", { status: 429 })), /busy/);
 });
 
+test("Steam authorization failures identify site configuration without exposing credentials", async () => {
+  for (const status of [401, 403]) {
+    await assert.rejects(steamRequest("GetOwnedGames", "76561198000000000", "secret-fixture-key", async () => new Response("private upstream details", { status })), (error: Error) => {
+      assert.match(error.message, /Steam rejected the site’s API key/);
+      assert.match(error.message, /saved games are unchanged/);
+      assert.doesNotMatch(error.message, /secret-fixture-key|private upstream details/);
+      return true;
+    });
+  }
+  await assert.rejects(steamRequest("GetOwnedGames", "76561198000000000", "key", async () => new Response("", { status: 503 })), /temporarily unavailable/);
+});
+
 test("OpenID rejects spoofed providers, unsigned identities, altered return URLs, duplicates, and old nonces", () => {
   assert.equal(new URL(steamLoginUrl(returnTo)).searchParams.get("openid.return_to"), returnTo);
   assert.equal(steamAssertion(assertion(), returnTo), "76561198000000000");

@@ -35,6 +35,7 @@ export async function steamRequest(method: "GetOwnedGames" | "GetRecentlyPlayedG
   url.searchParams.set("key", key);
   url.searchParams.set("input_json", JSON.stringify({ steamid: steamId, ...(method === "GetOwnedGames" ? { include_appinfo: true, include_played_free_games: true } : { count: 0 }) }));
   const response = await send(url, { signal: AbortSignal.timeout(15000), redirect: "manual" });
+  if (response.status === 401 || response.status === 403) throw new SteamError("Steam rejected the site’s API key. Ask the site owner to check its Steam API key. Your saved games are unchanged.");
   if (!response.ok) throw new SteamError(response.status === 429 ? "Steam is busy. Please wait before refreshing again." : "Steam is temporarily unavailable. Your saved games are unchanged.");
   return parseSteamGames(await response.json(), method === "GetOwnedGames");
 }
