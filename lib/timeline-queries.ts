@@ -46,6 +46,30 @@ export const timelineRatingsQuery = `SELECT row.id, row.igdb_id AS igdbId, row.n
   WHERE row.user_id IN ${friendIds} AND row.rated_at <= ?2 AND ${belowFloor("row.rated_at")} AND ${verified("account")}
   ORDER BY row.rated_at DESC, row.id DESC LIMIT ?4`;
 
+export type TimelineUnlockRow = TimelinePersonRow & { id: number; titleRowId: number; igdbId: number; name: string; coverUrl: string | null; releaseYear: number | null; platformName: string | null;
+  achievementName: string; iconUrl: string | null; gamerscore: number; at: number };
+export type TimelineMasteredRow = TimelineCopyRow & { titleRowId: number; totalAchievements: number; totalGamerscore: number };
+
+// Xbox entries cover only games the friend added to their library, and disappear with that copy.
+const xboxGame = `l.igdb_id AS igdbId, l.name, l.cover_url AS coverUrl, l.release_year AS releaseYear, l.platform_name AS platformName`;
+// Unlocks batch per friend and game, so floors are keyed by both (see achievementGroup).
+export const timelineAchievementsQuery = `SELECT row.id, row.unlocked_at AS at, t.id AS titleRowId, ${xboxGame},
+    COALESCE(a.name, 'Achievement') AS achievementName, a.icon_url AS iconUrl, COALESCE(a.gamerscore, 0) AS gamerscore, ${person("account")}
+  FROM xbox_unlocks AS row JOIN xbox_titles AS t ON t.id = row.title_row_id JOIN library_items AS l ON l.id = t.library_item_id
+  JOIN accounts AS account ON account.user_id = row.user_id
+  LEFT JOIN xbox_achievements AS a ON a.title_id = t.title_id AND a.achievement_id = row.achievement_id
+  WHERE row.user_id IN ${friendIds} AND row.unlocked_at <= ?2 AND ${verified("account")}
+    AND NOT EXISTS (SELECT 1 FROM json_each(?3) AS floor WHERE floor.key = row.user_id || ':' || t.id AND row.unlocked_at >= floor.value)
+  ORDER BY row.unlocked_at DESC, row.id DESC LIMIT ?4`;
+
+// Every achievement earned; a later add-on with new achievements hides the entry until those are earned too.
+export const timelineMasteredQuery = `SELECT t.id, t.id AS titleRowId, t.completed_at AS at, ${xboxGame},
+    t.total_achievements AS totalAchievements, t.total_gamerscore AS totalGamerscore, ${person("account")}
+  FROM xbox_connections AS row JOIN xbox_titles AS t ON t.connection_id = row.connection_id JOIN library_items AS l ON l.id = t.library_item_id
+  JOIN accounts AS account ON account.user_id = row.user_id
+  WHERE row.user_id IN ${friendIds} AND t.completed_at IS NOT NULL AND t.completed_at <= ?2 AND t.current_achievements = t.total_achievements AND ${verified("account")}
+  ORDER BY t.completed_at DESC, t.id DESC LIMIT ?4`;
+
 // A private participant who is not the viewer or a friend hides the whole challenge, unless ?5 allows it.
 const visible = (account: string) => `(?5 OR ${account}.user_id = ?1 OR ${account}.is_public
   OR EXISTS (SELECT 1 FROM friendships WHERE status = 'accepted'

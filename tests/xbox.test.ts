@@ -9,6 +9,8 @@ import {
   acquireXboxLock, attachXboxGame, consumeXboxState, finishXboxAchievements, importXboxGame, linkXboxConnection, playXboxGame, readyXboxGames, removeXboxCopies, saveXboxAchievement,
   saveXboxTitle, saveXboxUnlock, setXboxMatch, staleXboxAchievements, xboxAchievementListQuery, xboxCounts, xboxPage, xboxShowcaseQuery,
 } from "../lib/xbox-queries.ts";
+import { timelineAchievementsQuery, timelineMasteredQuery } from "../lib/timeline-queries.ts";
+import { batchAchievements, timelinePage, BATCH_WINDOW, type TimelineUnlock } from "../lib/timeline-items.ts";
 import type { CatalogGame } from "../lib/game-types.ts";
 
 const catalog = (ids: number[]): CatalogGame => ({ igdbId: 42, name: "Catalog game", coverUrl: null, releaseYear: 2020, platforms: [], platformOptions: ids.map((id) => ({ id, name: `P${id}` })) });
@@ -181,6 +183,24 @@ test("achievement syncs store shared definitions once, keep first unlock times, 
   db.close();
 });
 
+test("Xbox timeline reads show friends' unlocks and completions for added games only", () => {
+  const db = database(); save(db, "lease", 100, 2); match(db); add(db);
+  const titleRow = db.prepare("SELECT id FROM xbox_titles").get()!.id as number;
+  run(db, saveXboxAchievement, [10, "a", "Named", null, null, 10, 0, null, 0, 300]);
+  run(db, saveXboxUnlock, ["connection", "lease", titleRow, "a", 1000, 300]);
+  run(db, saveXboxUnlock, ["connection", "lease", titleRow, "b", 2000, 300]);
+  run(db, finishXboxAchievements, ["connection", "lease", titleRow, 2, 300]);
+  const unlocks = db.prepare(timelineAchievementsQuery).all({ 1: "two", 2: Number.MAX_SAFE_INTEGER, 3: "{}", 4: 100 });
+  assert.deepEqual(unlocks.map((row) => [row.achievementName, row.at, row.name]), [["Achievement", 2000, "Catalog game"], ["Named", 1000, "Catalog game"]]);
+  assert.equal(db.prepare(timelineAchievementsQuery).all({ 1: "two", 2: Number.MAX_SAFE_INTEGER, 3: JSON.stringify({ [`one:${titleRow}`]: 500 }), 4: 100 }).length, 0);
+  assert.equal(db.prepare(timelineAchievementsQuery).all({ 1: "one", 2: Number.MAX_SAFE_INTEGER, 3: "{}", 4: 100 }).length, 0);
+  assert.deepEqual(db.prepare(timelineMasteredQuery).all({ 1: "two", 2: Number.MAX_SAFE_INTEGER, 4: 16 }).map((row) => row.at), [2000]);
+  db.exec("DELETE FROM library_items");
+  assert.equal(db.prepare(timelineAchievementsQuery).all({ 1: "two", 2: Number.MAX_SAFE_INTEGER, 3: "{}", 4: 100 }).length, 0);
+  assert.equal(db.prepare(timelineMasteredQuery).all({ 1: "two", 2: Number.MAX_SAFE_INTEGER, 4: 16 }).length, 0);
+  db.close();
+});
+
 test("link states are single use, expire, and disconnect removes Xbox data but keeps library copies", () => {
   const db = database(); save(db); match(db); add(db);
   const titleRow = db.prepare("SELECT id FROM xbox_titles").get()!.id as number;
@@ -207,6 +227,19 @@ test("the settings list puts the most recently played games first", () => {
   assert.deepEqual(db.prepare(xboxPage("all")).all({ 1: "one", 2: "", 3: 0 }).map((row) => row.titleId), [3, 1, 2]);
   assert.deepEqual(db.prepare(xboxPage("all")).all({ 1: "one", 2: "game 1", 3: 0 }).map((row) => row.titleId), [1]);
   db.close();
+});
+
+const unlock = (id: number, unlockedAt: number, titleRowId = 1): TimelineUnlock => ({ id, titleRowId, unlockedAt, achievementName: `A${id}`, iconUrl: null, gamerscore: 10,
+  person: { id: "friend", name: "Friend", href: "/users/Friend" }, igdbId: 42, name: "Game", coverUrl: null, releaseYear: null, platformName: null });
+
+test("unlocks batch per friend and game within 24 hours, and later pages skip a shown batch", () => {
+  const batches = batchAchievements([unlock(1, 0), unlock(2, BATCH_WINDOW), unlock(3, BATCH_WINDOW * 2), unlock(4, BATCH_WINDOW * 2, 2)]);
+  assert.deepEqual(batches.map((batch) => [batch.key, batch.unlocks.map((row) => row.id)]), [["achievements:4", [4]], ["achievements:3", [3, 2]], ["achievements:1", [1]]]);
+  const empty = { rows: [], truncated: false };
+  const page = timelinePage({ games: empty, challenges: empty, favorites: empty, playing: empty, completed: empty, ratings: empty,
+    achievements: { rows: [unlock(3, BATCH_WINDOW * 2), unlock(2, BATCH_WINDOW), unlock(1, 0)], truncated: false } }, null, 1)!;
+  assert.equal(page.items[0].key, "achievements:3");
+  assert.deepEqual(JSON.parse(page.next!).achievements, { "friend:1": BATCH_WINDOW });
 });
 
 test("removing the library deletes only this connection's copies, keeps ratings, and makes them ready to add again", () => {

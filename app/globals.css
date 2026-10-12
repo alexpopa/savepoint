@@ -541,6 +541,7 @@ button:disabled { cursor: default; }
 .timeline-cover img { width: 100%; height: 100%; object-fit: contain; }
 .timeline-game small { display: block; margin-top: 4px; color: var(--rgb-muted); font-size: 0.875rem; }
 .timeline-score { margin-top: 6px; }
+.timeline-unlocks { margin: 4px 0 0; color: var(--rgb-muted); font-size: 0.875rem; overflow-wrap: anywhere; }
 .timeline-more { margin-top: 16px; }
 .timeline-more summary { cursor: pointer; width: fit-content; min-height: 32px; padding-block: 4px; color: var(--rgb-info); font-size: 0.875rem; }
 .timeline-more summary:focus-visible { outline: 3px solid var(--rgb-focus); outline-offset: 3px; }
