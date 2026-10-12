@@ -64,3 +64,9 @@ AND (?3 = '' OR instr(lower(g.name), lower(?3)) > 0)`;
 export const recentSteamCount = `SELECT count(*) AS total ${recentlyUpdatedFrom}`;
 export const recentSteamGames = `SELECT g.app_id AS appId ${recentlyUpdatedFrom}
 ORDER BY l.updated_at DESC, l.id DESC LIMIT 30 OFFSET ?4`;
+
+// Removes every library copy this connection imported or linked. imported_at stays set, so removed games are not re-imported.
+export const removeSteamCopies = `
+DELETE FROM library_items WHERE user_id = ?1 AND id IN (
+  SELECT g.library_item_id FROM steam_games g JOIN steam_connections c ON c.connection_id = g.connection_id
+  WHERE c.connection_id = ?2 AND c.lock_token = ?3 AND g.library_item_id IS NOT NULL)`;

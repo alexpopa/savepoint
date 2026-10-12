@@ -58,7 +58,11 @@ export default function SteamSettings() {
   const [autoPaused, setAutoPaused] = useState(false);
   const [processing, setProcessing] = useState<"matching" | "importing" | null>(null);
   const alive = useRef(true);
+  // Bumped by every player action so a background batch that started earlier cannot overwrite what they now see.
+  const epoch = useRef(0);
+  const [syncing, setSyncing] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -71,28 +75,30 @@ export default function SteamSettings() {
   }, []);
 
   // Match and import in bounded sequential requests, including matches saved by an older UI.
-  // Leaving the page stops scheduling; reopening resumes persisted work automatically.
+  // Batches never disable the page. Leaving the page stops scheduling; reopening resumes persisted work automatically.
   useEffect(() => {
-    if (!state?.connection || (!state.pending && !state.ready) || busy || searchLoading || autoPaused || matching !== null || detailGame) return;
+    if (!state?.connection || (!state.pending && !state.ready) || busy || syncing || searchLoading || autoPaused || matching !== null || detailGame) return;
     const importing = state.ready > 0;
     const payload = importing ? { action: "import-matched", steamId: state.connection.steamId, syncedAt: state.connection.syncedAt } : { action: "match" };
     const timer = window.setTimeout(() => {
-      setBusy(true); setProcessing(importing ? "importing" : "matching");
+      const started = epoch.current;
+      setSyncing(true); setProcessing(importing ? "importing" : "matching");
       void api<SteamState>("/api/steam", { ...payload, view, page: state.page, search: activeSearch }).then((fresh) => {
-        if (!alive.current) return;
+        if (!alive.current || epoch.current !== started) return;
         if (importing ? fresh.ready >= state.ready : fresh.pending >= state.pending) throw new Error("Steam sync could not make progress. Please try again.");
         setState(fresh);
         if (!fresh.pending && !fresh.ready) setNotice("Steam library synced.");
-      }).catch((e) => { if (alive.current) { setError(e.message); setAutoPaused(true); } })
-        .finally(() => { if (alive.current) { setBusy(false); setProcessing(null); } });
+      }).catch((e) => { if (alive.current && epoch.current === started) { setError(e.message); setAutoPaused(true); } })
+        .finally(() => { if (alive.current) { setSyncing(false); setProcessing(null); } });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [state?.pending, state?.ready, state?.connection, state?.page, busy, searchLoading, autoPaused, matching, detailGame, view, activeSearch]);
+  }, [state?.pending, state?.ready, state?.connection, state?.page, busy, syncing, searchLoading, autoPaused, matching, detailGame, view, activeSearch]);
 
   useEffect(() => {
-    if (search === activeSearch || busy || processing) return;
+    if (search === activeSearch || busy) return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
+      epoch.current += 1;
       setSearchLoading(true);
       void fetch(`/api/steam?page=0&search=${encodeURIComponent(search)}&view=${view}`, { signal: controller.signal }).then(async (response) => {
         const data = await response.json() as SteamState & { error?: string };
@@ -103,19 +109,21 @@ export default function SteamSettings() {
         .finally(() => { if (!controller.signal.aborted) setSearchLoading(false); });
     }, 250);
     return () => { window.clearTimeout(timer); controller.abort(); setSearchLoading(false); };
-  }, [search, activeSearch, view, busy, processing]);
+  }, [search, activeSearch, view, busy]);
 
   async function load(page: number, query = activeSearch, category = view) {
+    epoch.current += 1;
     setBusy(true); setError("");
     try { setState(await api<SteamState>(`/api/steam?page=${page}&search=${encodeURIComponent(query)}&view=${category}`)); setView(category); setMatching(null); }
     catch (e) { setError(e instanceof Error ? e.message : "Could not load Steam games."); }
     finally { setBusy(false); }
   }
   async function act(payload: unknown, message: string) {
+    epoch.current += 1;
     setBusy(true); setError(""); setNotice("");
     try {
       const fresh = await api<SteamState>("/api/steam", payload);
-      setState(fresh); setView("all"); setSearch(""); setActiveSearch(""); setMatching(null); setConfirmDisconnect(false); setNotice((payload as { action?: string }).action === "refresh" ? fresh.pending ? `Library refreshed. Matching ${fresh.pending.toLocaleString()} pending games…` : "Library refreshed. No new games to match." : message);
+      setState(fresh); setView("all"); setSearch(""); setActiveSearch(""); setMatching(null); setConfirmDisconnect(false); setConfirmRemove(false); setNotice((payload as { action?: string }).action === "refresh" ? fresh.pending ? `Library refreshed. Matching ${fresh.pending.toLocaleString()} pending games…` : "Library refreshed. No new games to match." : message);
       if ((payload as { action?: string }).action === "refresh") setAutoPaused(false);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not update Steam."); }
     finally { setBusy(false); }
@@ -133,6 +141,7 @@ export default function SteamSettings() {
     setCopies(library.games); setState(fresh);
   }
   async function openGame(game: CatalogGame) {
+    epoch.current += 1;
     setBusy(true); setError("");
     try { const library = await api<{ games: SavedGame[] }>("/api/library"); setCopies(library.games); setDetailGame(game); }
     catch (error) { setError(error instanceof Error ? error.message : "Could not load your library."); }
@@ -153,13 +162,14 @@ export default function SteamSettings() {
     } else await updateCopy("/api/library", "POST", { igdbId: detailGame.igdbId, platformId });
   }
   async function resolve(appId: number, igdbId?: number) {
+    epoch.current += 1;
     setBusy(true); setError("");
     try {
       const fresh = await api<SteamState>("/api/steam", { action: "resolve", appId, igdbId, view, page: state?.page ?? 0, search: activeSearch });
       setState(fresh); setMatching(null); setNotice("Added to your library.");
     } finally { setBusy(false); }
   }
-  const working = busy || searchLoading || Boolean((state?.pending || state?.ready) && !autoPaused);
+  const working = busy || searchLoading;
   return <><div className="steam-settings">
     {error && <p className="notice error" role="alert">{error}</p>}
     {notice && <p className="notice success" role="status">{notice}</p>}
@@ -170,18 +180,19 @@ export default function SteamSettings() {
       </section> : <>
       <section className="steam-connection" aria-label="Connected account">
         <div><a className="inline-link" href={`https://steamcommunity.com/profiles/${state.connection.steamId}/`} target="_blank" rel="noreferrer">Steam connected ↗</a><p>Last refreshed {date(state.connection.syncedAt)}</p></div>
-        <div className="person-actions"><button className="secondary" disabled={working || !state.configured} onClick={() => void act({ action: "refresh" }, "Library refreshed.")}>Refresh library</button><button className="tool-button" disabled={working} onClick={() => setConfirmDisconnect(!confirmDisconnect)}>Disconnect</button></div>
+        <div className="person-actions"><button className="secondary" disabled={working || !state.configured} onClick={() => void act({ action: "refresh" }, "Library refreshed.")}>Refresh library</button>{state.imported > 0 && <button className="tool-button" disabled={working || Boolean(state.pending || state.ready)} onClick={() => { setConfirmRemove(!confirmRemove); setConfirmDisconnect(false); }}>Remove all games</button>}<button className="tool-button" disabled={working} onClick={() => { setConfirmDisconnect(!confirmDisconnect); setConfirmRemove(false); }}>Disconnect</button></div>
       </section>
       {state.connection.syncError && <p className="notice" role="status">{state.connection.syncError}</p>}
+      {confirmRemove && <div className="steam-disconnect"><p>Remove the {state.imported.toLocaleString()} Steam games from your library? Ratings and favorites stay; currently playing and completed marks go with the copies. They won’t be added again automatically.</p><div className="person-actions"><button disabled={busy} onClick={() => void act({ action: "remove-library" }, "Removed from your library.")}>Confirm remove</button><button className="secondary" onClick={() => setConfirmRemove(false)}>Cancel</button></div></div>}
       {confirmDisconnect && <div className="steam-disconnect"><p>Erase Steam sync data? Imported games, ratings, and progress stay in RGBoner.</p><div className="person-actions"><button disabled={busy} onClick={() => void act({ action: "disconnect" }, "Steam disconnected. Imported games kept.")}>Confirm disconnect</button><button className="secondary" onClick={() => setConfirmDisconnect(false)}>Cancel</button></div></div>}
       <section className="steam-import" aria-labelledby="steam-import-title">
         <div className="steam-import-heading"><div><h2 id="steam-import-title">{state.pending || state.ready ? autoPaused ? "Steam sync paused" : "Syncing Steam library" : "Steam library"}</h2><p>{state.imported.toLocaleString()} imported{state.review ? ` · ${state.review.toLocaleString()} unresolved` : ""}</p></div><a className="inline-link" href="/library">My library →</a></div>
-        {(state.pending > 0 || state.ready > 0) && <div className="steam-progress"><div><p role="status">{autoPaused ? "Progress saved." : processing === "importing" || state.ready ? "Adding matched games…" : "Matching games…"}</p><button className="tool-button" onClick={() => { setAutoPaused(!autoPaused); setError(""); }}>{autoPaused ? "Resume sync" : "Pause sync"}</button></div><progress aria-label="Steam sync" value={state.imported + state.review} max={state.pending + state.ready + state.imported + state.review}/></div>}
+        {(state.pending > 0 || state.ready > 0) && <div className="steam-progress"><div><p role="status">{autoPaused ? "Progress saved." : `${processing === "importing" || state.ready ? "Adding matched games…" : "Matching games…"} ${(state.pending + state.ready).toLocaleString()} left`}</p><button className="tool-button" onClick={() => { setAutoPaused(!autoPaused); setError(""); }}>{autoPaused ? "Resume sync" : "Pause sync"}</button></div><progress aria-label="Steam sync" value={state.imported + state.review} max={state.pending + state.ready + state.imported + state.review}/></div>}
 
       </section>
       <section aria-label="Steam games">
         <div className="steam-toolbar"><div className="steam-filters" role="group" aria-label="Filter Steam games">{[["all", "All games"], ["review", "Unresolved"], ["imported", "Imported"], ["updated", "Recently updated"]].map(([id, label]) => <button className="secondary" key={id} aria-pressed={view === id} disabled={working} onClick={() => void load(0, activeSearch, id)}>{label}</button>)}</div>
-          <label className="library-search steam-library-search"><span className="sr-only">Search your Steam games</span><span className="library-search-field"><Search size={17} aria-hidden="true"/><input type="search" placeholder="Search titles" value={search} maxLength={100} autoComplete="off" spellCheck={false} disabled={busy || Boolean((state.pending || state.ready) && !autoPaused)} onChange={(event) => setSearch(event.target.value)}/></span></label>
+          <label className="library-search steam-library-search"><span className="sr-only">Search your Steam games</span><span className="library-search-field"><Search size={17} aria-hidden="true"/><input type="search" placeholder="Search titles" value={search} maxLength={100} autoComplete="off" spellCheck={false} disabled={busy} onChange={(event) => setSearch(event.target.value)}/></span></label>
 
         </div>
         <p className="steam-count">{state.total ? `${state.page * 30 + 1}–${Math.min((state.page + 1) * 30, state.total)} of ${state.total.toLocaleString()} games` : view === "review" ? "All clear. No games are unresolved." : "No games here yet. Refresh your library or change the filters."}</p>

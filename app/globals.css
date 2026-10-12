@@ -984,3 +984,5 @@ li:not(.is-unlocked) > .xbox-achievement-icon img { opacity: 0.45; }
   .xbox-achievement-list li { gap: 12px; }
   .xbox-achievement-icon { width: 40px; height: 40px; }
 }
+.steam-card-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.steam-card-actions button[aria-pressed="true"] { border-color: var(--rgb-action); color: var(--rgb-action); }

@@ -4,7 +4,7 @@ import { getDb } from "../db";
 import { libraryItems, steamConnections, steamGames, steamMappings } from "../db/schema";
 import { getIgdbGame, getSteamCatalogMatches } from "./igdb";
 import { steamRequest, SteamError } from "./steam-api";
-import { acquireSteamLock, attachSteamGame, importSteamGame, recentSteamCount, recentSteamGames, readySteamGames, saveSteamGame, setSteamMatch, steamMatchCounts } from "./steam-queries";
+import { acquireSteamLock, attachSteamGame, importSteamGame, recentSteamCount, recentSteamGames, readySteamGames, removeSteamCopies, saveSteamGame, setSteamMatch, steamMatchCounts } from "./steam-queries";
 import { defaultSteamPlatform, steamPlatforms, steamPlatformIds } from "./steam-types";
 import type { SteamState } from "./steam-types";
 import type { CatalogGame } from "./game-types";
@@ -193,6 +193,13 @@ export async function importMatchedSteamBatch(userId: string, steamId: string, s
       .where(and(eq(libraryItems.userId, userId), inArray(libraryItems.igdbId, games.map((row) => row.game.igdbId))));
     await writeSteamImports(connection, token, games.map(({ appId, game }) => ({ appId,
       platformId: defaultSteamPlatform(game, existing.filter((row) => row.igdbId === game.igdbId).map((row) => row.platformId)) })));
+  });
+}
+
+// Removes the library copies Steam added; ratings and favorites stay with the game, and removed games are not re-imported.
+export async function removeSteamLibrary(userId: string) {
+  return withSteamLock(userId, async (connection, token) => {
+    await getDb().$client.prepare(removeSteamCopies).bind(userId, connection.connectionId, token).run();
   });
 }
 
