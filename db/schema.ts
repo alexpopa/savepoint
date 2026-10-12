@@ -373,3 +373,102 @@ export const psnUnlocks = sqliteTable("psn_unlocks", {
   uniqueIndex("idx_psn_unlocks_title_trophy").on(table.titleRowId, table.trophyId),
   index("idx_psn_unlocks_user_earned_at").on(table.userId, table.earnedAt),
 ]);
+
+// A pending RetroAchievements link: the player puts the code in their RA motto, and verifying reads it back by ULID.
+export const raLinkCodes = sqliteTable("ra_link_codes", {
+  userId: text("user_id").primaryKey().references(() => accounts.userId, { onDelete: "cascade" }),
+  ulid: text("ulid").notNull(),
+  username: text("username").notNull(),
+  code: text("code").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  checkedAt: integer("checked_at"),
+});
+
+// RetroAchievements data is public and read with the site's own Web API key, so no player credential is stored.
+export const raConnections = sqliteTable("ra_connections", {
+  userId: text("user_id").primaryKey().references(() => accounts.userId, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().unique(),
+  // RA usernames can change; the ULID cannot.
+  ulid: text("ulid").notNull().unique(),
+  username: text("username").notNull(),
+  linkedAt: integer("linked_at").notNull(),
+  syncedAt: integer("synced_at"),
+  attemptedAt: integer("attempted_at"),
+  lockToken: text("lock_token"),
+  lockUntil: integer("lock_until"),
+  syncError: text("sync_error"),
+  syncPaused: integer("sync_paused", { mode: "boolean" }).notNull().default(false),
+  hardcorePoints: integer("hardcore_points").notNull().default(0),
+  softcorePoints: integer("softcore_points").notNull().default(0),
+  retroPoints: integer("retro_points").notNull().default(0),
+  beatenHardcore: integer("beaten_hardcore").notNull().default(0),
+  beatenSoftcore: integer("beaten_softcore").notNull().default(0),
+  mastered: integer("mastered").notNull().default(0),
+  completed: integer("completed").notNull().default(0),
+});
+
+// Shared catalog cache keyed by RetroAchievements game ID; player choices belong to ra_games.
+export const raMappings = sqliteTable("ra_mappings", {
+  gameId: integer("game_id").primaryKey(),
+  candidatesJson: text("candidates_json").notNull(),
+  checkedAt: integer("checked_at").notNull(),
+});
+
+// One row per main game; its subsets fold in, like PlayStation add-on trophy groups.
+export const raGames = sqliteTable("ra_games", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  connectionId: text("connection_id").notNull().references(() => raConnections.connectionId, { onDelete: "cascade" }),
+  gameId: integer("game_id").notNull(),
+  subsetIdsJson: text("subset_ids_json").notNull().default("[]"),
+  name: text("name").notNull(),
+  consoleId: integer("console_id").notNull(),
+  consoleName: text("console_name").notNull(),
+  imageUrl: text("image_url"),
+  // Counts across the main set and its subsets; softcore counts include hardcore unlocks.
+  earned: integer("earned").notNull().default(0),
+  earnedHardcore: integer("earned_hardcore").notNull().default(0),
+  total: integer("total").notNull().default(0),
+  lastPlayedAt: integer("last_played_at"),
+  playSeconds: integer("play_seconds"),
+  observedAt: integer("observed_at").notNull(),
+  matchedAt: integer("matched_at"),
+  gameJson: text("game_json"),
+  importedAt: integer("imported_at"),
+  libraryItemId: integer("library_item_id").references(() => libraryItems.id, { onDelete: "set null" }),
+  // Earned plus hardcore count when the achievement lists were last read, so refreshes only reread games that changed.
+  achievementsSyncedCount: integer("achievements_synced_count"),
+  // First time the main game was beaten in either mode, or mastered or completed when it cannot be beaten.
+  completedAt: integer("completed_at"),
+  completedHardcore: integer("completed_hardcore", { mode: "boolean" }).notNull().default(false),
+}, (table) => [
+  uniqueIndex("idx_ra_games_connection_game").on(table.connectionId, table.gameId),
+  index("idx_ra_games_connection_library").on(table.connectionId, table.libraryItemId),
+  index("idx_ra_games_connection_played").on(table.connectionId, table.lastPlayedAt),
+  index("idx_ra_games_connection_completed").on(table.connectionId, table.completedAt).where(sql`${table.completedAt} IS NOT NULL`),
+]);
+
+// Shared achievement definitions. RA achievement IDs are global; `set_name` names the subset, or is null for the main set.
+export const raAchievements = sqliteTable("ra_achievements", {
+  achievementId: integer("achievement_id").primaryKey(),
+  gameId: integer("game_id").notNull(),
+  setName: text("set_name"),
+  title: text("title").notNull(),
+  description: text("description"),
+  badgeUrl: text("badge_url"),
+  points: integer("points").notNull().default(0),
+  displayOrder: integer("display_order").notNull().default(0),
+  rarity: integer("rarity"),
+  checkedAt: integer("checked_at").notNull(),
+}, (table) => [index("idx_ra_achievements_game").on(table.gameId)]);
+
+export const raUnlocks = sqliteTable("ra_unlocks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  gameRowId: integer("game_row_id").notNull().references(() => raGames.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  achievementId: integer("achievement_id").notNull(),
+  earnedAt: integer("earned_at").notNull(),
+  hardcore: integer("hardcore", { mode: "boolean" }).notNull().default(false),
+}, (table) => [
+  uniqueIndex("idx_ra_unlocks_game_achievement").on(table.gameRowId, table.achievementId),
+  index("idx_ra_unlocks_user_earned_at").on(table.userId, table.earnedAt),
+]);

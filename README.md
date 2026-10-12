@@ -8,9 +8,10 @@ Meta description: “Show off your collection, defend your Top 10, and challenge
 ## Features
 
 - **Library** — track the games you own, per platform
-- **Connected libraries** — a dedicated page in the account menu, with separate Steam, Xbox, and PlayStation cards showing connection status and Connect or Manage actions
+- **Connected libraries** — a dedicated page in the account menu, with separate Steam, Xbox, PlayStation, and RetroAchievements cards showing connection status and Connect or Manage actions
 - **Steam import** — connect Steam, automatically match your collection to IGDB, add matched games with one Import all games button, and resolve and import unmatched games in one click, and manage games through the shared library popup, including SteamVR and a Recently updated filter
 - **PlayStation games and trophies** — paste your NPSSO token from Sony to see the games you’ve played on PS5, PS4, PS3, and PS Vita, with playtime; add them the same way as Xbox games; and show trophies, your trophy level, and platinums on your profile and in your friends’ timeline. Reconnect every couple of months when Sony’s sign-in expires.
+- **RetroAchievements games and achievements** — link your RetroAchievements account by putting a short code in your RA motto, see every retro game you’ve earned achievements in (subsets fold into their main game), add them the same way as Xbox games, and show progress, playtime, and the games you’ve beaten (softcore or hardcore) on your profile and in your friends’ timeline
 - **Xbox games and achievements** — sign in with Microsoft to see the games you’ve played on Xbox and PC, most recent first; add them one at a time, as currently playing, or all at once; and show achievement progress on your profile and in your friends’ timeline
 - **Status and ratings** — mark games as playing or completed, and score them 1–5 stars
 - **Top 10** — pin your favorites; your #1 cover becomes your profile picture

@@ -1,9 +1,9 @@
-import { ArrowRight, Gamepad2, Monitor, LibraryBig } from "lucide-react";
+import { ArrowRight, Gamepad2, Monitor, LibraryBig, Trophy } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { requireUser } from "../auth";
 import SiteHeader from "../site-header";
 import { getDb } from "../../db";
-import { steamConnections, xboxConnections, psnConnections } from "../../db/schema";
+import { steamConnections, xboxConnections, psnConnections, raConnections } from "../../db/schema";
 import { hasPermission } from "../../lib/permissions";
 
 export const dynamic = "force-dynamic";
@@ -13,17 +13,19 @@ export default async function ConnectionsPage() {
   const db = getDb();
   let connections = null;
   try {
-    const [steam, xbox, psn] = await db.batch([
+    const [steam, xbox, psn, ra] = await db.batch([
       db.select({ userId: steamConnections.userId }).from(steamConnections).where(eq(steamConnections.userId, user.userId)),
       db.select({ name: xboxConnections.gamertag }).from(xboxConnections).where(eq(xboxConnections.userId, user.userId)),
       db.select({ name: psnConnections.onlineId, needsReconnect: psnConnections.needsReconnect }).from(psnConnections).where(eq(psnConnections.userId, user.userId)),
+      db.select({ name: raConnections.username }).from(raConnections).where(eq(raConnections.userId, user.userId)),
     ]);
-    connections = { steam: steam[0], xbox: xbox[0], psn: psn[0] };
+    connections = { steam: steam[0], xbox: xbox[0], psn: psn[0], ra: ra[0] };
   } catch (error) { console.error("Could not load connected libraries", error); }
   const services = [
     { name: "Steam", path: "steam", icon: Monitor, description: "Import your Steam collection and choose the games to bring into your library.", connection: connections?.steam, account: null, reconnect: false },
     { name: "Xbox", path: "xbox", icon: Gamepad2, description: "Add the games you’ve played on Xbox and PC, and show your achievements.", connection: connections?.xbox, account: connections?.xbox?.name, reconnect: false },
     { name: "PlayStation", path: "playstation", icon: Gamepad2, description: "Add your PlayStation games and show your trophies, platinums, and playtime.", connection: connections?.psn, account: connections?.psn?.name, reconnect: connections?.psn?.needsReconnect },
+    { name: "RetroAchievements", path: "retroachievements", icon: Trophy, description: "Add the retro games you’ve earned achievements in, and show the games you’ve beaten.", connection: connections?.ra, account: connections?.ra?.name, reconnect: false },
   ];
   return <main className="library-page"><SiteHeader email={user.email} showAdmin={hasPermission(user, false)}/>
     <div className="library-wrap settings-wrap connections-wrap">

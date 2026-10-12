@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { raTitleName, raTitleVariants } from "./ra-types";
 
 type IgdbGame = {
   id: number;
@@ -327,6 +328,33 @@ export async function getPsnCatalogMatches(references: PsnCatalogReference[]) {
       const named = rows.filter((game) => storeTitleName(game.name) === storeTitleName(reference.name));
       const played = named.filter((game) => game.platforms?.some((platform) => reference.platforms.includes(platform.id)));
       for (const game of played.length ? played : named) add(reference.titleKey, game);
+    }
+  }
+  return result;
+}
+
+type RaCatalogReference = { gameId: number; name: string; platforms: number[] };
+
+// IGDB records no RetroAchievements IDs, so RA games match by exact title (or IGDB alternative name) on their console's
+// platforms, trying RA's title variants. A match on the main title wins over alternative names. Only one unique result
+// is selected; ambiguous or missing games stay for the player to resolve.
+export async function getRaCatalogMatches(references: RaCatalogReference[]) {
+  const result = new Map(references.map((reference) => [reference.gameId, [] as ReturnType<typeof serialize>[]]));
+  const searchable = references.map((reference) => ({ ...reference, variants: raTitleVariants(reference.name) })).filter((reference) => reference.platforms.length && reference.variants.length);
+  const escape = (name: string) => name.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  for (let offset = 0; offset < searchable.length; offset += 5) {
+    const batch = searchable.slice(offset, offset + 5);
+    const filters = batch.flatMap((reference) => reference.variants.map((name) => `name ~ "${escape(name)}" | alternative_names.name ~ "${escape(name)}"`)).join(" | ");
+    const platforms = [...new Set(batch.flatMap((reference) => reference.platforms))];
+    const rows = await request<IgdbGame & { alternative_names?: { name?: string }[] }>("games",
+      `fields ${storeGameFields},alternative_names.name; where (${filters}) & platforms = (${platforms.join(",")}); limit 500;`);
+    for (const reference of batch) {
+      const names = new Set(reference.variants.map(raTitleName));
+      const onConsole = rows.filter((game) => game.platforms?.some((platform) => reference.platforms.includes(platform.id)));
+      const named = onConsole.filter((game) => names.has(raTitleName(game.name)));
+      const candidates = named.length ? named : onConsole.filter((game) => game.alternative_names?.some((entry) => entry.name && names.has(raTitleName(entry.name))));
+      const list = result.get(reference.gameId)!;
+      for (const game of candidates) if (Number.isSafeInteger(game.id) && game.name && !list.some((entry) => entry.igdbId === game.id)) list.push(serialize(game));
     }
   }
   return result;

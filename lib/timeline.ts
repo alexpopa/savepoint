@@ -4,8 +4,9 @@ import { accountDisplayName } from "./social";
 import { profilePath } from "./profile-path";
 import { timelinePage, timelinePageSize, type TimelineCursor, type TimelineGame, type TimelineItem } from "./timeline-items";
 import {
-  saveRecoveredCoverQuery, timelineAchievementsQuery, timelinePlatinumQuery, timelineTrophiesQuery, timelineChallengesQuery, timelineMasteredQuery, timelineCompletedQuery, timelineFavoritesQuery, timelineLibraryQuery, timelinePlayingQuery, timelineRatingsQuery,
+  saveRecoveredCoverQuery, timelineAchievementsQuery, timelineBeatenQuery, timelineRaUnlocksQuery, timelinePlatinumQuery, timelineTrophiesQuery, timelineChallengesQuery, timelineMasteredQuery, timelineCompletedQuery, timelineFavoritesQuery, timelineLibraryQuery, timelinePlayingQuery, timelineRatingsQuery,
   type TimelineChallengeRow, type TimelineCopyRow, type TimelineFavoriteRow, type TimelineMasteredRow, type TimelinePlatinumRow, type TimelineTrophyRow, type TimelinePersonRow, type TimelineRatingRow, type TimelineUnlockRow,
+  type TimelineBeatenRow, type TimelineRaUnlockRow,
 } from "./timeline-queries";
 import { getIgdbGameCoversForGames } from "./igdb";
 import { hasPermission, type PermissionUser } from "./permissions";
@@ -18,14 +19,14 @@ export async function getTimelinePage(user: PermissionUser, cursor: TimelineCurs
   const client = getDb().$client;
   const newest = cursor?.at ?? Number.MAX_SAFE_INTEGER;
   // One JSON parameter keeps the floors under D1's bound-parameter limit however many friends appear.
-  const floors = (kind: "library" | "ratings" | "achievements" | "trophies") => JSON.stringify(cursor?.[kind] ?? {});
+  const floors = (kind: "library" | "ratings" | "achievements" | "trophies" | "retroachievements") => JSON.stringify(cursor?.[kind] ?? {});
   const person = (row: TimelinePersonRow) => ({ id: row.userId, name: accountDisplayName(row), href: profilePath(row) });
   const source = <T>(rows: T[], limit: number) => ({ rows, truncated: rows.length === limit });
   const copyEntry = ({ igdbId, name, coverUrl, releaseYear, platformName, ...row }: TimelineCopyRow) => ({ person: person(row), igdbId, name, coverUrl, releaseYear, platformName });
 
   // Single entries are read one page at a time; batched rows grow until every shown batch is complete.
   for (let singleLimit = timelinePageSize + 1, batchedLimit = batchedRowLimit; ; singleLimit *= 4, batchedLimit *= 4) {
-    const [games, challenges, favorites, playing, completed, ratings, unlocks, mastered, trophies, platinum] = await client.batch([
+    const [games, challenges, favorites, playing, completed, ratings, unlocks, mastered, trophies, platinum, raUnlocks, beaten] = await client.batch([
       client.prepare(timelineLibraryQuery).bind(user.userId, newest, floors("library"), batchedLimit),
       client.prepare(timelineChallengesQuery).bind(user.userId, newest, "{}", singleLimit, hasPermission(user, false) ? 1 : 0),
       client.prepare(timelineFavoritesQuery).bind(user.userId, newest, "{}", singleLimit),
@@ -36,6 +37,8 @@ export async function getTimelinePage(user: PermissionUser, cursor: TimelineCurs
       client.prepare(timelineMasteredQuery).bind(user.userId, newest, "{}", singleLimit),
       client.prepare(timelineTrophiesQuery).bind(user.userId, newest, floors("trophies"), batchedLimit),
       client.prepare(timelinePlatinumQuery).bind(user.userId, newest, "{}", singleLimit),
+      client.prepare(timelineRaUnlocksQuery).bind(user.userId, newest, floors("retroachievements"), batchedLimit),
+      client.prepare(timelineBeatenQuery).bind(user.userId, newest, "{}", singleLimit),
     ]);
     const page = timelinePage({
       games: source((games.results as TimelineCopyRow[]).map((row) => ({
@@ -71,6 +74,12 @@ export async function getTimelinePage(user: PermissionUser, cursor: TimelineCurs
       })), batchedLimit),
       platinum: source((platinum.results as TimelinePlatinumRow[]).map((row) => ({ kind: "platinum" as const, key: `platinum:${row.id}`, at: row.at, ...copyEntry(row),
         titleRowId: row.titleRowId, hasPlatinum: Boolean(row.hasPlatinum), totalTrophies: row.totalTrophies })), singleLimit),
+      retroachievements: source((raUnlocks.results as TimelineRaUnlockRow[]).map((row) => ({
+        id: row.id, titleRowId: row.titleRowId, achievementName: row.achievementName, hardcore: Boolean(row.hardcore), earnedAt: row.at, person: person(row),
+        igdbId: row.igdbId, name: row.name, coverUrl: row.coverUrl, releaseYear: row.releaseYear, platformName: row.platformName,
+      })), batchedLimit),
+      beaten: source((beaten.results as TimelineBeatenRow[]).map((row) => ({ kind: "beaten" as const, key: `beaten:${row.id}`, at: row.at, ...copyEntry(row),
+        titleRowId: row.titleRowId, hardcore: Boolean(row.hardcore) })), singleLimit),
     }, cursor);
     if (!page) continue;
     await recoverCovers(page.items);

@@ -1,13 +1,13 @@
 # Integration sync workflow
 
-How a connected game service (Steam, Xbox, PlayStation, and any future one) refreshes, matches, and adds games. Steam, Xbox, and PlayStation follow this exactly; a new integration copies them. Behavior specific to one service lives in [architecture](architecture.md); visual rules live in the [style guide](style-guide.md).
+How a connected game service (Steam, Xbox, PlayStation, RetroAchievements, and any future one) refreshes, matches, and adds games. Steam, Xbox, PlayStation, and RetroAchievements follow this exactly; a new integration copies them. Behavior specific to one service lives in [architecture](architecture.md); visual rules live in the [style guide](style-guide.md).
 
 ## The flow
 
-1. **Connect.** The player links the service to their verified account. Identity is verified by the provider; a pasted ID is never proof. (PlayStation's pasted NPSSO is a Sony sign-in credential, exchanged at once; the account comes from Sony.)
+1. **Connect.** The player links the service to their verified account. Identity is verified by the provider; a pasted ID is never proof. (PlayStation's pasted NPSSO is a Sony sign-in credential, exchanged at once; the account comes from Sony. RetroAchievements has no sign-in for other sites, so the player puts a one-time code in their RA motto, which only the account owner can edit, and RGBoner reads it back by the account's permanent ID.)
 2. **Refresh** is manual and rate limited. It stores the player's games from the provider as personal source rows tied to the refresh timestamp (`synced_at`), and never deletes or edits library copies.
-3. **Sync** matches source rows to IGDB games in bounded sequential batches (and reads any other background data, such as Xbox achievements and PlayStation trophies). Sync never adds anything to the library.
-4. **Add** is the player's decision: one game at a time, from the game popup, or with one bulk button (**Import all games** on Steam, **Add all** on Xbox and PlayStation) that appears once matching has finished.
+3. **Sync** matches source rows to IGDB games in bounded sequential batches (and reads any other background data, such as Xbox and RetroAchievements achievements and PlayStation trophies). Sync never adds anything to the library.
+4. **Add** is the player's decision: one game at a time, from the game popup, or with one bulk button (**Import all games** on Steam, **Add all** on Xbox, PlayStation, and RetroAchievements) that appears once matching has finished.
 5. **Remove all games** deletes only the library copies this connection added or linked. Ratings and favorites stay, and removed games are not added again automatically.
 6. **Disconnect** erases the service's data and keeps library copies.
 
@@ -29,7 +29,7 @@ How a connected game service (Steam, Xbox, PlayStation, and any future one) refr
 
 ## Checklist for a new integration
 
-1. Copy the Steam, Xbox, or PlayStation tables and add `sync_paused boolean not null default false` to the connection table. Add a forward migration and document it.
+1. Copy the Steam, Xbox, PlayStation, or RetroAchievements tables and add `sync_paused boolean not null default false` to the connection table. Add a forward migration and document it.
 2. Return `paused` inside the connection object of the state response, and add `pause` to the POST route with `typeof input.paused === "boolean"` validation. Clear it in the refresh write.
 3. In the settings client, derive `const paused = state?.connection?.paused ?? false`, use a `setPaused` helper that bumps the epoch, updates state, and saves, and gate the batch effect on it. Copy `app/settings/steam/steam-settings.tsx`.
 4. Matching never adds games. Add games only through the popup or the single bulk button.

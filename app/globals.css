@@ -136,7 +136,7 @@ button:disabled { cursor: default; }
 
 .library-wrap { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 64px 0 48px; }
 .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 40px; }
-.page-heading h1, .search-wrap h1, .settings-wrap h1 { margin: 8px 0 10px; font-size: clamp(2.25rem, 4vw, 3.25rem); font-weight: 750; letter-spacing: -0.045em; line-height: 1.08; }
+.page-heading h1, .search-wrap h1, .settings-wrap h1 { margin: 8px 0 10px; font-size: clamp(2.25rem, 4vw, 3.25rem); font-weight: 750; letter-spacing: -0.045em; line-height: 1.08; overflow-wrap: break-word; }
 .subcopy { margin: 0; color: var(--rgb-muted); font-size: 1rem; line-height: 1.6; }
 .eyebrow { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--rgb-action); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; line-height: 1.5; }
 .game-count { display: flex; align-items: center; gap: 12px; flex: none; padding-left: 18px; border-left: 3px solid var(--rgb-action); color: var(--rgb-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 700; line-height: 1.4; letter-spacing: 0.05em; }
@@ -207,7 +207,7 @@ button:disabled { cursor: default; }
 
 /* Connected libraries overview */
 .settings-wrap.connections-wrap { max-width: 1120px; }
-.connections-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.connections-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .settings-card.connection-card { display: flex; flex-direction: column; align-items: flex-start; margin: 0; padding: 24px; }
 .connection-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
 .settings-card .connection-heading h2 { margin: 0; }
@@ -909,7 +909,7 @@ button.honor-cover:focus-visible { transform: translateY(-6px); outline-offset: 
 .steam-filters button[aria-pressed="true"] { color: var(--rgb-ink); border-color: var(--rgb-action); box-shadow: inset 0 -2px var(--rgb-action); }
 .steam-disconnect { margin: 24px 0; padding: 16px; border: 1px solid var(--rgb-control-edge); }
 .steam-disconnect p { margin-bottom: 12px; }
-/* PlayStation NPSSO form, used to connect and reconnect */
+/* PlayStation NPSSO form, used to connect and reconnect, and the RetroAchievements link forms */
 .psn-connect { display: grid; gap: 16px; max-width: 68ch; }
 .psn-connect ol { margin: 0; padding-left: 1.25rem; list-style: decimal; color: var(--rgb-muted); font-size: 0.9375rem; line-height: 1.6; }
 .psn-connect code { overflow-wrap: anywhere; color: var(--rgb-ink); }
@@ -917,6 +917,9 @@ button.honor-cover:focus-visible { transform: translateY(-6px); outline-offset: 
 .psn-connect input { min-height: 44px; padding: 9px 13px; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-page); color: var(--rgb-ink); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .psn-connect .muted { margin: 0; font-size: 0.875rem; }
 .psn-connect .person-actions { margin-top: 0; }
+/* RetroAchievements motto code, the second step of linking an account */
+.ra-link ol li + li { margin-top: 6px; }
+.ra-link .ra-code { display: inline-block; margin: 0 6px; padding: 2px 8px; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-page); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1rem; letter-spacing: 0.06em; user-select: all; }
 .steam-count { margin: 16px 0; color: var(--rgb-muted); font-size: .875rem; }
 .steam-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; gap: 16px; }
 .steam-game { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--rgb-rule); border-radius: 4px; overflow: hidden; background: var(--rgb-panel); }

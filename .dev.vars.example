@@ -14,3 +14,7 @@ XBOX_TOKEN_KEY=
 # Optional: enables PlayStation linking with a pasted NPSSO token. PSN_TOKEN_KEY is 32 random bytes in base64
 # (for example `openssl rand -base64 32`) and encrypts stored Sony sign-ins. Never expose it to the browser.
 PSN_TOKEN_KEY=
+
+# Optional: enables RetroAchievements linking and refreshes. The Web API key of the RGBoner RetroAchievements account.
+# Never expose it to the browser.
+RA_API_KEY=
