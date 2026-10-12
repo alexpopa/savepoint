@@ -15,12 +15,17 @@ export const cookieName = "rgboner_session";
 const stateDir = path.join(projectRoot, ".wrangler");
 const configPath = path.join(stateDir, "agent-d1.json");
 
-function wrangler(args) {
+export function localD1Config() {
   mkdirSync(stateDir, { recursive: true });
   writeFileSync(configPath, JSON.stringify({
     name: "rgboner-local-d1",
-    d1_databases: [{ binding: "DB", database_name: "site-creator-d1", database_id: "00000000-0000-4000-8000-000000000000" }],
+    d1_databases: [{ binding: "DB", database_name: "site-creator-d1", database_id: "00000000-0000-4000-8000-000000000000", migrations_dir: path.join(projectRoot, "drizzle") }],
   }));
+  return configPath;
+}
+
+function wrangler(args) {
+  const configPath = localD1Config();
   const result = spawnSync(process.execPath, ["--import", "./scripts/sites-env.mjs", "./node_modules/wrangler/bin/wrangler.js",
     "d1", "execute", "DB", "--local", "--config", configPath, "--persist-to", ".wrangler/state", "--json", ...args], { cwd: projectRoot, encoding: "utf8" });
   const output = result.stdout.slice(result.stdout.indexOf("["));

@@ -38,6 +38,8 @@ Set up the local database first — see the [development guide](docs/development
 | `npm run check` | Lint, type check, and run tests |
 | `npm run build` | Build the Worker |
 | `npm run db:generate` | Generate a migration from `db/schema.ts` |
+| `npm run db:migrate` | Apply and record pending local D1 migrations |
+| `npm run db:status` | List pending local D1 migrations |
 
 ## Docs
 
