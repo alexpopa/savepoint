@@ -160,6 +160,7 @@ export const steamConnections = sqliteTable("steam_connections", {
   recentJson: text("recent_json"),
   activityAt: integer("activity_at"),
   syncError: text("sync_error"),
+  syncPaused: integer("sync_paused", { mode: "boolean" }).notNull().default(false),
 });
 
 export const steamLinkStates = sqliteTable("steam_link_states", {

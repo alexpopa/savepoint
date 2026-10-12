@@ -1,0 +1,1 @@
+ALTER TABLE `steam_connections` ADD `sync_paused` integer DEFAULT false NOT NULL;

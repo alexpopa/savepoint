@@ -2,7 +2,7 @@ import { getCurrentUser } from "../../auth";
 import { hasPermission } from "../../../lib/permissions";
 import { isSameOriginWrite } from "../../../lib/request-security";
 import { privateResponse } from "../../../lib/social";
-import { chooseSteamMatch, disconnectSteam, getSteamState, ignoreSteamGame, importSteamGames, importMatchedSteamBatch, matchSteamGames, refreshSteam, removeSteamLibrary, resolveSteamGame } from "../../../lib/steam";
+import { chooseSteamMatch, disconnectSteam, getSteamState, ignoreSteamGame, importSteamGames, importMatchedSteamBatch, matchSteamGames, refreshSteam, removeSteamLibrary, resolveSteamGame, setSteamSyncPaused } from "../../../lib/steam";
 import { steamPlatformIds } from "../../../lib/steam-types";
 import { SteamError, validAppId } from "../../../lib/steam-api";
 
@@ -44,6 +44,7 @@ export async function POST(request: Request) {
       await importMatchedSteamBatch(user.userId, input.steamId, input.syncedAt);
     else if (input.action === "resolve" && validAppId(input.appId) && (input.igdbId === undefined || typeof input.igdbId === "number" && Number.isSafeInteger(input.igdbId) && input.igdbId > 0))
       await resolveSteamGame(user.userId, input.appId, input.igdbId as number | undefined);
+    else if (input.action === "pause" && typeof input.paused === "boolean") await setSteamSyncPaused(user.userId, input.paused);
     else if (input.action === "remove-library") await removeSteamLibrary(user.userId);
     else if (input.action === "disconnect") await disconnectSteam(user.userId);
     else if (input.action === "choose" && validAppId(input.appId) && typeof input.igdbId === "number" && Number.isSafeInteger(input.igdbId) && input.igdbId > 0)

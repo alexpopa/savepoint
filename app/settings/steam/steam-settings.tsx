@@ -55,7 +55,6 @@ export default function SteamSettings() {
   const [detailGame, setDetailGame] = useState<CatalogGame | null>(null);
   const [copies, setCopies] = useState<SavedGame[]>([]);
   const [matching, setMatching] = useState<number | null>(null);
-  const [autoPaused, setAutoPaused] = useState(false);
   const [processing, setProcessing] = useState<"matching" | "importing" | null>(null);
   const alive = useRef(true);
   // Bumped by every player action so a background batch that started earlier cannot overwrite what they now see.
@@ -63,6 +62,8 @@ export default function SteamSettings() {
   const [syncing, setSyncing] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // Saved on the connection, so a pause survives leaving or reloading the page.
+  const paused = state?.connection?.paused ?? false;
 
   useEffect(() => {
     let active = true;
@@ -77,7 +78,7 @@ export default function SteamSettings() {
   // Sync only matches games, in bounded sequential requests. Adding them to the library is the player's Import all games action.
   // Batches never disable the page. Leaving the page stops scheduling; reopening resumes persisted work automatically.
   useEffect(() => {
-    if (!state?.connection || !state.pending || busy || syncing || searchLoading || autoPaused || matching !== null || detailGame) return;
+    if (!state?.connection || !state.pending || busy || syncing || searchLoading || paused || matching !== null || detailGame) return;
     const timer = window.setTimeout(() => {
       const started = epoch.current;
       setSyncing(true); setProcessing("matching");
@@ -86,11 +87,11 @@ export default function SteamSettings() {
         if (fresh.pending >= state.pending) throw new Error("Steam sync could not make progress. Please try again.");
         setState(fresh);
         if (!fresh.pending) setNotice(fresh.ready ? `Steam library synced. ${fresh.ready.toLocaleString()} games ready to add.` : "Steam library synced.");
-      }).catch((e) => { if (alive.current && epoch.current === started) { setError(e.message); setAutoPaused(true); } })
+      }).catch((e) => { if (alive.current && epoch.current === started) { setError(e.message); void setPaused(true); } })
         .finally(() => { if (alive.current) { setSyncing(false); setProcessing(null); } });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [state?.pending, state?.connection, state?.page, busy, syncing, searchLoading, autoPaused, matching, detailGame, view, activeSearch]);
+  }, [state?.pending, state?.connection, state?.page, busy, syncing, searchLoading, paused, matching, detailGame, view, activeSearch]);
 
   useEffect(() => {
     if (search === activeSearch || busy) return;
@@ -122,9 +123,14 @@ export default function SteamSettings() {
     try {
       const fresh = await api<SteamState>("/api/steam", payload);
       setState(fresh); setView("all"); setSearch(""); setActiveSearch(""); setMatching(null); setConfirmDisconnect(false); setConfirmRemove(false); setNotice((payload as { action?: string }).action === "refresh" ? fresh.pending ? `Library refreshed. Matching ${fresh.pending.toLocaleString()} pending games…` : "Library refreshed. No new games to match." : message);
-      if ((payload as { action?: string }).action === "refresh") setAutoPaused(false);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not update Steam."); }
     finally { setBusy(false); }
+  }
+  async function setPaused(value: boolean) {
+    epoch.current += 1;
+    setState((current) => current?.connection ? { ...current, connection: { ...current.connection, paused: value } } : current);
+    try { await api<SteamState>("/api/steam", { action: "pause", paused: value }); }
+    catch (e) { setError(e instanceof Error ? e.message : "Could not save the sync state."); }
   }
   async function importAll() {
     if (!state?.connection) return;
@@ -195,14 +201,14 @@ export default function SteamSettings() {
       </section> : <>
       <section className="steam-connection" aria-label="Connected account">
         <div><a className="inline-link" href={`https://steamcommunity.com/profiles/${state.connection.steamId}/`} target="_blank" rel="noreferrer">Steam connected ↗</a><p>Last refreshed {date(state.connection.syncedAt)}</p></div>
-        <div className="person-actions"><button className="secondary" disabled={working || !state.configured} onClick={() => void act({ action: "refresh" }, "Library refreshed.")}>Refresh library</button>{state.imported > 0 && <button className="tool-button" disabled={working} onClick={() => { setConfirmRemove(!confirmRemove); setConfirmDisconnect(false); if (!confirmRemove) setAutoPaused(true); }}>Remove all games</button>}<button className="tool-button" disabled={working} onClick={() => { setConfirmDisconnect(!confirmDisconnect); setConfirmRemove(false); }}>Disconnect</button></div>
+        <div className="person-actions"><button className="secondary" disabled={working || !state.configured} onClick={() => void act({ action: "refresh" }, "Library refreshed.")}>Refresh library</button>{state.imported > 0 && <button className="tool-button" disabled={working} onClick={() => { setConfirmRemove(!confirmRemove); setConfirmDisconnect(false); if (!confirmRemove) void setPaused(true); }}>Remove all games</button>}<button className="tool-button" disabled={working} onClick={() => { setConfirmDisconnect(!confirmDisconnect); setConfirmRemove(false); }}>Disconnect</button></div>
       </section>
       {state.connection.syncError && <p className="notice" role="status">{state.connection.syncError}</p>}
       {confirmRemove && <div className="steam-disconnect"><p>Remove the {state.imported.toLocaleString()} Steam games from your library? Ratings and favorites stay; currently playing and completed marks go with the copies. They won’t be added again automatically.</p><div className="person-actions"><button disabled={busy || syncing} onClick={() => void act({ action: "remove-library" }, "Removed from your library.")}>Confirm remove</button><button className="secondary" onClick={() => setConfirmRemove(false)}>Cancel</button></div></div>}
       {confirmDisconnect && <div className="steam-disconnect"><p>Erase Steam sync data? Imported games, ratings, and progress stay in RGBoner.</p><div className="person-actions"><button disabled={busy} onClick={() => void act({ action: "disconnect" }, "Steam disconnected. Imported games kept.")}>Confirm disconnect</button><button className="secondary" onClick={() => setConfirmDisconnect(false)}>Cancel</button></div></div>}
       <section className="steam-import" aria-labelledby="steam-import-title">
-        <div className="steam-import-heading"><div><h2 id="steam-import-title">{state.pending ? autoPaused ? "Steam sync paused" : "Syncing Steam library" : "Steam library"}</h2><p>{state.imported.toLocaleString()} imported{state.review ? ` · ${state.review.toLocaleString()} unresolved` : ""}</p></div><a className="inline-link" href="/library">My library →</a></div>
-        {state.pending > 0 && <div className="steam-progress"><div><p role="status">{autoPaused ? "Progress saved." : `Matching games… ${state.pending.toLocaleString()} left`}</p><button className="tool-button" onClick={() => { setAutoPaused(!autoPaused); setError(""); }}>{autoPaused ? "Resume sync" : "Pause sync"}</button></div><progress aria-label="Steam sync" value={state.imported + state.review + state.ready} max={state.pending + state.ready + state.imported + state.review}/></div>}
+        <div className="steam-import-heading"><div><h2 id="steam-import-title">{state.pending ? paused ? "Steam sync paused" : "Syncing Steam library" : "Steam library"}</h2><p>{state.imported.toLocaleString()} imported{state.review ? ` · ${state.review.toLocaleString()} unresolved` : ""}</p></div><a className="inline-link" href="/library">My library →</a></div>
+        {state.pending > 0 && <div className="steam-progress"><div><p role="status">{paused ? "Progress saved." : `Matching games… ${state.pending.toLocaleString()} left`}</p><button className="tool-button" onClick={() => { void setPaused(!paused); setError(""); }}>{paused ? "Resume sync" : "Pause sync"}</button></div><progress aria-label="Steam sync" value={state.imported + state.review + state.ready} max={state.pending + state.ready + state.imported + state.review}/></div>}
         {!state.pending && state.ready > 0 && <div className="steam-progress"><div><p role="status">{processing === "importing" ? `Adding games… ${state.ready.toLocaleString()} left` : `${state.ready.toLocaleString()} games ready to add`}</p><button disabled={working} onClick={() => void importAll()}>Import all games</button></div></div>}
 
       </section>

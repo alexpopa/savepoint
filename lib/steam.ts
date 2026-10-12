@@ -38,7 +38,7 @@ export async function getSteamState(userId: string, page = 0, search = "", view 
   const games = rows.map((row) => ({ ...row, game: row.gameJson ? JSON.parse(row.gameJson) as CatalogGame : null }));
   const ids = games.flatMap((row) => row.game ? [row.game.igdbId] : []);
   const existing = ids.length ? await db.select({ igdbId: libraryItems.igdbId, platformId: libraryItems.platformId }).from(libraryItems).where(and(eq(libraryItems.userId, userId), inArray(libraryItems.igdbId, ids))) : [];
-  return { configured: steamConfigured(), connection: { steamId: connection.steamId, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, activityAt: connection.activityAt, syncError: connection.syncError },
+  return { configured: steamConfigured(), connection: { steamId: connection.steamId, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, activityAt: connection.activityAt, syncError: connection.syncError, paused: connection.syncPaused },
     recent: connection.recentJson ? JSON.parse(connection.recentJson) : null, total, pending: pendingRows[0].total, ready: matchCounts?.ready ?? 0, review: matchCounts?.review ?? 0, imported: matchCounts?.imported ?? 0, page,
     games: games.map((row) => ({ appId: row.appId, name: row.name, playtimeMinutes: row.playtimeMinutes, recentMinutes: row.recentMinutes, lastPlayedAt: row.lastPlayedAt,
       game: row.game, matchedAt: row.matchedAt, ignored: row.ignored, importedAt: row.importedAt, libraryItemId: row.libraryItemId,
@@ -81,7 +81,7 @@ export async function refreshSteam(userId: string) {
         const statements = games.slice(offset, offset + 100).map((game) => db.$client.prepare(saveSteamGame).bind(connection.connectionId, token, game.appId, game.name, game.playtimeMinutes, game.recentMinutes, game.lastPlayedAt, now, Date.now()));
         await db.$client.batch(statements);
       }
-      const saved = await db.update(steamConnections).set({ syncedAt: now, recentJson: recent ? JSON.stringify(recent) : null, activityAt: recent ? now : null,
+      const saved = await db.update(steamConnections).set({ syncedAt: now, syncPaused: false, recentJson: recent ? JSON.stringify(recent) : null, activityAt: recent ? now : null,
         syncError: recent ? null : "Library refreshed. Recent activity is unavailable; check your Steam playtime privacy settings." }).where(lease(connection, token)).returning({ id: steamConnections.connectionId });
       if (!saved.length) throw new SteamError("The refresh expired or the connection changed. Please refresh again.", 409);
     } catch (error) {
@@ -90,6 +90,11 @@ export async function refreshSteam(userId: string) {
       throw error instanceof SteamError ? error : new SteamError(message);
     }
   });
+}
+
+// Saved on the connection so a pause survives leaving or reloading the page.
+export async function setSteamSyncPaused(userId: string, paused: boolean) {
+  await getDb().update(steamConnections).set({ syncPaused: paused }).where(eq(steamConnections.userId, userId));
 }
 
 export async function matchSteamGames(userId: string) {
