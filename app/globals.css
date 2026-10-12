@@ -212,6 +212,7 @@ button:disabled { cursor: default; }
 .settings-card > p { max-width: 68ch; margin: 0 0 20px; color: var(--rgb-muted); font-size: 0.9375rem; line-height: 1.6; }
 .settings-card > p:last-child { margin-bottom: 0; }
 .settings-card code { overflow-wrap: anywhere; color: var(--rgb-ink); }
+.settings-links { display: flex; flex-wrap: wrap; gap: 8px 24px; }
 .visibility-options { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .visibility-options button, .friend-form button, .person-actions button, .friend-button { min-height: 44px; padding: 9px 16px; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-panel-raised); color: var(--rgb-ink); font-size: 0.875rem; font-weight: 700; }
 .visibility-options button:hover:not(:disabled), .person-actions button.secondary:hover:not(:disabled) { border-color: var(--rgb-ink); }
@@ -939,4 +940,46 @@ button.honor-cover:focus-visible { transform: translateY(-6px); outline-offset: 
   .steam-game { display: flex; }
   .steam-settings .steam-game-open { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: start; }
   .steam-card-actions { margin-left: 104px; }
+}
+
+/* Xbox achievements on profiles: flat progress meters beside covers, and a plain achievement list in the game-file dialog. */
+.xbox-totals { margin: 0; color: var(--rgb-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8125rem; }
+.xbox-showcase { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.xbox-game { display: flex; align-items: center; gap: 14px; width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--rgb-rule); border-radius: 4px; background: var(--rgb-panel); color: var(--rgb-ink); text-align: left; cursor: pointer; }
+.xbox-game:hover { border-color: var(--rgb-control-edge); }
+.xbox-game:hover .xbox-game-name { color: var(--rgb-action); }
+.xbox-game:focus-visible { outline: 3px solid var(--rgb-focus); outline-offset: 3px; }
+.xbox-cover { display: grid; place-items: center; flex: none; width: 63px; aspect-ratio: 3 / 4; overflow: hidden; border: 1px solid var(--rgb-rule); background: var(--rgb-black); color: var(--rgb-muted); }
+.xbox-cover img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.xbox-game-copy { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.xbox-game-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.9375rem; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.xbox-game-meta { display: inline-flex; align-items: center; gap: 6px; color: var(--rgb-muted); font-size: 0.8125rem; }
+.xbox-game-meta svg { color: var(--rgb-action); }
+.xbox-progress { appearance: none; width: 100%; height: 4px; border: 0; background: var(--rgb-rule); accent-color: var(--rgb-action); }
+.xbox-progress::-webkit-progress-bar { background: var(--rgb-rule); }
+.xbox-progress::-webkit-progress-value { background: var(--rgb-action); }
+.xbox-progress::-moz-progress-bar { background: var(--rgb-action); }
+.xbox-dialog { width: min(720px, calc(100% - 32px)); }
+.xbox-dialog-intro { display: flex; align-items: center; gap: 20px; padding: 24px 32px; border-bottom: 1px solid var(--rgb-rule); }
+.xbox-dialog-intro h2 { margin: 0 0 6px; font-size: 1.5rem; line-height: 1.2; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.xbox-dialog-intro p { margin: 0; color: var(--rgb-muted); font-size: 0.875rem; }
+.xbox-dialog-status { margin: 0; padding: 24px 32px; color: var(--rgb-muted); }
+.xbox-achievement-list { margin: 0; padding: 8px 32px 24px; list-style: none; }
+.xbox-achievement-list li { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--rgb-rule); color: var(--rgb-muted); }
+.xbox-achievement-list li.is-unlocked { color: var(--rgb-ink); }
+.xbox-achievement-icon { display: grid; place-items: center; flex: none; width: 48px; height: 48px; overflow: hidden; border: 1px solid var(--rgb-rule); background: var(--rgb-black); }
+.xbox-achievement-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
+li:not(.is-unlocked) > .xbox-achievement-icon img { opacity: 0.45; }
+.xbox-achievement-copy { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.xbox-achievement-copy span { font-size: 0.875rem; }
+.xbox-achievement-copy small { color: var(--rgb-muted); font-size: 0.75rem; }
+.xbox-achievement-score { flex: none; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.875rem; }
+.is-unlocked .xbox-achievement-score { color: var(--rgb-action); }
+@media (max-width: 900px) { .xbox-showcase { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .xbox-showcase { grid-template-columns: 1fr; }
+  .xbox-dialog-intro, .xbox-dialog-status { padding: 20px 16px; }
+  .xbox-achievement-list { padding: 4px 16px 20px; }
+  .xbox-achievement-list li { gap: 12px; }
+  .xbox-achievement-icon { width: 40px; height: 40px; }
 }

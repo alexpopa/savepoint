@@ -243,3 +243,50 @@ export async function getSteamCatalogMatches(appIds: number[]) {
   }
   return result;
 }
+
+type XboxCatalogReference = { titleId: number; name: string; productId: string | null; devicePlatforms: number[] };
+const xboxSourceNames = ["microsoft", "xbox marketplace", "xbox game pass ultimate cloud"];
+const xboxImportPlatforms = [169, 49, 12, 6];
+const xboxGameFields = "id,name,first_release_date,cover.image_id,platforms.id,platforms.name";
+// Store names often carry trademark symbols that IGDB titles omit.
+function xboxTitleName(name: string) { return normalizedGameName(name.replace(/[™®©]/g, "")); }
+
+// Xbox titles map by Store product ID, or by the Xbox 360 marketplace ID embedded in the title ID.
+// Titles with no external ID fall back to an exact title match on an Xbox or PC platform.
+// Only one unique result is selected; ambiguous editions stay for the player to resolve.
+export async function getXboxCatalogMatches(references: XboxCatalogReference[]) {
+  const sources = (await request<{ id: number; name: string }>("external_game_sources", 'fields id,name; where name ~ *"xbox"* | name ~ "microsoft"; limit 20;'))
+    .filter((source) => xboxSourceNames.includes(source.name.toLowerCase()));
+  const result = new Map(references.map((reference) => [reference.titleId, [] as ReturnType<typeof serialize>[]]));
+  const add = (titleId: number, game?: IgdbGame) => {
+    const candidates = result.get(titleId);
+    if (candidates && game && Number.isSafeInteger(game.id) && game.name && !candidates.some((entry) => entry.igdbId === game.id)) candidates.push(serialize(game));
+  };
+  const byUid = new Map<string, number[]>();
+  for (const reference of references) {
+    const hex = `66acd000-77fe-1000-9115-d802${reference.titleId.toString(16).padStart(8, "0")}`;
+    for (const uid of [reference.productId, hex, `xbox360${hex}`]) if (uid) byUid.set(uid, [...(byUid.get(uid) ?? []), reference.titleId]);
+  }
+  if (sources.length && byUid.size) {
+    const uids = [...byUid.keys()];
+    for (let offset = 0; offset < uids.length; offset += 150) {
+      const batch = uids.slice(offset, offset + 150);
+      const rows = await request<{ uid: string; game?: IgdbGame }>("external_games",
+        `fields uid,${xboxGameFields.split(",").map((field) => `game.${field}`).join(",")}; where external_game_source = (${sources.map((source) => source.id).join(",")}) & uid = (${batch.map((uid) => `"${uid}"`).join(",")}); limit 500;`);
+      if (rows.length === 500) throw new Error("Xbox catalog response was truncated.");
+      for (const row of rows) for (const titleId of byUid.get(row.uid) ?? []) add(titleId, row.game);
+    }
+  }
+  const unmatched = references.filter((reference) => !result.get(reference.titleId)?.length && reference.name.length <= 200 && !/[\r\n]/.test(reference.name));
+  for (let offset = 0; offset < unmatched.length; offset += 10) {
+    const batch = unmatched.slice(offset, offset + 10);
+    const filters = batch.map((reference) => `name ~ "${reference.name.replace(/[™®©]/g, "").trim().replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`).join(" | ");
+    const rows = await request<IgdbGame>("games", `fields ${xboxGameFields}; where (${filters}) & platforms = (${xboxImportPlatforms.join(",")}); limit 500;`);
+    for (const reference of batch) {
+      const named = rows.filter((game) => xboxTitleName(game.name) === xboxTitleName(reference.name));
+      const played = named.filter((game) => game.platforms?.some((platform) => reference.devicePlatforms.includes(platform.id)));
+      for (const game of played.length ? played : named) add(reference.titleId, game);
+    }
+  }
+  return result;
+}

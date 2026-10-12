@@ -190,3 +190,88 @@ export const steamGames = sqliteTable("steam_games", {
   importedAt: integer("imported_at"),
   libraryItemId: integer("library_item_id").references(() => libraryItems.id, { onDelete: "set null" }),
 }, (table) => [primaryKey({ columns: [table.connectionId, table.appId] }), index("idx_steam_connection_library").on(table.connectionId, table.libraryItemId, table.appId)]);
+
+export const xboxConnections = sqliteTable("xbox_connections", {
+  userId: text("user_id").primaryKey().references(() => accounts.userId, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().unique(),
+  xuid: text("xuid").notNull().unique(),
+  gamertag: text("gamertag").notNull(),
+  // AES-GCM ciphertext of the Microsoft refresh token and cached Xbox Live token; never sent to the browser.
+  tokenCipher: text("token_cipher").notNull(),
+  linkedAt: integer("linked_at").notNull(),
+  syncedAt: integer("synced_at"),
+  attemptedAt: integer("attempted_at"),
+  lockToken: text("lock_token"),
+  lockUntil: integer("lock_until"),
+  syncError: text("sync_error"),
+});
+
+export const xboxLinkStates = sqliteTable("xbox_link_states", {
+  userId: text("user_id").primaryKey().references(() => accounts.userId, { onDelete: "cascade" }),
+  stateHash: text("state_hash").notNull(),
+  verifier: text("verifier").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
+
+// Shared catalog cache keyed by Xbox title ID; player choices belong to xbox_titles.
+export const xboxMappings = sqliteTable("xbox_mappings", {
+  titleId: integer("title_id").primaryKey(),
+  candidatesJson: text("candidates_json").notNull(),
+  checkedAt: integer("checked_at").notNull(),
+});
+
+export const xboxTitles = sqliteTable("xbox_titles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  connectionId: text("connection_id").notNull().references(() => xboxConnections.connectionId, { onDelete: "cascade" }),
+  titleId: integer("title_id").notNull(),
+  name: text("name").notNull(),
+  imageUrl: text("image_url"),
+  productId: text("product_id"),
+  devicesJson: text("devices_json").notNull().default("[]"),
+  lastPlayedAt: integer("last_played_at"),
+  currentAchievements: integer("current_achievements").notNull().default(0),
+  totalAchievements: integer("total_achievements").notNull().default(0),
+  currentGamerscore: integer("current_gamerscore").notNull().default(0),
+  totalGamerscore: integer("total_gamerscore").notNull().default(0),
+  achievementVersion: integer("achievement_version").notNull().default(2),
+  observedAt: integer("observed_at").notNull(),
+  matchedAt: integer("matched_at"),
+  gameJson: text("game_json"),
+  importedAt: integer("imported_at"),
+  libraryItemId: integer("library_item_id").references(() => libraryItems.id, { onDelete: "set null" }),
+  // Earned count when the achievement list was last read, so refreshes only reread titles that changed.
+  achievementsSyncedCount: integer("achievements_synced_count"),
+  // Time of the final unlock once every achievement is earned.
+  completedAt: integer("completed_at"),
+}, (table) => [
+  uniqueIndex("idx_xbox_titles_connection_title").on(table.connectionId, table.titleId),
+  index("idx_xbox_titles_connection_library").on(table.connectionId, table.libraryItemId),
+  index("idx_xbox_titles_connection_played").on(table.connectionId, table.lastPlayedAt),
+  index("idx_xbox_titles_connection_completed").on(table.connectionId, table.completedAt).where(sql`${table.completedAt} IS NOT NULL`),
+]);
+
+// Shared achievement definitions, stored once per title for every player.
+export const xboxAchievements = sqliteTable("xbox_achievements", {
+  titleId: integer("title_id").notNull(),
+  achievementId: text("achievement_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  lockedDescription: text("locked_description"),
+  iconUrl: text("icon_url"),
+  gamerscore: integer("gamerscore").notNull().default(0),
+  isSecret: integer("is_secret", { mode: "boolean" }).notNull().default(false),
+  rarity: integer("rarity"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  checkedAt: integer("checked_at").notNull(),
+}, (table) => [primaryKey({ columns: [table.titleId, table.achievementId] })]);
+
+export const xboxUnlocks = sqliteTable("xbox_unlocks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  titleRowId: integer("title_row_id").notNull().references(() => xboxTitles.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  achievementId: text("achievement_id").notNull(),
+  unlockedAt: integer("unlocked_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_xbox_unlocks_title_achievement").on(table.titleRowId, table.achievementId),
+  index("idx_xbox_unlocks_user_unlocked_at").on(table.userId, table.unlockedAt),
+]);

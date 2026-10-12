@@ -1,7 +1,9 @@
 import CurrentlyPlaying from "../../currently-playing";
 import FavoriteGames from "../../favorite-games";
+import XboxAchievements from "../../xbox-achievements";
 import { getCurrentlyPlaying } from "../../../lib/currently-playing";
 import { getGameFavorites } from "../../../lib/game-favorites";
+import { getXboxShowcase } from "../../../lib/xbox";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { Gamepad2, Lock, MessageSquare, UserPlus } from "lucide-react";
@@ -38,12 +40,13 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
   const canView = canViewProfile(user, target, friendship?.status);
   const canManageChallenges = hasPermission(user, false);
   const loginPath = `/login?return_to=${encodeURIComponent(profilePath(target))}`;
-  const [games, challengeRows, favorites, playing] = canView ? await Promise.all([
+  const [games, challengeRows, favorites, playing, xbox] = canView ? await Promise.all([
     getLibraryGames(targetId),
     receivedChallenges(targetId),
     getGameFavorites(targetId),
     getCurrentlyPlaying(targetId),
-  ]) : [[], [], [], []];
+    getXboxShowcase(targetId),
+  ]) : [[], [], [], [], null];
   let displayGames = games;
   const missingCoverGames = games.filter((game) => !game.coverUrl);
   if (missingCoverGames.length) {
@@ -73,6 +76,7 @@ export default async function UserLibraryPage({ params }: { params: Promise<{ us
       <CurrentlyPlaying initialGames={playing} canManage={hasPermission(user, targetId === user?.userId)} signedIn={Boolean(user)} loginPath={loginPath}/>
       <HallOfHonor received={challengeRows} viewerId={user?.userId ?? ""} canManage={canManageChallenges}/>
       <FavoriteGames initialFavorites={favorites} canManage={hasPermission(user, targetId === user?.userId)} signedIn={Boolean(user)} loginPath={loginPath}/>
+      {xbox && <XboxAchievements playerId={targetId} games={xbox.games} totals={xbox.totals}/>}
       <ProfileChallenges received={challengeRows} viewerId={user?.userId ?? ""} canManage={canManageChallenges}/>
       <section className="profile-section" id="library" aria-labelledby="library-title">
         <div className="profile-section-head"><h2 id="library-title" className="profile-label"><Gamepad2 size={15} aria-hidden="true"/>Library</h2></div>
