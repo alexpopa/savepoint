@@ -81,6 +81,10 @@ All outgoing email goes through `sendEmail(request, { to, subject, text })` in `
 
 Locally, `AUTH_EMAIL_MODE=console` in `.dev.vars` makes `sendEmail` print the recipient, subject, and full text to the dev server log instead of sending. It only works on `localhost`/`127.0.0.1`; hosted requests always use Resend.
 
+## Connected services
+
+Steam, Xbox, and any new integration share one sync workflow: matching never adds games, pause is saved on the connection, and Remove all games pauses sync. Follow [integration sync](integration-sync.md) and copy the Steam settings page.
+
 ## Client components
 
 - `useState` for state; no global stores, context providers, or data-fetching libraries.

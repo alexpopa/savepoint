@@ -15,6 +15,7 @@ Read what the task touches before changing anything. The code is the final autho
 | Local setup, commands, database and roles | [docs/development.md](docs/development.md) |
 | Signing in and checking UI in a browser (test account, local SQL) | [docs/browser-testing.md](docs/browser-testing.md) |
 | Visual design, brand, accessibility | [docs/style-guide.md](docs/style-guide.md) — read before any UI change |
+| Connected services (Steam, Xbox, future ones): refresh, match, add, pause, remove | [docs/integration-sync.md](docs/integration-sync.md) — read before adding or changing an integration |
 | Friends timeline rules | [docs/timeline-design.md](docs/timeline-design.md) |
 | Releases | [docs/deployment.md](docs/deployment.md) — only when asked to publish |
 
