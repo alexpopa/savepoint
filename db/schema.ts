@@ -478,3 +478,94 @@ export const raUnlocks = sqliteTable("ra_unlocks", {
   uniqueIndex("idx_ra_unlocks_game_achievement").on(table.gameRowId, table.achievementId),
   index("idx_ra_unlocks_user_earned_at").on(table.userId, table.earnedAt),
 ]);
+
+// Events, such as a Backlog Season: players count the games they play between two whole days in the owner's time zone.
+// Multipliers are tenths, so 15 means 1.5 points per hour; event data never changes the library or connected services.
+export const events = sqliteTable("events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ownerId: text("owner_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  rules: text("rules").notNull().default(""),
+  visibility: text("visibility", { enum: ["public", "private"] }).notNull(),
+  startDay: text("start_day").notNull(),
+  endDay: text("end_day").notNull(),
+  timeZone: text("time_zone").notNull(),
+  // Start of the first day and end of the last day in the time zone; results lock at `ends_at`.
+  startsAt: integer("starts_at").notNull(),
+  endsAt: integer("ends_at").notNull(),
+  hourPoints: integer("hour_points").notNull().default(10),
+  beatenPoints: integer("beaten_points").notNull().default(10),
+  completedPoints: integer("completed_points").notNull().default(0),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  index("idx_events_starts_at").on(table.startsAt),
+  check("ck_events_visibility", sql`${table.visibility} IN ('public', 'private')`),
+  check("ck_events_dates", sql`${table.startsAt} < ${table.endsAt}`),
+]);
+
+// Co-managers besides the owner; they can change anything in the event.
+export const eventHosts = sqliteTable("event_hosts", {
+  eventId: integer("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+}, (table) => [primaryKey({ columns: [table.eventId, table.userId] }), index("idx_event_hosts_user").on(table.userId)]);
+
+// A platform or game multiplier replaces the event's own for that platform or game.
+export const eventMultipliers = sqliteTable("event_multipliers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  eventId: integer("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  kind: text("kind", { enum: ["platform", "game"] }).notNull(),
+  targetId: integer("target_id").notNull(),
+  name: text("name").notNull(),
+  coverUrl: text("cover_url"),
+  hourPoints: integer("hour_points").notNull(),
+  beatenPoints: integer("beaten_points").notNull(),
+  completedPoints: integer("completed_points").notNull(),
+}, (table) => [
+  uniqueIndex("idx_event_multipliers_target").on(table.eventId, table.kind, table.targetId),
+  check("ck_event_multipliers_kind", sql`${table.kind} IN ('platform', 'game')`),
+]);
+
+export const eventMembers = sqliteTable("event_members", {
+  eventId: integer("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  status: text("status", { enum: ["invited", "joined", "left"] }).notNull(),
+  invitedBy: text("invited_by").references(() => accounts.userId, { onDelete: "set null" }),
+  invitedAt: integer("invited_at"),
+  joinedAt: integer("joined_at"),
+  // Each service's playtime totals at the player's first visit after the start; event time is what they add.
+  baselineAt: integer("baseline_at"),
+  baselineJson: text("baseline_json"),
+  updatedAt: integer("updated_at"),
+}, (table) => [
+  primaryKey({ columns: [table.eventId, table.userId] }),
+  index("idx_event_members_user").on(table.userId, table.status),
+  check("ck_event_members_status", sql`${table.status} IN ('invited', 'joined', 'left')`),
+]);
+
+// One row per player, game, and platform played during the event. Automatic values come from the library and
+// connected services on each update; the player's or a host's edits are kept separately so updates never undo them.
+export const eventGames = sqliteTable("event_games", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  eventId: integer("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
+  libraryItemId: integer("library_item_id").references(() => libraryItems.id, { onDelete: "set null" }),
+  igdbId: integer("igdb_id").notNull(),
+  platformId: integer("platform_id").notNull(),
+  platformName: text("platform_name"),
+  name: text("name").notNull(),
+  coverUrl: text("cover_url"),
+  autoMinutes: integer("auto_minutes").notNull().default(0),
+  // Added to the automatic minutes, so an edit keeps counting new play from later updates.
+  adjustMinutes: integer("adjust_minutes").notNull().default(0),
+  autoBeatenAt: integer("auto_beaten_at"),
+  autoCompletedAt: integer("auto_completed_at"),
+  // Null follows the automatic value; 0 or 1 is an edit for this event only.
+  beaten: integer("beaten", { mode: "boolean" }),
+  completed: integer("completed", { mode: "boolean" }),
+  achievements: integer("achievements").notNull().default(0),
+  removed: integer("removed", { mode: "boolean" }).notNull().default(false),
+  addedAt: integer("added_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_event_games_player_game").on(table.eventId, table.userId, table.igdbId, table.platformId),
+]);

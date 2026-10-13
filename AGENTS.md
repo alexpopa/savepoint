@@ -1,6 +1,6 @@
 # Working on RGBoner
 
-RGBoner is a retro RGB-styled social game library: verified email accounts, IGDB-backed game search, per-platform libraries, friendships, challenges, a Top 10 of favorite games, currently playing status, Steam imports, Xbox played games and achievements, PlayStation played games and trophies, RetroAchievements games and achievements, a friends timeline, and direct messages between friends. It is a Vinext (Next.js App Router on Vite) Cloudflare Worker with D1 via Drizzle, deployed through ChatGPT Sites. Several AI coding agents work on this repository, so this file is the shared contract. Instructions here outrank habits from other projects.
+RGBoner is a retro RGB-styled social game library: verified email accounts, IGDB-backed game search, per-platform libraries, friendships, challenges, a Top 10 of favorite games, currently playing status, Steam imports, Xbox played games and achievements, PlayStation played games and trophies, RetroAchievements games and achievements, a friends timeline, direct messages between friends, time played per game, and events (seasons with a leaderboard). It is a Vinext (Next.js App Router on Vite) Cloudflare Worker with D1 via Drizzle, deployed through ChatGPT Sites. Several AI coding agents work on this repository, so this file is the shared contract. Instructions here outrank habits from other projects.
 
 ## Sources of truth
 
@@ -17,6 +17,7 @@ Read what the task touches before changing anything. The code is the final autho
 | Visual design, brand, accessibility | [docs/style-guide.md](docs/style-guide.md) — read before any UI change |
 | Connected services (Steam, Xbox, PlayStation, RetroAchievements, future ones): refresh, match, add, pause, remove | [docs/integration-sync.md](docs/integration-sync.md) — read before adding or changing an integration |
 | Friends timeline rules | [docs/timeline-design.md](docs/timeline-design.md) |
+| Events: rules, decisions, scoring, and data model | [docs/events-design.md](docs/events-design.md) — read before any events work |
 | Releases | [docs/deployment.md](docs/deployment.md) — only when asked to publish |
 
 ## Start of every task

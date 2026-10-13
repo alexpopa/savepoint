@@ -9,7 +9,7 @@ import { baselineSql, migrationArgs, migrationNames } from "../scripts/migrate.m
 test("migration files match the complete ordered Drizzle journal", () => {
   const names = migrationNames(new URL("../drizzle/", import.meta.url).pathname);
   assert.equal(names[0], "0000_marvelous_wolverine.sql");
-  assert.equal(names.at(-1), "0022_mixed_fenris.sql");
+  assert.equal(names.at(-1), "0024_striped_mad_thinker.sql");
   const db = new DatabaseSync(":memory:");
   for (const name of names) db.exec(readFileSync(new URL(`../drizzle/${name}`, import.meta.url), "utf8"));
   assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE name = 'xbox_unlocks'").get());
@@ -17,6 +17,9 @@ test("migration files match the complete ordered Drizzle journal", () => {
   assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE name = 'ra_unlocks'").get());
   assert.ok(db.prepare("SELECT name FROM pragma_table_info('steam_connections') WHERE name = 'sync_paused'").get());
   assert.ok(db.prepare("SELECT name FROM pragma_table_info('xbox_connections') WHERE name = 'sync_paused'").get());
+  assert.ok(db.prepare("SELECT name FROM pragma_table_info('library_items') WHERE name = 'play_minutes'").get());
+  assert.ok(db.prepare("SELECT name FROM pragma_table_info('xbox_titles') WHERE name = 'play_minutes'").get());
+  assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE name = 'event_games'").get());
   db.close();
 });
 
