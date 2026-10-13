@@ -231,7 +231,7 @@ export async function runEventAction(user: AppUser, id: number, input: Action): 
       const values = input.multiplier as { kind: "game"; targetId: number } & Points;
       const game = await getIgdbGame(values.targetId);
       if (!game) throw new EventError("Choose a game from the catalog.", 404);
-      await db.insert(eventMultipliers).values({ eventId: id, ...values }).onConflictDoUpdate({
+      await db.insert(eventMultipliers).values({ eventId: id, ...values, name: game.name, coverUrl: game.coverUrl }).onConflictDoUpdate({
         target: [eventMultipliers.eventId, eventMultipliers.kind, eventMultipliers.targetId],
         set: { hourPoints: values.hourPoints, beatenPoints: values.beatenPoints, completedPoints: values.completedPoints, name: game.name, coverUrl: game.coverUrl },
       });

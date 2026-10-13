@@ -10,6 +10,8 @@ Events, such as **Backlog Season**, count the games players play between a first
 - **No events in the timeline.** Joining, invitations, updates, edits, scores, and standings never appear in the friends timeline. A game beaten during an event shows up only because the library or connected service recorded it, exactly as without the event, and the timeline never mentions the event.
 - **Keep it simple.** One page per event, and advanced settings stay closed until a host asks for them.
 
+Game multipliers store the catalog name and cover when first added and when updated.
+
 ## People
 
 - An event has an **owner** and optional co-managers called **hosts** (never "admins", so they are not confused with the hidden site admin role). Hosts can change anything in the event, including any player's results. The owner cannot be removed. Site admins have every host permission on every event, through `hasPermission`.
