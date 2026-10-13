@@ -85,3 +85,34 @@ FROM events WHERE id = ?1 RETURNING id`;
 export const copyEventMultipliers = `
 INSERT INTO event_multipliers (event_id, kind, target_id, name, cover_url, hour_points, beaten_points, completed_points)
 SELECT ?2, kind, target_id, name, cover_url, hour_points, beaten_points, completed_points FROM event_multipliers WHERE event_id = ?1`;
+
+// Includes unadded games; stages and unlock counts are read by source, not by library membership.
+export const eventReviewSources = `SELECT 'steam:' || g.app_id AS key, g.name, g.game_json AS gameJson, g.library_item_id AS libraryItemId,
+  g.playtime_minutes AS minutes, g.last_played_at AS lastPlayedAt, '[]' AS platformsJson, NULL AS consoleId,
+  NULL AS beatenAt, NULL AS completedAt, 0 AS achievements
+FROM steam_games g JOIN steam_connections c USING (connection_id) WHERE c.user_id = ?1
+UNION ALL SELECT 'xbox:' || t.title_id, t.name, t.game_json, t.library_item_id, t.play_minutes, t.last_played_at, t.devices_json, NULL,
+  NULL, CASE WHEN t.completed_at >= ?2 AND t.completed_at < ?3 THEN t.completed_at END,
+  (SELECT count(*) FROM xbox_unlocks u WHERE u.title_row_id = t.id AND u.unlocked_at >= ?2 AND u.unlocked_at < ?3)
+FROM xbox_titles t JOIN xbox_connections c USING (connection_id) WHERE c.user_id = ?1
+UNION ALL SELECT 'psn:' || t.title_key, t.name, t.game_json, t.library_item_id, t.play_seconds / 60, t.last_played_at, t.platforms_json, NULL,
+  NULL, CASE WHEN t.completed_at >= ?2 AND t.completed_at < ?3 THEN t.completed_at END,
+  (SELECT count(*) FROM psn_unlocks u WHERE u.title_row_id = t.id AND u.earned_at >= ?2 AND u.earned_at < ?3)
+FROM psn_titles t JOIN psn_connections c USING (connection_id) WHERE c.user_id = ?1
+UNION ALL SELECT 'ra:' || g.game_id, g.name, g.game_json, g.library_item_id, g.play_seconds / 60, g.last_played_at, '[]', g.console_id,
+  CASE WHEN g.completed_at >= ?2 AND g.completed_at < ?3 THEN g.completed_at END,
+  CASE WHEN g.total > 0 AND g.earned >= g.total THEN (SELECT max(u.earned_at) FROM ra_unlocks u WHERE u.game_row_id = g.id HAVING max(u.earned_at) >= ?2 AND max(u.earned_at) < ?3) END,
+  (SELECT count(*) FROM ra_unlocks u WHERE u.game_row_id = g.id AND u.earned_at >= ?2 AND u.earned_at < ?3)
+FROM ra_games g JOIN ra_connections c USING (connection_id) WHERE c.user_id = ?1`;
+
+// Accepted readings and the approved result are saved together. An in-flight review cannot overwrite a newer edit.
+export const acceptEventGame = `INSERT INTO event_games
+(event_id, user_id, library_item_id, igdb_id, platform_id, platform_name, name, cover_url, auto_minutes, auto_beaten_at, auto_completed_at, achievements, added_at, adjust_minutes, beaten, completed)
+SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16
+WHERE EXISTS (SELECT 1 FROM event_members m JOIN events e ON e.id = m.event_id
+  WHERE m.event_id = ?1 AND m.user_id = ?2 AND m.status = 'joined' AND e.starts_at <= ?13 AND e.ends_at > ?13)
+ON CONFLICT(event_id, user_id, igdb_id, platform_id) DO UPDATE SET library_item_id = excluded.library_item_id,
+  auto_minutes = excluded.auto_minutes, auto_beaten_at = excluded.auto_beaten_at, auto_completed_at = excluded.auto_completed_at,
+  achievements = excluded.achievements, adjust_minutes = excluded.adjust_minutes, beaten = excluded.beaten, completed = excluded.completed
+WHERE event_games.removed = 0 AND json_array(event_games.id, event_games.auto_minutes, event_games.adjust_minutes, event_games.auto_beaten_at,
+  event_games.auto_completed_at, event_games.beaten, event_games.completed, event_games.achievements) = ?17`;

@@ -1,6 +1,6 @@
 import { getCurrentUser } from "../../../auth";
 import { parseEventSettings, parsePoints } from "../../../../lib/event-rules";
-import { copyEventFor, EventError, getEventDetail, runEventAction } from "../../../../lib/events";
+import { acceptEventChanges, reviewEvent, copyEventFor, EventError, getEventDetail, runEventAction } from "../../../../lib/events";
 import { maxPlayMinutes } from "../../../../lib/playtime";
 import { isSameOriginWrite } from "../../../../lib/request-security";
 import { ensureAccount, privateResponse } from "../../../../lib/social";
@@ -25,6 +25,11 @@ function validate(input: Record<string, unknown>): Record<string, unknown> | str
   switch (input.action) {
     case "join": case "decline": case "leave": case "baseline": case "update": case "copy":
       return { action: input.action };
+    case "accept-changes":
+      if (!Array.isArray(input.changes) || !input.changes.length || input.changes.length > 20) return "Choose up to 20 changes to accept.";
+      if (input.changes.some((row) => !row || typeof row !== "object" || typeof row.key !== "string" || row.key.length > 150 || typeof row.signature !== "string" || row.signature.length > 2000 || (row.igdbId !== undefined && !positive(row.igdbId)))) return "Choose valid changes to accept.";
+      if (new Set(input.changes.map((row) => row.key)).size !== input.changes.length) return "Choose each game once.";
+      return { action: input.action, changes: input.changes.map((row) => ({ key: row.key, signature: row.signature, igdbId: row.igdbId })) };
     case "add-game":
       return positive(input.libraryItemId) ? { action: input.action, libraryItemId: input.libraryItemId } : "Choose a game from your library.";
     case "edit-game":
@@ -83,6 +88,10 @@ export async function POST(request: Request, context: Context) {
   try {
     await ensureAccount(user);
     if (input.action === "copy") return response({ id: await copyEventFor(user, id) }, 201);
+    if (input.action === "update" || input.action === "accept-changes") {
+      const result = input.action === "update" ? await reviewEvent(user, id) : await acceptEventChanges(user, id, input.changes as { key: string; signature: string; igdbId?: number }[]);
+      return response({ ...result, event: await getEventDetail(user, id) });
+    }
     const message = await runEventAction(user, id, input as { action: string });
     // Declining a private invitation can leave nothing to show.
     const event = await getEventDetail(user, id).catch((error) => { if (error instanceof EventError && error.status === 404) return null; throw error; });

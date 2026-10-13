@@ -223,10 +223,10 @@ export async function addAllPsnGames(userId: string, syncedAt: number) {
 }
 
 // Reads full trophy lists for a few added games per request, keeping well under Sony's per-account rate limit.
-export async function syncPsnTrophies(userId: string) {
+export async function syncPsnTrophies(userId: string, includeUnadded = false) {
   return withPsnLock(userId, async (connection, token) => {
     const db = getDb();
-    const { results } = await db.$client.prepare(stalePsnTrophies).bind(connection.connectionId).all<{ id: number; npCommunicationId: string; npServiceName: string | null }>();
+    const { results } = await db.$client.prepare(includeUnadded ? stalePsnTrophies.replace("t.library_item_id IS NOT NULL AND ", "") : stalePsnTrophies).bind(connection.connectionId).all<{ id: number; npCommunicationId: string; npServiceName: string | null }>();
     if (!results.length) return;
     const access = await psnAccess(connection, token);
     for (const title of results) {

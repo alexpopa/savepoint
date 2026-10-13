@@ -7,7 +7,7 @@ How a connected game service (Steam, Xbox, PlayStation, RetroAchievements, and a
 1. **Connect.** The player links the service to their verified account. Identity is verified by the provider; a pasted ID is never proof. (PlayStation's pasted NPSSO is a Sony sign-in credential, exchanged at once; the account comes from Sony. RetroAchievements has no sign-in for other sites, so the player puts a one-time code in their RA motto, which only the account owner can edit, and RGBoner reads it back by the account's permanent ID.)
 2. **Refresh** is manual and rate limited. It stores the player's games from the provider as personal source rows tied to the refresh timestamp (`synced_at`), and never deletes or edits library copies.
 3. **Sync** matches source rows to IGDB games in bounded sequential batches (and reads any other background data, such as Xbox and RetroAchievements achievements and PlayStation trophies). Sync never adds anything to the library.
-4. **Add** is the player's decision: one game at a time, from the game popup, or with one bulk button (**Import all games** on Steam, **Add all** on Xbox, PlayStation, and RetroAchievements) that appears once matching has finished.
+4. **Add** is the player's decision (accepting a new connected game in an event also uses this normal add/link operation): one game at a time, from the game popup, or with one bulk button (**Import all games** on Steam, **Add all** on Xbox, PlayStation, and RetroAchievements) that appears once matching has finished.
 5. **Remove all games** deletes only the library copies this connection added or linked. Ratings and favorites stay, and removed games are not added again automatically.
 6. **Disconnect** erases the service's data and keeps library copies.
 
@@ -34,6 +34,8 @@ Every service reports playtime the same way, so a library copy's time played rea
 - **Refresh brings playtime.** Steam and PlayStation return totals with the game list. Xbox reads its `MinutesPlayed` stat for up to 100 titles per refresh, newest played first, choosing titles played since their last read or never read; a failed stats read keeps the refresh. RetroAchievements only reports playtime with a game's achievement list, so a refresh that sees a newer last-played time marks that list stale and the background sync rereads it.
 - **The source row keeps the total** (`playtime_minutes`, `play_minutes`, or `play_seconds`); refreshes never write it into the library. A copy shows the sum its linked services report, until the player sets their own time in the game popup.
 - **The player's own time wins.** Refreshes never overwrite it. When a service's total changes after the player set their time, the popup offers it ("Use 20 h from Steam"), and the service's settings page shows "N games have newer time played from …" with **Use all** (`{ action: "use-playtime" }`), which returns those copies to following their services.
+
+Event **Update** may read one bounded achievement/trophy batch for unadded titles as well, so the review can propose their dated progress before acceptance. Normal settings-page sync continues to read added titles only.
 
 ## Checklist for a new integration
 

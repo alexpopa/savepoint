@@ -14,7 +14,7 @@ Meta description: “Show off your collection, defend your Top 10, and challenge
 - **RetroAchievements games and achievements** — link your RetroAchievements account by putting a short code in your RA motto, see every retro game you’ve earned achievements in (subsets fold into their main game), add them the same way as Xbox games, and show progress, playtime, and the games you’ve beaten (softcore or hardcore) on your profile and in your friends’ timeline
 - **Xbox games and achievements** — sign in with Microsoft to see the games you’ve played on Xbox and PC, most recent first; add them one at a time, as currently playing, or all at once; and show achievement progress on your profile and in your friends’ timeline
 - **Status and ratings** — mark games as playing or completed, score them 1–5 stars, and keep your time played (filled in from your connected libraries, or entered by hand)
-- **Events** — seasons such as Backlog Season, with a start and end day: every game you play in between counts toward a leaderboard of hours, games beaten, and points, filled in from your connected libraries and editable for the event only
+- **Events** — seasons such as Backlog Season, with a start and end day: every game you play in between counts toward a leaderboard of hours, games beaten, and points, review changes from connected services and accept per game or all at once, independent event results, and manual event hours included in library totals
 - **Top 10** — pin your favorites; your #1 cover becomes your profile picture
 - **Friends** — timeline with gradual library-batch expansion capped at 100 copies, direct messages, and private profiles shared with friends
 - **Challenges** — dare friends on games in their library and keep the best in your Hall of Honor

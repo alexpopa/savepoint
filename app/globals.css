@@ -1142,3 +1142,15 @@ li:not(.is-unlocked) > .xbox-achievement-icon img { opacity: 0.45; }
   .event-console { grid-template-columns: minmax(0, 1fr) auto; }
   .event-console .event-field-row { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+.event-heading > div { width: 100%; min-width: 0; }
+.event-title-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+.event-title-row h1 { min-width: 0; overflow-wrap: anywhere; }
+.event-title-actions { flex: none; margin-left: auto; }
+.event-games-heading { flex-wrap: wrap; gap: 12px; }
+.event-membership .person-actions button, .event-games-heading .person-actions button { display: inline-flex; align-items: center; gap: 6px; }
+.event-change { grid-template-columns: 72px minmax(0, 1fr); }
+.event-review .event-games { align-items: start; }
+.event-change-actions { margin-top: 12px; }
+.event-change-actions button { min-height: 38px; padding: 6px 12px; }
+.event-review .section-title { flex-wrap: wrap; gap: 12px; }

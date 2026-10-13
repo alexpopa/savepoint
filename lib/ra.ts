@@ -231,11 +231,11 @@ export async function addAllRaGames(userId: string, syncedAt: number) {
 }
 
 // Reads full achievement lists for a few added games per request: one request for the main set and one per subset.
-export async function syncRaAchievements(userId: string) {
+export async function syncRaAchievements(userId: string, includeUnadded = false) {
   const key = apiKey();
   return withRaLock(userId, async (connection, token) => {
     const db = getDb();
-    const { results } = await db.$client.prepare(staleRaAchievements).bind(connection.connectionId).all<{ id: number; gameId: number; subsetIdsJson: string }>();
+    const { results } = await db.$client.prepare(includeUnadded ? staleRaAchievements.replace("g.library_item_id IS NOT NULL AND ", "") : staleRaAchievements).bind(connection.connectionId).all<{ id: number; gameId: number; subsetIdsJson: string }>();
     for (const row of results) {
       let playSeconds: number | null = null;
       const statements = [];

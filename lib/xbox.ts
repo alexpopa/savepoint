@@ -185,10 +185,10 @@ export async function addAllXboxGames(userId: string, syncedAt: number) {
 }
 
 // Reads full achievement lists for a few added titles per request, keeping well under Xbox's per-user rate limits.
-export async function syncXboxAchievements(userId: string) {
+export async function syncXboxAchievements(userId: string, includeUnadded = false) {
   return withXboxLock(userId, async (connection, token) => {
     const db = getDb();
-    const { results } = await db.$client.prepare(staleXboxAchievements).bind(connection.connectionId).all<{ id: number; titleId: number; achievementVersion: number }>();
+    const { results } = await db.$client.prepare(includeUnadded ? staleXboxAchievements.replace("t.library_item_id IS NOT NULL AND ", "") : staleXboxAchievements).bind(connection.connectionId).all<{ id: number; titleId: number; achievementVersion: number }>();
     if (!results.length) return;
     const auth = await xboxAuth(connection, token);
     for (const title of results) {

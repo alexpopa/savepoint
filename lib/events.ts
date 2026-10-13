@@ -3,8 +3,8 @@ import { getDb } from "../db";
 import { accounts, eventGames, eventHosts, eventMembers, eventMultipliers, events, libraryItems, psnConnections, raConnections, steamConnections, xboxConnections } from "../db/schema";
 import type { AppUser } from "../app/auth";
 import {
-  acceptEventInvite, addEventGame, copyEvent, copyEventMultipliers, eventAchievements, eventCompletions, eventPlaytimeSources, inviteToEvent, joinEvent,
-  saveEventBaseline, saveEventGame, visibleEventsQuery,
+  acceptEventInvite, addEventGame, copyEvent, copyEventMultipliers, eventPlaytimeSources, inviteToEvent, joinEvent,
+  saveEventBaseline, acceptEventGame, eventReviewSources, visibleEventsQuery,
 } from "./event-queries";
 import {
   canEditPlayer, canViewEvent, eventStatus, eventWindow, gameResult, gameScore, isEventHost, leaderboard, minutesSince, pointsFor, showPoints,
@@ -14,10 +14,17 @@ import { getIgdbGame, listIgdbPlatforms } from "./igdb";
 import { hasPermission } from "./permissions";
 import { profilePath } from "./profile-path";
 import { accountDisplayName, getFriendship } from "./social";
-import { refreshPsn, syncPsnTrophies } from "./psn";
-import { refreshRa, syncRaAchievements } from "./ra";
-import { refreshSteam } from "./steam";
-import { refreshXbox, syncXboxAchievements } from "./xbox";
+import { addPsnGame, matchPsnGames, refreshPsn, syncPsnTrophies } from "./psn";
+import { addRaGame, matchRaGames, refreshRa, syncRaAchievements } from "./ra";
+import { matchSteamGames, refreshSteam, resolveSteamGame } from "./steam";
+import { addXboxGame, matchXboxGames, refreshXbox, syncXboxAchievements } from "./xbox";
+
+import { defaultSteamPlatform } from "./steam-types";
+import { defaultXboxPlatform } from "./xbox-types";
+import { defaultPsnPlatform } from "./psn-types";
+import { defaultRaPlatform } from "./ra-types";
+import { eventChange, type EventChange } from "./event-review";
+import type { CatalogGame } from "./game-types";
 
 export class EventError extends Error {
   status: number;
@@ -183,14 +190,6 @@ export async function runEventAction(user: AppUser, id: number, input: Action): 
       if (member.baselineAt) return "Your starting point is already set.";
       return await baselineMember(user.userId, event);
     }
-    case "update": {
-      if (member?.status !== "joined") throw new EventError("Join this event first.", 409);
-      if (status !== "live") throw new EventError(status === "ended" ? "This event has ended. Results are locked." : "This event hasn’t started yet.", 409);
-      if (!member.baselineAt) return await baselineMember(user.userId, event);
-      const refreshed = await refreshServices(user.userId);
-      await computeMember(user.userId, event, member.baselineAt, member.baselineJson);
-      return `Updated ${updatedFrom(refreshed)}.`;
-    }
     case "add-game": {
       ownGame(context);
       const libraryItemId = input.libraryItemId as number;
@@ -205,7 +204,7 @@ export async function runEventAction(user: AppUser, id: number, input: Action): 
       const minutes = input.minutes as number;
       const beaten = input.beaten as boolean, completed = input.completed as boolean;
       const auto = { beaten: game.autoBeatenAt !== null || game.autoCompletedAt !== null, completed: game.autoCompletedAt !== null };
-      // Matching the automatic value clears the edit, so later updates can change it again.
+      // Matching the accepted source value clears the override; new readings still require approval.
       await db.update(eventGames).set({ adjustMinutes: minutes - game.autoMinutes, beaten: beaten === auto.beaten ? null : beaten, completed: completed === auto.completed ? null : completed })
         .where(eq(eventGames.id, game.id));
       return "Saved.";
@@ -294,9 +293,9 @@ async function refreshServices(userId: string) {
   ]);
   const services = [
     { name: "Steam", connected: steam.length > 0, run: () => refreshSteam(userId) },
-    { name: "Xbox", connected: xbox.length > 0, run: () => refreshXbox(userId).then(() => syncXboxAchievements(userId).catch(() => {})) },
-    { name: "PlayStation", connected: psn.length > 0, run: () => refreshPsn(userId).then(() => syncPsnTrophies(userId).catch(() => {})) },
-    { name: "RetroAchievements", connected: ra.length > 0, run: () => refreshRa(userId).then(() => syncRaAchievements(userId).catch(() => {})) },
+    { name: "Xbox", connected: xbox.length > 0, run: () => refreshXbox(userId).then(() => syncXboxAchievements(userId, true).catch(() => {})) },
+    { name: "PlayStation", connected: psn.length > 0, run: () => refreshPsn(userId).then(() => syncPsnTrophies(userId, true).catch(() => {})) },
+    { name: "RetroAchievements", connected: ra.length > 0, run: () => refreshRa(userId).then(() => syncRaAchievements(userId, true).catch(() => {})) },
   ].filter((service) => service.connected);
   const results = await Promise.allSettled(services.map((service) => service.run()));
   return { refreshed: services.filter((_, index) => results[index].status === "fulfilled").map((service) => service.name),
@@ -320,31 +319,111 @@ async function baselineMember(userId: string, event: EventRow) {
   for (const source of await playtimeSources(userId)) if (source.minutes !== null) baseline[source.key] = source.minutes;
   const json = JSON.stringify(baseline);
   await getDb().$client.prepare(saveEventBaseline).bind(event.id, userId, now, json).run();
-  await computeMember(userId, event, now, json);
   return `Your starting point is set ${updatedFrom(refreshed)}. Time played from now on counts.`;
 }
 
-// Recomputes the automatic values of every library copy played, beaten, completed, or unlocked during the event.
-async function computeMember(userId: string, event: EventRow, baselineAt: number, baselineJson: string | null) {
+type ReviewSource = PlaytimeSource & { name: string; gameJson: string | null; libraryItemId: number | null; platformsJson: string; consoleId: number | null;
+  beatenAt: number | null; completedAt: number | null; achievements: number };
+
+async function memberReview(userId: string, event: EventRow, baselineAt: number, baselineJson: string | null): Promise<EventChange[]> {
   const db = getDb();
-  const client = db.$client;
-  const baseline = JSON.parse(baselineJson ?? "{}") as Baseline;
-  const [sources, completions, achievements, copies, existing] = await Promise.all([
-    playtimeSources(userId),
-    client.prepare(eventCompletions).bind(userId, event.startsAt, event.endsAt).all<{ libraryItemId: number; stage: "beaten" | "completed"; at: number }>().then((result) => result.results),
-    client.prepare(eventAchievements).bind(userId, event.startsAt, event.endsAt).all<{ libraryItemId: number; earned: number }>().then((result) => result.results),
+  const [sources, copies, saved] = await Promise.all([
+    db.$client.prepare(eventReviewSources).bind(userId, event.startsAt, event.endsAt).all<ReviewSource>().then((result) => result.results),
     db.select().from(libraryItems).where(eq(libraryItems.userId, userId)),
-    db.select({ igdbId: eventGames.igdbId, platformId: eventGames.platformId }).from(eventGames).where(and(eq(eventGames.eventId, event.id), eq(eventGames.userId, userId))),
+    db.select().from(eventGames).where(and(eq(eventGames.eventId, event.id), eq(eventGames.userId, userId))),
   ]);
-  const first = (copyId: number, stage: string) => completions.filter((row) => row.libraryItemId === copyId && row.stage === stage).reduce<number | null>((at, row) => at === null || row.at < at ? row.at : at, null);
-  const statements = copies.flatMap((copy) => {
-    const minutes = minutesSince(baseline, baselineAt, sources.filter((source) => source.libraryItemId === copy.id));
-    const beatenAt = first(copy.id, "beaten"), completedAt = first(copy.id, "completed");
-    const earned = achievements.find((row) => row.libraryItemId === copy.id)?.earned ?? 0;
-    const tracked = existing.some((row) => row.igdbId === copy.igdbId && row.platformId === copy.platformId);
-    if (!minutes && beatenAt === null && completedAt === null && !earned && !tracked) return [];
-    return [client.prepare(saveEventGame).bind(event.id, userId, copy.id, copy.igdbId, copy.platformId, copy.platformName, copy.name, copy.coverUrl, minutes, beatenAt, completedAt, earned, Date.now())];
+  const baseline = JSON.parse(baselineJson ?? "{}") as Baseline;
+  type Group = { igdbId: number | null; platformId: number; platformName: string | null; libraryItemId: number | null; name: string; coverUrl: string | null; sources: ReviewSource[]; beatenAt: number | null };
+  const groups = new Map<string, Group>();
+  for (const copy of copies) groups.set(`${copy.igdbId}:${copy.platformId}`, { ...copy, libraryItemId: copy.id, sources: [], beatenAt: copy.completedAt !== null && copy.completedAt >= event.startsAt && copy.completedAt < event.endsAt ? copy.completedAt : null });
+  for (const source of sources) {
+    const linked = copies.find((copy) => copy.id === source.libraryItemId);
+    const game = source.gameJson ? JSON.parse(source.gameJson) as CatalogGame : null;
+    const platforms = copies.filter((copy) => copy.igdbId === game?.igdbId).map((copy) => copy.platformId);
+    const service = source.key.split(":")[0];
+    const platformId = linked?.platformId ?? (game ? service === "steam" ? defaultSteamPlatform(game, platforms)
+      : service === "xbox" ? defaultXboxPlatform(game, JSON.parse(source.platformsJson), platforms)
+      : service === "psn" ? defaultPsnPlatform(game, JSON.parse(source.platformsJson), platforms)
+      : defaultRaPlatform(game, source.consoleId ?? 0, platforms) : 0);
+    const igdbId = linked?.igdbId ?? (platformId ? game?.igdbId ?? null : null);
+    const key = igdbId === null ? source.key : `${igdbId}:${platformId}`;
+    if (!groups.has(key)) groups.set(key, { igdbId, platformId, platformName: game?.platformOptions.find((p) => p.id === platformId)?.name ?? null,
+      libraryItemId: null, name: game?.name ?? source.name, coverUrl: game?.coverUrl ?? null, sources: [], beatenAt: null });
+    groups.get(key)!.sources.push(source);
+  }
+  const first = (values: (number | null)[]) => values.reduce<number | null>((a, b) => b === null ? a : a === null ? b : Math.min(a, b), null);
+  return [...groups].flatMap(([key, group]) => {
+    const existing = saved.find((row) => row.igdbId === group.igdbId && row.platformId === group.platformId);
+    const reading = { autoMinutes: minutesSince(baseline, baselineAt, group.sources), autoBeatenAt: first([group.beatenAt, ...group.sources.map((s) => s.beatenAt)]),
+      autoCompletedAt: first(group.sources.map((s) => s.completedAt)), achievements: group.sources.reduce((sum, s) => sum + s.achievements, 0) };
+    const played = group.sources.some((source) => source.lastPlayedAt !== null && source.lastPlayedAt >= baselineAt && source.lastPlayedAt < event.endsAt);
+    const change = eventChange(reading, existing, played);
+    return change ? [{ ...change, timeKnown: group.sources.some((source) => source.minutes !== null), key, igdbId: group.igdbId, platformId: group.platformId, platformName: group.platformName, libraryItemId: group.libraryItemId,
+      name: group.name, coverUrl: group.coverUrl, sources: group.sources.map((s) => s.key) }] : [];
+  }).sort((a, b) => Number(a.previous !== null) - Number(b.previous !== null) || a.name.localeCompare(b.name));
+}
+
+async function reviewContext(user: AppUser, id: number) {
+  const context = await access(user, id);
+  if (context.member?.status !== "joined") throw new EventError("Join this event first.", 409);
+  if (context.status !== "live") throw new EventError(context.status === "ended" ? "This event has ended. Results are locked." : "This event hasn’t started yet.", 409);
+  if (!context.member.baselineAt) await baselineMember(user.userId, context.event);
+  const current = await access(user, id);
+  return { event: current.event, member: current.member! };
+}
+
+export async function reviewEvent(user: AppUser, id: number) {
+  const { event, member } = await reviewContext(user, id);
+  const refreshed = await refreshServices(user.userId);
+  // Matching offers a catalog choice; it doesn't add anything until the player accepts.
+  await Promise.allSettled([matchSteamGames(user.userId), matchXboxGames(user.userId), matchPsnGames(user.userId), matchRaGames(user.userId)]);
+  const changes = await memberReview(user.userId, event, member.baselineAt!, member.baselineJson);
+  return { changes, message: changes.length ? `Changes ready to review ${updatedFrom(refreshed)}.` : `No new changes ${updatedFrom(refreshed)}.` };
+}
+
+async function importSource(userId: string, key: string, igdbId: number) {
+  const colon = key.indexOf(":");
+  const service = key.slice(0, colon), sourceId = key.slice(colon + 1);
+  try {
+    if (service === "steam") await resolveSteamGame(userId, Number(sourceId), igdbId);
+    else if (service === "xbox") await addXboxGame(userId, Number(sourceId), igdbId, false);
+    else if (service === "psn") await addPsnGame(userId, sourceId, igdbId, false);
+    else if (service === "ra") await addRaGame(userId, Number(sourceId), igdbId, false);
+    else throw new EventError("Choose a connected game.");
+  } catch (error) { if (error instanceof Error && "status" in error) throw new EventError(error.message, Number(error.status)); throw error; }
+}
+
+export async function acceptEventChanges(user: AppUser, id: number, selections: { key: string; signature: string; igdbId?: number }[]) {
+  const { event, member } = await reviewContext(user, id);
+  let changes = await memberReview(user.userId, event, member.baselineAt!, member.baselineJson);
+  const approved = selections.map((selection) => {
+    const change = changes.find((row) => row.key === selection.key);
+    if (!change || change.signature !== selection.signature) throw new EventError("These changes have changed. Press Update to review them again.", 409);
+    if (change.igdbId === null && !selection.igdbId) throw new EventError("Find a match for this game first.");
+    return { change, igdbId: change.igdbId ?? selection.igdbId! };
   });
-  statements.push(client.prepare("UPDATE event_members SET updated_at = ?3 WHERE event_id = ?1 AND user_id = ?2").bind(event.id, userId, Date.now()));
-  for (let offset = 0; offset < statements.length; offset += 100) await client.batch(statements.slice(offset, offset + 100));
+  let accepted = 0;
+  for (const { change, igdbId } of approved) {
+    const sources = await getDb().$client.prepare(eventReviewSources).bind(user.userId, event.startsAt, event.endsAt).all<ReviewSource>();
+    const unlinked = sources.results.filter((row) => change.sources.includes(row.key) && row.libraryItemId === null);
+    if (unlinked.length) {
+      for (const source of unlinked) await importSource(user.userId, source.key, igdbId);
+      changes = await memberReview(user.userId, event, member.baselineAt!, member.baselineJson);
+    }
+    const current = changes.find((row) => row.key === change.key || (change.igdbId === null && row.sources.some((key) => change.sources.includes(key))));
+    if (!current?.libraryItemId || current.igdbId === null) throw new EventError("This game could not be added. Press Update and try again.", 409);
+    if (change.igdbId !== null && current.signature !== change.signature) throw new EventError("This game changed while you reviewed it. Press Update and try again.", 409);
+    const game = await getIgdbGame(current.igdbId);
+    if (!game) throw new EventError("That game is not available in IGDB.", 404);
+    const before = JSON.parse(current.signature)[1];
+    // Use the reviewed result; only matching an unresolved title changes the catalog identity.
+    const result = await getDb().$client.prepare(acceptEventGame).bind(id, user.userId, current.libraryItemId, current.igdbId, current.platformId,
+      current.platformName, game.name, game.coverUrl, current.reading.autoMinutes, current.reading.autoBeatenAt, current.reading.autoCompletedAt,
+      current.reading.achievements, Date.now(), current.next.minutes - current.reading.autoMinutes, current.next.beaten ? 1 : 0, current.next.completed ? 1 : 0,
+      before === null ? null : JSON.stringify(before.map((value: unknown) => typeof value === "boolean" ? Number(value) : value))).run();
+    if (!result.meta.changes) throw new EventError("This game changed while you reviewed it. Press Update and try again.", 409);
+    await getDb().update(eventMembers).set({ updatedAt: Date.now() }).where(and(eq(eventMembers.eventId, id), eq(eventMembers.userId, user.userId)));
+    accepted++;
+  }
+  return { changes: await memberReview(user.userId, event, member.baselineAt!, member.baselineJson), message: `Accepted ${accepted} ${accepted === 1 ? "game" : "games"}.` };
 }

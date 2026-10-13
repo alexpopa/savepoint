@@ -480,7 +480,7 @@ export const raUnlocks = sqliteTable("ra_unlocks", {
 ]);
 
 // Events, such as a Backlog Season: players count the games they play between two whole days in the owner's time zone.
-// Multipliers are tenths, so 15 means 1.5 points per hour; event data never changes the library or connected services.
+// Multipliers are tenths, so 15 means 1.5 points per hour; event results stay separate from library marks and hours.
 export const events = sqliteTable("events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   ownerId: text("owner_id").notNull().references(() => accounts.userId, { onDelete: "cascade" }),
@@ -543,8 +543,8 @@ export const eventMembers = sqliteTable("event_members", {
   check("ck_event_members_status", sql`${table.status} IN ('invited', 'joined', 'left')`),
 ]);
 
-// One row per player, game, and platform played during the event. Automatic values come from the library and
-// connected services on each update; the player's or a host's edits are kept separately so updates never undo them.
+// One row per player, game, and platform. Source readings are written only on acceptance;
+// manual adjustments stay separate and contribute to library totals only without provider playtime.
 export const eventGames = sqliteTable("event_games", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   eventId: integer("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
@@ -556,7 +556,7 @@ export const eventGames = sqliteTable("event_games", {
   name: text("name").notNull(),
   coverUrl: text("cover_url"),
   autoMinutes: integer("auto_minutes").notNull().default(0),
-  // Added to the automatic minutes, so an edit keeps counting new play from later updates.
+  // Manual hours beyond accepted source readings; later readings need approval before they change.
   adjustMinutes: integer("adjust_minutes").notNull().default(0),
   autoBeatenAt: integer("auto_beaten_at"),
   autoCompletedAt: integer("auto_completed_at"),

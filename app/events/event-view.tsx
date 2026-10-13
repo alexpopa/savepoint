@@ -6,12 +6,17 @@ import GameDetailsDialog from "../game-details-dialog";
 import GamePicker, { libraryParams, pickerRequest, type PickerSource } from "../game-picker";
 import type { Platform } from "../platform-filter";
 import { eventDays, statusLabels } from "../../lib/event-rules";
+import { steamPlatformIds } from "../../lib/steam-types";
+import { xboxPlatformIds } from "../../lib/xbox-types";
+import { psnPlatformIds } from "../../lib/psn-types";
+import { raPlatformIds } from "../../lib/ra-types";
+import type { EventChange } from "../../lib/event-review";
 import type { EventDetail, EventGameView } from "../../lib/events";
 import type { CatalogGame, SavedGame } from "../../lib/game-types";
 import type { LibraryCopy } from "../../lib/library-copies-query";
 import { formatHours, hoursInput, parseHours } from "../../lib/playtime";
 
-type Result = { message?: string; event?: EventDetail | null; error?: string };
+type Result = { changes?: EventChange[]; message?: string; event?: EventDetail | null; error?: string };
 export async function eventRequest(id: number, body: Record<string, unknown>) {
   const response = await fetch(`/api/events/${id}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const result = await response.json() as Result;
@@ -26,6 +31,19 @@ const librarySource: PickerSource = {
   },
 };
 
+function matchSource(supported: number[]): PickerSource { return {
+  async load({ query, platformIds }, signal) {
+    const catalog = await pickerRequest<{ platforms: Platform[] }>("/api/igdb/platforms", signal, "Could not load platforms.");
+    const platforms = catalog.platforms.filter((platform) => supported.includes(platform.id));
+    if (query.length < 2) return { items: [], next: null, platforms };
+    const params = new URLSearchParams({ q: query });
+    (platformIds.length ? platformIds : supported).forEach((id) => params.append("platform", String(id)));
+    const { games } = await pickerRequest<{ games: CatalogGame[] }>(`/api/igdb/search?${params}`, signal, "Could not search games.");
+    return { items: games.map((game) => ({ id: game.igdbId, name: game.name, coverUrl: game.coverUrl, detail: game.platforms.join(" · ") })), next: null, platforms };
+  },
+}; }
+const matchSources: Record<string, PickerSource> = { steam: matchSource(steamPlatformIds), xbox: matchSource(xboxPlatformIds), psn: matchSource(psnPlatformIds), ra: matchSource(raPlatformIds) };
+
 const subscribe = () => () => {};
 const points = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 1 });
 const hours = (minutes: number) => formatHours(minutes);
@@ -36,6 +54,8 @@ export default function EventView({ initial }: { initial: EventDetail }) {
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [changes, setChanges] = useState<EventChange[] | null>(null);
+  const [matching, setMatching] = useState<EventChange | null>(null);
   const [picking, setPicking] = useState(false);
   const [selected, setSelected] = useState<CatalogGame | null>(null);
   const [copies, setCopies] = useState<SavedGame[]>([]);
@@ -56,6 +76,12 @@ export default function EventView({ initial }: { initial: EventDetail }) {
       const result = await eventRequest(event.id, body);
       if (!result.event) { window.location.assign(new URL("/events", window.location.origin)); return; }
       setDetail(result.event); setNotice(result.message ?? "");
+      if (result.changes) setChanges(result.changes);
+      else if (body.action === "leave") setChanges(null);
+      else if (changes !== null && typeof body.gameId === "number") {
+        const changed = detail.games.find((game) => game.id === body.gameId);
+        setChanges(changes.filter((row) => row.key !== `${changed?.igdbId}:${changed?.platformId}`));
+      }
       if (body.action === "join" || body.action === "baseline") setPlayerId(viewer.userId);
     } catch (failure) { setError(failure instanceof Error ? failure.message : "Could not update the event."); }
     finally { setBusy(false); setWorking(""); }
@@ -70,7 +96,27 @@ export default function EventView({ initial }: { initial: EventDetail }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsBaseline]);
 
-  async function openGame(game: EventGameView) {
+  async function accept(rows: EventChange[], igdbId?: number) {
+    setBusy(true); setWorking(`Accepting ${rows.length} ${rows.length === 1 ? "game" : "games"}…`); setError(""); setNotice("");
+    let count = 0;
+    try {
+      for (let offset = 0; offset < rows.length; offset += 20) {
+        const result = await eventRequest(event.id, { action: "accept-changes", changes: rows.slice(offset, offset + 20).map((row) => ({ key: row.key, signature: row.signature, ...(igdbId ? { igdbId } : {}) })) });
+        if (result.event) setDetail(result.event);
+        if (result.changes) setChanges(result.changes);
+        count += Math.min(20, rows.length - offset);
+      }
+      setNotice(`Accepted ${count} ${count === 1 ? "game" : "games"}.`); setMatching(null);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Could not accept these changes.");
+      const result = await fetch(`/api/events/${event.id}`).then((response) => response.json() as Promise<Result>).catch(() => null);
+      if (result?.event) setDetail(result.event);
+      setChanges(null);
+      if (igdbId) throw failure;
+    } finally { setBusy(false); setWorking(""); }
+  }
+
+  async function openGame(game: { igdbId: number; name: string; coverUrl: string | null }) {
     setError("");
     try {
       const response = await fetch("/api/library");
@@ -88,11 +134,14 @@ export default function EventView({ initial }: { initial: EventDetail }) {
   return <>
     <div className="page-heading event-heading"><div>
       <p className="eyebrow"><Trophy size={14} aria-hidden="true"/> EVENT <span className={`event-status is-${event.status}`}>{statusLabels[event.status]}</span>{event.visibility === "private" && <span className="event-private"><Lock size={13} aria-hidden="true"/>Private</span>}</p>
-      <h1>{event.name}</h1>
+      <div className="event-title-row"><h1>{event.name}</h1>{(viewer.host || (joined && event.status !== "ended")) && <div className="person-actions event-title-actions">
+        {viewer.host && <a className="event-create" href={`/events/${event.id}/settings`}><Settings size={18} aria-hidden="true"/>Manage</a>}
+        {joined && event.status !== "ended" && <button className="secondary" disabled={busy} onClick={() => void act({ action: "leave" })}>Leave</button>}
+      </div>}</div>
       <p className="event-dates"><CalendarDays size={16} aria-hidden="true"/>{eventDays(event.startDay, event.endDay)} · {event.timeZone.replaceAll("_", " ")}</p>
       {event.description && <p className="subcopy event-description">{event.description}</p>}
       <p className="event-hosts">Hosted by {[detail.owner, ...detail.hosts].map((host) => host.name).join(", ")}</p>
-    </div>{viewer.host && <a className="event-create" href={`/events/${event.id}/settings`}><Settings size={18} aria-hidden="true"/>Manage</a>}</div>
+    </div></div>
     {event.rules && <details className="event-rules"><summary>Rules</summary><p>{event.rules}</p></details>}
     {error && <p className="notice error" role="alert"><X size={17} aria-hidden="true"/>{error}</p>}
     {notice && !working && <p className="notice success" role="status">{notice}</p>}
@@ -109,12 +158,28 @@ export default function EventView({ initial }: { initial: EventDetail }) {
           <div className="person-actions"><button disabled={busy} onClick={() => void act({ action: "join" }, event.status === "live" ? "Setting your starting point…" : "")}>{member?.status === "left" ? "Rejoin" : "Join"}</button></div>
         </> : event.status === "upcoming" ? <>
           <p>You’re in. Your time played counts from your first visit after it starts.</p>
-          <div className="person-actions"><button className="secondary" disabled={busy} onClick={() => void act({ action: "leave" })}>Leave</button></div>
         </> : event.status === "live" ? <>
           <p>{mounted && member?.updatedAt ? `Last updated ${new Date(member.updatedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.` : "Update to bring in your latest play."} Update before the event ends; results lock then.</p>
-          <div className="person-actions"><button disabled={busy} onClick={() => void act({ action: "update" }, "Updating from your connected libraries…")}><RefreshCw size={16} aria-hidden="true"/> Update</button><button className="secondary" disabled={busy} onClick={() => setPicking(true)}><Plus size={16} aria-hidden="true"/> Add a game</button><button className="secondary" disabled={busy} onClick={() => void act({ action: "leave" })}>Leave</button></div>
+          <div className="person-actions"><button disabled={busy} onClick={() => void act({ action: "update" }, "Updating from your connected libraries…")}><RefreshCw size={16} aria-hidden="true"/> Update</button></div>
         </> : <p>This event has ended. Results are final{viewer.host ? "; as a host you can still correct them" : ""}.</p>}
     </section>
+
+    {changes !== null && joined && event.status === "live" && <section className="events-section event-review" aria-labelledby="event-review-title">
+      <div className="section-title"><h2 id="event-review-title">Changes to review</h2>
+        {changes.some((row) => row.igdbId !== null) && <div className="person-actions"><button disabled={busy} onClick={() => void accept(changes.filter((row) => row.igdbId !== null))}>Accept all{changes.some((row) => row.igdbId === null) ? " matched games" : ""}</button></div>}</div>
+      {changes.length ? <ul className="event-games">{changes.map((change) => <li className="event-game event-change" key={change.key}>
+        <button type="button" className="event-game-cover" disabled={change.igdbId === null} aria-label={`View details for ${change.name}`} onClick={() => change.igdbId !== null && void openGame({ ...change, igdbId: change.igdbId })}>
+          {change.coverUrl ? <img src={change.coverUrl} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }}/> : <span className="cover-fallback"><Gamepad2 size={24} aria-hidden="true"/></span>}</button>
+        <div className="event-game-body">
+          {change.igdbId === null ? <strong className="event-game-title">{change.name}</strong> : <button className="event-game-title" onClick={() => void openGame({ ...change, igdbId: change.igdbId! })}>{change.name}</button>}
+          <p className="event-game-meta">{change.platformName || "Find a catalog match"}{!change.previous && " · New to event"}{!change.libraryItemId && " · Adds to library"}</p>
+          <p className="event-game-stats">{change.previous ? <span>{hours(change.previous.minutes)} → {hours(change.next.minutes)} ({change.next.minutes >= change.previous.minutes ? "+" : "−"}{hours(Math.abs(change.next.minutes - change.previous.minutes))})</span> : <span>{change.timeKnown ? `${hours(change.next.minutes)} in this event` : "Time not reported"}</span>}</p>
+          <p className="event-game-stats"><span>Beaten: {change.previous && change.previous.beaten !== change.next.beaten ? `${change.previous.beaten ? "Yes" : "No"} → ` : ""}{change.next.beaten ? "Yes" : "No"}</span><span>100%: {change.previous && change.previous.completed !== change.next.completed ? `${change.previous.completed ? "Yes" : "No"} → ` : ""}{change.next.completed ? "Yes" : "No"}</span></p>
+          {change.next.achievements !== (change.previous?.achievements ?? 0) && <p className="event-game-meta">{change.previous?.achievements ?? 0} → {change.next.achievements} achievements / trophies</p>}
+          <div className="person-actions event-change-actions"><button disabled={busy} onClick={() => change.igdbId === null ? setMatching(change) : void accept([change])}>{change.igdbId === null ? "Find match & accept" : "Accept"}</button></div>
+        </div>
+      </li>)}</ul> : <p className="muted" role="status">No changes waiting for acceptance.</p>}
+    </section>}
 
     <section className="events-section" aria-labelledby="event-board-title">
       <div className="section-title"><div><p className="eyebrow"><Medal size={14} aria-hidden="true"/> LEADERBOARD</p><h2 id="event-board-title">{event.status === "ended" ? "Final standings" : "Standings"}</h2></div></div>
@@ -130,7 +195,8 @@ export default function EventView({ initial }: { initial: EventDetail }) {
     </section>
 
     {player && <section className="events-section" aria-labelledby="event-games-title">
-      <div className="section-title"><div><p className="eyebrow"><Gamepad2 size={14} aria-hidden="true"/> {event.status === "ended" ? "WRAP-UP" : "GAMES"}</p><h2 id="event-games-title">{ownView ? "Your games" : `${player.name}’s games`}</h2></div></div>
+      <div className="section-title event-games-heading"><div><p className="eyebrow"><Gamepad2 size={14} aria-hidden="true"/> {event.status === "ended" ? "WRAP-UP" : "GAMES"}</p><h2 id="event-games-title">{ownView ? "Your games" : `${player.name}’s games`}</h2></div>
+        {ownView && joined && event.status === "live" && <div className="person-actions"><button className="secondary" disabled={busy} onClick={() => setPicking(true)}><Plus size={16} aria-hidden="true"/> Add a game</button></div>}</div>
       <dl className="event-totals"><div><dt>Score</dt><dd>{points(player.score)}</dd></div><div><dt>Games</dt><dd>{player.games}</dd></div><div><dt>Hours</dt><dd>{points(player.minutes / 60)}</dd></div>
         <div><dt>Beaten</dt><dd>{player.beaten}</dd></div><div><dt>100%</dt><dd>{player.completed}</dd></div><div><dt>Achievements</dt><dd>{totals.achievements}</dd></div></dl>
       {games.length ? <ul className="event-games">{games.map((game) => <EventGameCard key={`${game.id}-${game.minutes}-${game.beaten}-${game.completed}`} game={game} canEdit={editable(game)} busy={busy}
@@ -138,6 +204,9 @@ export default function EventView({ initial }: { initial: EventDetail }) {
         : <p className="muted">{ownView && joined && event.status === "live" ? "Play something, then press Update. Games from your connected libraries appear here." : "No games yet."}</p>}
     </section>}
 
+    {matching && <GamePicker title={`Find ${matching.name}`} searchLabel="Search games" initialQuery={matching.name} source={matchSources[matching.sources[0].split(":")[0]]}
+      selectedLabel="Accepted" actionLabel="Accept" isSelected={() => false} onClose={() => setMatching(null)} emptyText="No games found. Try another name."
+      onToggle={async (item) => { await accept([matching], item.id); }}/>}
     {picking && <GamePicker title="Add a game to this event" searchLabel="Search your games" source={librarySource} selectedLabel="In event"
       isSelected={(item) => ownGames.some((game) => game.libraryItemId === item.id)} onClose={() => setPicking(false)}
       emptyText={<>Your library is empty. <a href="/search">Find a game</a> to add it first.</>}

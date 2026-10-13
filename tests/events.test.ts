@@ -212,3 +212,78 @@ test("copying keeps the setup and multipliers but no players or results", () => 
   assert.equal(db.prepare("SELECT count(*) AS n FROM event_members WHERE event_id = ?").get(copied.id)!.n, 0);
   db.close();
 });
+
+test("reviewing changes leaves saved readings independent until each game is accepted", async () => {
+  const { eventChange } = await import("../lib/event-review.ts");
+  const saved = { id: 1, removed: false, autoMinutes: 120, adjustMinutes: 30, autoBeatenAt: null, autoCompletedAt: null, beaten: false, completed: false, achievements: 2 };
+  const reading = { autoMinutes: 180, autoBeatenAt: 2500, autoCompletedAt: null, achievements: 4 };
+  const review = eventChange(reading, saved)!;
+  assert.deepEqual(review.previous, { minutes: 150, beaten: false, completed: false, achievements: 2 });
+  assert.deepEqual(review.next, { minutes: 180, beaten: true, completed: false, achievements: 4 });
+  assert.equal(saved.autoMinutes, 120, "reading a review does not advance the accepted time");
+  assert.deepEqual(eventChange(reading, saved), review, "unaccepted changes return unchanged");
+  assert.equal(eventChange(reading, { ...saved, ...reading, adjustMinutes: 0, beaten: true }), null);
+  assert.equal(eventChange(reading, { ...saved, removed: true }), null);
+  assert.equal(eventChange({ autoMinutes: 0, autoBeatenAt: null, autoCompletedAt: null, achievements: 0 }), null);
+  assert.ok(eventChange({ autoMinutes: 0, autoBeatenAt: null, autoCompletedAt: null, achievements: 0 }, undefined, true), "recently played games are offered even when playtime is unavailable");
+  assert.equal(eventChange({ ...reading, autoCompletedAt: 2600 })!.next.beaten, true);
+  const manualStatus = { ...saved, autoBeatenAt: 2500, beaten: false };
+  assert.equal(eventChange({ ...reading, achievements: 5 }, manualStatus)!.next.beaten, false, "an unchanged provider status preserves a manual choice");
+});
+
+test("acceptance saves just the reviewed game, detects intervening edits, and enforces membership and locking", async () => {
+  const { acceptEventGame } = await import("../lib/event-queries.ts");
+  const db = database();
+  db.prepare(joinEvent).run(1, "one", 2000, 0);
+  db.exec("INSERT INTO library_items (id, user_id, igdb_id, name, platform_id, added_at) VALUES (7, 'one', 70, 'Game', 8, 1), (8, 'one', 80, 'Other game', 8, 1)");
+  const accept = (game: number, minutes: number, before: string | null, now = 2300) => db.prepare(acceptEventGame).run(1, "one", game, game * 10, 8, "PS2", "Game", null, minutes, null, null, 2, now, 30, 0, 0, before);
+  assert.equal(accept(7, 60, null).changes, 1);
+  const snapshot = () => JSON.stringify(Object.values(db.prepare("SELECT id, auto_minutes, adjust_minutes, auto_beaten_at, auto_completed_at, beaten, completed, achievements FROM event_games WHERE igdb_id = 70").get()!));
+  const before = snapshot();
+  assert.equal(accept(7, 120, before).changes, 1);
+  assert.equal(accept(7, 180, before).changes, 0, "a stale acceptance cannot overwrite a newer one");
+  assert.equal(accept(8, 90, null).changes, 1);
+  const fresh = snapshot();
+  db.exec("UPDATE event_games SET adjust_minutes = 50 WHERE igdb_id = 70");
+  assert.equal(accept(7, 180, fresh).changes, 0, "a host/player edit invalidates the review");
+  assert.equal(db.prepare("SELECT auto_minutes FROM event_games WHERE igdb_id = 80").get()!.auto_minutes, 90);
+  assert.equal(accept(8, 180, null, 5000).changes, 0, "accepting at the end is locked");
+  db.exec("UPDATE event_members SET status = 'left'");
+  assert.equal(accept(8, 180, null).changes, 0);
+  db.close();
+});
+
+test("reviews include connected games outside the library with their dated progress", async () => {
+  const { eventReviewSources } = await import("../lib/event-queries.ts");
+  const db = database();
+  db.exec(`INSERT INTO ra_connections (user_id, connection_id, ulid, username, linked_at) VALUES ('one', 'ra', 'U', 'one', 1);
+    INSERT INTO ra_games (id, connection_id, game_id, name, console_id, console_name, observed_at, earned, total, play_seconds, last_played_at, completed_at)
+      VALUES (1, 'ra', 5, 'Outside library', 1, 'Genesis', 1, 2, 2, 7200, 2500, 2000);
+    INSERT INTO ra_unlocks (game_row_id, user_id, achievement_id, earned_at) VALUES (1, 'one', 1, 900), (1, 'one', 2, 2600);`);
+  const [source] = db.prepare(eventReviewSources).all("one", 1000, 5000);
+  assert.equal(source.libraryItemId, null);
+  assert.equal(source.minutes, 120);
+  assert.equal(source.beatenAt, 2000);
+  assert.equal(source.completedAt, 2600);
+  assert.equal(source.achievements, 1);
+  assert.equal(db.prepare(eventReviewSources).all("two", 1000, 5000).length, 0);
+  db.close();
+});
+
+test("event progress reads can include unadded titles while ordinary integration sync stays library-only", async () => {
+  const { staleRaAchievements } = await import("../lib/ra-queries.ts");
+  const { staleXboxAchievements } = await import("../lib/xbox-queries.ts");
+  const { stalePsnTrophies } = await import("../lib/psn-queries.ts");
+  const db = database();
+  db.exec(`INSERT INTO ra_connections (user_id, connection_id, ulid, username, linked_at, synced_at) VALUES ('one', 'ra', 'U', 'one', 1, 1);
+    INSERT INTO ra_games (connection_id, game_id, name, console_id, console_name, observed_at, total) VALUES ('ra', 5, 'Unadded', 1, 'Genesis', 1, 2);
+    INSERT INTO xbox_connections (user_id, connection_id, xuid, gamertag, token_cipher, linked_at, synced_at) VALUES ('one', 'xbox', 'X', 'One', 'fixture', 1, 1);
+    INSERT INTO xbox_titles (connection_id, title_id, name, observed_at, total_achievements) VALUES ('xbox', 10, 'Unadded', 1, 2);
+    INSERT INTO psn_connections (user_id, connection_id, account_id, online_id, token_cipher, linked_at, synced_at) VALUES ('one', 'psn', 'P', 'One', 'fixture', 1, 1);
+    INSERT INTO psn_titles (connection_id, title_key, name, observed_at, np_communication_id, np_service_name, defined_bronze) VALUES ('psn', 'T', 'Unadded', 1, 'NP', 'trophy2', 2);`);
+  for (const [query, alias, connection] of [[staleRaAchievements, "g", "ra"], [staleXboxAchievements, "t", "xbox"], [stalePsnTrophies, "t", "psn"]]) {
+    assert.equal(db.prepare(query).all(connection).length, 0);
+    assert.equal(db.prepare(query.replace(`${alias}.library_item_id IS NOT NULL AND `, "")).all(connection).length, 1);
+  }
+  db.close();
+});
