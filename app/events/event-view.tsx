@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { CalendarDays, CircleCheck, Gamepad2, LoaderCircle, Lock, Medal, Pencil, Plus, RefreshCw, Settings, Trophy, X } from "lucide-react";
+import { CalendarDays, CircleCheck, Gamepad2, LoaderCircle, Lock, Medal, Plus, RefreshCw, Settings, Trophy, X } from "lucide-react";
 import GameDetailsDialog from "../game-details-dialog";
 import GamePicker, { libraryParams, pickerRequest, type PickerSource } from "../game-picker";
 import type { Platform } from "../platform-filter";
@@ -75,7 +75,7 @@ export default function EventView({ initial }: { initial: EventDetail }) {
     try {
       const result = await eventRequest(event.id, body);
       if (!result.event) { window.location.assign(new URL("/events", window.location.origin)); return; }
-      setDetail(result.event); setNotice(result.message ?? "");
+      setDetail(result.event); setNotice(result.message === "Saved." ? "" : result.message ?? "");
       if (result.changes) setChanges(result.changes);
       else if (body.action === "leave") setChanges(null);
       else if (changes !== null && typeof body.gameId === "number") {
@@ -199,7 +199,7 @@ export default function EventView({ initial }: { initial: EventDetail }) {
         {ownView && joined && event.status === "live" && <div className="person-actions"><button className="secondary" disabled={busy} onClick={() => setPicking(true)}><Plus size={16} aria-hidden="true"/> Add a game</button></div>}</div>
       <dl className="event-totals"><div><dt>Score</dt><dd>{points(player.score)}</dd></div><div><dt>Games</dt><dd>{player.games}</dd></div><div><dt>Hours</dt><dd>{points(player.minutes / 60)}</dd></div>
         <div><dt>Beaten</dt><dd>{player.beaten}</dd></div><div><dt>100%</dt><dd>{player.completed}</dd></div><div><dt>Achievements</dt><dd>{totals.achievements}</dd></div></dl>
-      {games.length ? <ul className="event-games">{games.map((game) => <EventGameCard key={`${game.id}-${game.minutes}-${game.beaten}-${game.completed}`} game={game} canEdit={editable(game)} busy={busy}
+      {games.length ? <ul className="event-games event-game-list">{games.map((game) => <EventGameRow key={game.id} game={game} canEdit={editable(game)} busy={busy}
         onOpen={() => void openGame(game)} onAct={(body) => act({ ...body, gameId: game.id })}/>)}</ul>
         : <p className="muted">{ownView && joined && event.status === "live" ? "Play something, then press Update. Games from your connected libraries appear here." : "No games yet."}</p>}
     </section>}
@@ -219,38 +219,46 @@ export default function EventView({ initial }: { initial: EventDetail }) {
   </>;
 }
 
-function EventGameCard({ game, canEdit, busy, onOpen, onAct }: { game: EventGameView; canEdit: boolean; busy: boolean; onOpen: () => void; onAct: (body: Record<string, unknown>) => Promise<void> }) {
-  const [editing, setEditing] = useState(false);
+function EventGameRow({ game, canEdit, busy, onOpen, onAct }: { game: EventGameView; canEdit: boolean; busy: boolean; onOpen: () => void; onAct: (body: Record<string, unknown>) => Promise<void> }) {
   const [value, setValue] = useState(hoursInput(game.minutes));
-  const [beaten, setBeaten] = useState(game.beaten);
-  const [completed, setCompleted] = useState(game.completed);
+  const [savedMinutes, setSavedMinutes] = useState(game.minutes);
   const [error, setError] = useState("");
-  const edited = game.minutes !== game.autoMinutes || game.beaten !== (game.autoBeaten || game.autoCompleted) || game.completed !== game.autoCompleted;
+  const saving = useRef(false);
+  const clickingStage = useRef(false);
+  if (savedMinutes !== game.minutes) {
+    setSavedMinutes(game.minutes);
+    setValue(hoursInput(game.minutes));
+  }
 
-  function save() {
+  async function save(beaten = game.beaten, completed = game.completed) {
+    if (saving.current) return;
     const minutes = parseHours(value);
     if (minutes === null || Number.isNaN(minutes)) { setError("Enter hours as a number, such as 12.5."); return; }
     setError("");
-    void onAct({ action: "edit-game", minutes, beaten: beaten || completed, completed });
+    if (minutes === game.minutes && beaten === game.beaten && completed === game.completed) return;
+    saving.current = true;
+    try { await onAct({ action: "edit-game", minutes, beaten: beaten || completed, completed }); }
+    finally { saving.current = false; }
   }
 
-  return <li className="event-game">
+  return <li className="event-game event-game-row">
     <button type="button" className="event-game-cover" aria-label={`View details for ${game.name}`} onClick={onOpen}>{game.coverUrl ? <img src={game.coverUrl} alt="" loading="lazy"/> : <span className="cover-fallback"><Gamepad2 size={24} aria-hidden="true"/></span>}</button>
     <div className="event-game-body">
       <button type="button" className="event-game-title" onClick={onOpen}>{game.name}</button>
       <p className="event-game-meta">{game.platformName || "Platform not set"}</p>
-      <p className="event-game-stats"><span>{hours(game.minutes)}</span>{game.completed ? <span className="event-badge"><Trophy size={13} aria-hidden="true"/>100%</span> : game.beaten ? <span className="event-badge"><CircleCheck size={13} aria-hidden="true"/>Beaten</span> : null}
-        {game.achievements > 0 && <span>{game.achievements} {game.achievements === 1 ? "achievement" : "achievements"}</span>}{edited && <span className="event-edited">Edited</span>}</p>
-      {editing && canEdit && <form className="event-game-edit" onSubmit={(event) => { event.preventDefault(); save(); }}>
-        <label className="playtime-field"><span>Hours</span><input type="text" inputMode="decimal" value={value} maxLength={9} onChange={(event) => setValue(event.target.value)}/></label>
-        <label className="event-check"><input type="checkbox" checked={beaten || completed} disabled={completed} onChange={(event) => setBeaten(event.target.checked)}/>Beaten</label>
-        <label className="event-check"><input type="checkbox" checked={completed} onChange={(event) => setCompleted(event.target.checked)}/>100%</label>
-        <div className="person-actions"><button type="submit" disabled={busy}>Save</button>{edited && <button type="button" className="secondary" disabled={busy} onClick={() => void onAct({ action: "reset-game" })}>Use automatic</button>}<button type="button" className="secondary" disabled={busy} onClick={() => void onAct({ action: "remove-game" })}>Remove</button></div>
-        {error && <p className="playtime-error" role="alert">{error}</p>}
-        {game.autoMinutes !== game.minutes && <p className="event-game-auto">Connected libraries: {hours(game.autoMinutes)}</p>}
-      </form>}
+      {game.achievements > 0 && <p className="event-game-meta">{game.achievements} {game.achievements === 1 ? "achievement" : "achievements"}</p>}
     </div>
-    <div className="event-game-side"><strong>{points(game.points)}</strong><span>pts</span>
-      {canEdit && !editing && <button type="button" className="event-edit" aria-label={`Edit ${game.name}`} title="Edit" onClick={() => setEditing(true)}><Pencil size={15} aria-hidden="true"/></button>}</div>
+    {canEdit ? <form className="event-game-edit" aria-label={`Results for ${game.name} on ${game.platformName || "unspecified platform"}`} onSubmit={(event) => { event.preventDefault(); void save(); }}>
+      <label className="playtime-field"><span>Hours</span><input type="text" inputMode="decimal" value={value} maxLength={9} disabled={busy} onChange={(event) => setValue(event.target.value)} onBlur={() => {
+        // A checkbox click saves the hours and stage together, rather than racing the blur write.
+        if (clickingStage.current) { clickingStage.current = false; return; }
+        void save();
+      }}/></label>
+      <label className="event-check"><input type="checkbox" onPointerDown={() => { clickingStage.current = true; }} onPointerUp={() => { clickingStage.current = false; }} checked={game.beaten || game.completed} disabled={busy || game.completed} onChange={(event) => void save(event.target.checked, game.completed)}/>Beaten</label>
+      <label className="event-check"><input type="checkbox" onPointerDown={() => { clickingStage.current = true; }} onPointerUp={() => { clickingStage.current = false; }} checked={game.completed} disabled={busy} onChange={(event) => void save(game.beaten || event.target.checked, event.target.checked)}/>100%</label>
+      {error && <p className="playtime-error" role="alert">{error}</p>}
+    </form> : <p className="event-game-stats"><span>{hours(game.minutes)}</span>{game.completed ? <span className="event-badge"><Trophy size={13} aria-hidden="true"/>100%</span> : game.beaten ? <span className="event-badge"><CircleCheck size={13} aria-hidden="true"/>Beaten</span> : null}</p>}
+    <div className="event-game-side"><strong>{points(game.points)}</strong><span>pts</span></div>
+    {canEdit && <button type="button" className="event-row-remove" disabled={busy} aria-label={`Remove ${game.name} from event`} title="Remove from event" onClick={() => void onAct({ action: "remove-game" })}><X size={16} aria-hidden="true"/></button>}
   </li>;
 }

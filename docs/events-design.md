@@ -8,7 +8,7 @@ Events, such as **Backlog Season**, count the games players play between a first
 - **Fill in what the site knows; let people fix the rest.** Connected libraries and the library propose event data; players review and accept it. Players and hosts can correct any of it, for the event only.
 - **Event results stay independent.** Accepting a connected game outside the library also adds or links its platform copy through the service’s normal import. Event hours, beaten, and 100% choices never overwrite library hours or completion marks. Manual event hours contribute to the displayed library total; provider-reported event hours are already included in lifetime totals. A host marking a game "not beaten" changes only the event.
 - **No events in the timeline.** Joining, invitations, updates, edits, scores, and standings never appear in the friends timeline. A game beaten during an event shows up only because the library or connected service recorded it, exactly as without the event, and the timeline never mentions the event.
-- **Keep it simple.** One page per event, and advanced settings stay closed until a host asks for them.
+- **Keep it simple.** One page per event, and advanced settings stay closed until a host asks for them. Games appear as compact rows with always-visible Hours, Beaten, and 100% fields when editable; checkboxes save on click and hours save when leaving the field or pressing Enter. Routine saves update the fields and totals without a Saved banner; errors remain visible. There are no Save or reset buttons or edit labels; points stay on one line and removal sits beside the row.
 
 Game multipliers store the catalog name and cover when first added and when updated.
 
