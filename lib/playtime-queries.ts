@@ -26,3 +26,8 @@ export type PlaytimeService = keyof typeof tables;
 export const playtimeOfferCount = (service: PlaytimeService) => `SELECT count(*) AS total FROM library_items l WHERE l.user_id = ?1 AND ${offered(service, tables[service])}`;
 export const acceptPlaytimeOffers = (service: PlaytimeService) => `UPDATE library_items AS l SET play_minutes = NULL, play_source_minutes = NULL
 WHERE l.user_id = ?1 AND ${offered(service, tables[service])}`;
+
+// Provider lifetime totals stand alone; only games without a reported total add manual event hours.
+// Match by player/game/platform so removing and re-adding a library copy keeps its independently saved event hours.
+export const manualEventMinutes = (copy: string) => `(CASE WHEN ${sourceMinutes(copy)} IS NOT NULL THEN 0 ELSE (SELECT COALESCE(sum(max(0, e.adjust_minutes)), 0) FROM event_games e
+  WHERE e.user_id = ${copy}.user_id AND e.igdb_id = ${copy}.igdb_id AND e.platform_id = ${copy}.platform_id AND e.removed = 0) END)`;

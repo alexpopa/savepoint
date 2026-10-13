@@ -4,7 +4,7 @@ import { getDb } from "../../../../../db";
 import { libraryItems } from "../../../../../db/schema";
 import { hasPermission } from "../../../../../lib/permissions";
 import { maxPlayMinutes, readPlaytime } from "../../../../../lib/playtime";
-import { setPlaytime, sourceMinutes, sourceNames } from "../../../../../lib/playtime-queries";
+import { manualEventMinutes, setPlaytime, sourceMinutes, sourceNames } from "../../../../../lib/playtime-queries";
 import { isSameOriginWrite } from "../../../../../lib/request-security";
 import { privateResponse } from "../../../../../lib/social";
 
@@ -29,8 +29,8 @@ export async function PUT(request: Request, context: Context) {
     if (!hasPermission(user, row.userId === user.userId)) return Response.json({ error: "You cannot update this game." }, { status: 403 });
     await db.$client.prepare(setPlaytime).bind(id, row.userId, minutes).run();
     const [updated] = await db.select({ own: libraryItems.playMinutes, sourceMinutes: sql<number | null>`${sql.raw(sourceMinutes("library_items"))}`,
-      sourceNames: sql<string | null>`${sql.raw(sourceNames("library_items"))}` }).from(libraryItems).where(eq(libraryItems.id, id));
+      sourceNames: sql<string | null>`${sql.raw(sourceNames("library_items"))}`, eventMinutes: sql<number>`${sql.raw(manualEventMinutes("library_items"))}` }).from(libraryItems).where(eq(libraryItems.id, id));
     if (!updated) return Response.json({ error: "This platform copy is no longer in the library." }, { status: 404 });
-    return Response.json({ playtime: readPlaytime(updated.own, updated.sourceMinutes, updated.sourceNames) }, { headers: privateResponse });
+    return Response.json({ playtime: readPlaytime(updated.own, updated.sourceMinutes, updated.sourceNames, updated.eventMinutes) }, { headers: privateResponse });
   } catch { return Response.json({ error: "Could not update time played. Please try again." }, { status: 503 }); }
 }

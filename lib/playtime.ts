@@ -1,16 +1,18 @@
 // No database here, so the library, profiles, and events share one reading of a copy's time played.
 export type Playtime = {
-  // What the copy shows: the player's own time, otherwise their connected services' total.
+  // What the copy shows: the base time, plus manual event hours when no provider reports playtime.
   minutes: number | null;
   // Set while the player's own time is shown; empty when it follows the services.
   own: number | null;
+  eventMinutes?: number;
   // The services' total and their names, for "Steam says 20 h".
   source: { minutes: number; names: string } | null;
 };
 
-export function readPlaytime(own: number | null, sourceMinutes: number | null, sourceNames: string | null): Playtime {
+export function readPlaytime(own: number | null, sourceMinutes: number | null, sourceNames: string | null, eventMinutes = 0): Playtime {
   const source = sourceMinutes === null ? null : { minutes: sourceMinutes, names: sourceNames || "Your connected services" };
-  return { minutes: own ?? source?.minutes ?? null, own, source };
+  const base = own ?? source?.minutes ?? null;
+  return { minutes: base === null && !eventMinutes ? null : (base ?? 0) + eventMinutes, own, source, ...(eventMinutes ? { eventMinutes } : {}) };
 }
 
 export function formatHours(minutes: number) {

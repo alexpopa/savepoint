@@ -73,3 +73,30 @@ test("playtime reads, formats, and parses hours", () => {
   assert.equal(hoursInput(750), "12.5");
   assert.equal(hoursInput(null), "");
 });
+
+test("manual event hours add to displayed totals without duplicating provider readings or changing either saved value", async () => {
+  const { manualEventMinutes } = await import("../lib/playtime-queries.ts");
+  const db = database();
+  db.exec(`INSERT INTO events (id, owner_id, name, visibility, start_day, end_day, time_zone, starts_at, ends_at, created_at)
+    VALUES (1, 'one', 'First', 'public', '2027-03-01', '2027-03-31', 'UTC', 1, 5000, 1), (2, 'one', 'Second', 'public', '2027-03-01', '2027-03-31', 'UTC', 1, 5000, 1);
+    INSERT INTO event_games (event_id, user_id, igdb_id, platform_id, name, auto_minutes, adjust_minutes, added_at)
+    VALUES (1, 'one', 10, 6, 'Steam game', 180, 0, 1), (1, 'one', 30, 130, 'Manual', 0, 120, 1),
+      (2, 'one', 30, 130, 'Manual', 0, 60, 1), (1, 'two', 30, 130, 'Other player', 0, 900, 1);`);
+  const added = (id: number) => (db.prepare(`SELECT ${manualEventMinutes("l")} AS minutes FROM library_items l WHERE id = ?`).get(id) as { minutes: number }).minutes;
+  db.exec("UPDATE event_games SET adjust_minutes = 60 WHERE igdb_id = 10");
+  assert.equal(added(1), 0, "the 180 imported event minutes are already in Steam's 600-minute total");
+  assert.equal(readPlaytime(null, 600, "Steam", added(1)).minutes, 600);
+  db.prepare(setPlaytime).run(3, "one", 300);
+  assert.equal(added(3), 180);
+  assert.equal(readPlaytime(300, null, null, added(3)).minutes, 480);
+  assert.equal(read(db, 3).own, 300, "displaying event time doesn't alter library hours");
+  db.exec("UPDATE event_games SET adjust_minutes = 150 WHERE event_id = 1 AND user_id = 'one' AND igdb_id = 30");
+  assert.equal(readPlaytime(300, null, null, added(3)).minutes, 510);
+  db.prepare(setPlaytime).run(3, "one", 360);
+  assert.equal(added(3), 210, "changing library hours doesn't alter event hours");
+  assert.equal(readPlaytime(360, null, null, added(3)).minutes, 570);
+  assert.equal(readPlaytime(null, null, null, 90).minutes, 90);
+  db.exec("UPDATE event_games SET removed = 1 WHERE event_id = 2");
+  assert.equal(added(3), 150);
+  db.close();
+});

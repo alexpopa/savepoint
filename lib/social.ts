@@ -2,7 +2,7 @@ import { and, desc, eq, isNotNull, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { accounts, friendships, gameRatings, libraryItems } from "../db/schema";
 import type { AppUser } from "../app/auth";
-import { sourceMinutes, sourceNames } from "./playtime-queries";
+import { manualEventMinutes, sourceMinutes, sourceNames } from "./playtime-queries";
 import { readPlaytime } from "./playtime";
 
 export const privateResponse = { "cache-control": "private, no-store" };
@@ -61,7 +61,7 @@ export async function getSocialState(userId: string) {
   });
 }
 
-export function serializeGame(row: typeof libraryItems.$inferSelect, score: number | null = null, source: { minutes: number | null; names: string | null } = { minutes: null, names: null }) {
+export function serializeGame(row: typeof libraryItems.$inferSelect, score: number | null = null, source: { minutes: number | null; names: string | null; eventMinutes?: number } = { minutes: null, names: null }) {
   return {
     id: row.id,
     igdbId: row.igdbId,
@@ -74,15 +74,15 @@ export function serializeGame(row: typeof libraryItems.$inferSelect, score: numb
     playingSince: row.playingSince,
     completedAt: row.completedAt,
     score,
-    playtime: readPlaytime(row.playMinutes, source.minutes, source.names),
+    playtime: readPlaytime(row.playMinutes, source.minutes, source.names, source.eventMinutes),
   };
 }
 
 // A player's saved copies, newest first, each with that player's score for the game.
 export async function getLibraryGames(userId: string) {
   const rows = await getDb().select({ item: libraryItems, score: gameRatings.score,
-    sourceMinutes: sql<number | null>`${sql.raw(sourceMinutes("library_items"))}`, sourceNames: sql<string | null>`${sql.raw(sourceNames("library_items"))}` }).from(libraryItems)
+    sourceMinutes: sql<number | null>`${sql.raw(sourceMinutes("library_items"))}`, sourceNames: sql<string | null>`${sql.raw(sourceNames("library_items"))}`, eventMinutes: sql<number>`${sql.raw(manualEventMinutes("library_items"))}` }).from(libraryItems)
     .leftJoin(gameRatings, and(eq(gameRatings.userId, libraryItems.userId), eq(gameRatings.igdbId, libraryItems.igdbId)))
     .where(eq(libraryItems.userId, userId)).orderBy(desc(libraryItems.addedAt), desc(libraryItems.id));
-  return rows.map(({ item, score, sourceMinutes, sourceNames }) => serializeGame(item, score, { minutes: sourceMinutes, names: sourceNames }));
+  return rows.map(({ item, score, sourceMinutes, sourceNames, eventMinutes }) => serializeGame(item, score, { minutes: sourceMinutes, names: sourceNames, eventMinutes }));
 }

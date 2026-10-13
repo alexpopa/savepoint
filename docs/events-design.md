@@ -46,6 +46,8 @@ What each service provides:
 | RetroAchievements | Per game, reread after it is played again | Unlocks | Beaten; every achievement (100%) at the final unlock |
 | Library | — | — | Completed mark (beaten) |
 
+- **Library total.** The saved library hours and event hours remain separate. Displayed library playtime is its existing manual or provider total; games with provider-reported lifetime totals add no event hours. For games without a reported total, add positive manual event adjustments across non-removed event rows for the same player, game, and platform. A manual-only event game contributes all its hours; games with provider totals contribute zero extra because lifetime totals already contain them. The library popup edits the base hours and shows the event contribution and combined total separately. Editing either value never writes the other. Overlapping events do not duplicate imported provider time. Leaving an event keeps its saved hours; removing a game excludes its event contribution.
+
 ## Beaten and completed
 
 - A game has two stages: **beaten** and **completed** (100%: mastered, platinum, every achievement). Completed always counts as beaten too.
