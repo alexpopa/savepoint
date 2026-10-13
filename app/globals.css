@@ -1084,6 +1084,16 @@ li:not(.is-unlocked) > .xbox-achievement-icon img { opacity: 0.45; }
 .event-game-meta { margin: 4px 0 0; color: var(--rgb-muted); font-size: 0.8125rem; }
 .event-game-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 8px 0 0; font-size: 0.875rem; }
 .event-badge { display: inline-flex; align-items: center; gap: 4px; color: var(--rgb-action); font-weight: 700; }
+.event-game-tools { flex-wrap: wrap; }
+.event-game-tools .library-search { min-width: 180px; }
+.event-game-control > span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.event-game-filters { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.event-filter-chips { display: flex; flex: 1; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.event-filter-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-height: 36px; padding: 6px 10px; border: 1px solid var(--rgb-rule); border-radius: 3px; background: var(--rgb-panel-raised); color: var(--rgb-ink); font-size: 0.875rem; }
+.event-filter-chip span { overflow-wrap: anywhere; min-width: 0; }
+.event-filter-chip svg { flex: none; color: var(--rgb-muted); }
+.event-filter-chip:hover { border-color: var(--rgb-control-edge); }
+.event-game-filters > .library-clear { flex: none; margin-left: auto; }
 .event-game-list { display: flex; flex-direction: column; gap: 0; }
 .event-game-row { grid-template-columns: 42px minmax(160px, 1fr) minmax(0, auto) max-content 28px; align-items: center; padding: 14px 0; border: 0; border-bottom: 1px solid var(--rgb-rule); border-radius: 0; background: none; }
 .event-game-row .event-game-cover { width: 42px; }

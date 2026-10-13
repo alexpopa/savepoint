@@ -10,6 +10,17 @@ Events, such as **Backlog Season**, count the games players play between a first
 - **No events in the timeline.** Joining, invitations, updates, edits, scores, and standings never appear in the friends timeline. A game beaten during an event shows up only because the library or connected service recorded it, exactly as without the event, and the timeline never mentions the event.
 - **Keep it simple.** One page per event, and advanced settings stay closed until a host asks for them. Games appear as compact rows with always-visible Hours, Beaten, and 100% fields when editable; checkboxes save on click and hours save when leaving the field or pressing Enter. Routine saves update the fields and totals without a Saved banner; errors remain visible. There are no Save or reset buttons or edit labels; points stay on one line and removal sits beside the row.
 
+## Finding event games
+
+The selected player's list reuses collection controls: a search-as-you-type title field, the shared searchable multi-select platform dropdown with selection clearing, a result checkbox dropdown between title search and platform selection, a Sort selector with its label available to assistive technology, result counts, and twelve games per page with Previous/Next navigation.
+
+- **Newest added** is the default: descending `event_games.added_at`, then descending row ID for simultaneous additions. This is the date added to this event, independent of library addition dates. Editing hours or completion does not change it.
+- **Most hours played** sorts by saved event minutes descending, then newest addition and row ID for ties.
+- The result dropdown uses checkboxes. **Not beaten**, **Beaten**, and **100%** can be selected together, matching any selected result. Beaten includes 100% games; Not beaten excludes both stages. No result selections means **All games**; checking All games clears the individual result selections.
+- Title search is a case-insensitive, literal substring match. Selected platforms match any selected platform; title, platforms, and result filters combine. Platform choices come from the selected player's full list, not its filtered results.
+- **Clear filters** resets title, platforms, and result to All games, retaining the chosen sort. Active title, each selected result, and each selected platform appear as removable chips below the controls; each X removes only that filter. Clear filters sits at the right of this row, including when nothing matches. Counts describe matching rows; event totals and standings always include all games.
+- Changing search, platform, result, or sort returns to page one. Saving, adding, accepting, and removing games preserve the active controls and current page, clamping to the last available page if needed. Selecting another player preserves title, result, and sort, clears platform selections, and returns to page one. Controls are local to the open page; reloading restores defaults.
+
 Game multipliers store the catalog name and cover when first added and when updated.
 
 ## People

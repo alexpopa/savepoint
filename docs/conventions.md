@@ -104,6 +104,12 @@ Steam, Xbox, PlayStation, RetroAchievements, and any new integration share one s
 - Put responsive overrides in the feature's own `@media` block at the end of that feature's section. Check 320px width.
 - Add CSS next to the feature's existing block and delete rules that no longer match any markup.
 
+## Collection search, filters, and sorting
+
+Reuse `.library-tools`, `.library-search`, and `.library-search-field` for local title searches: a visible label, Search icon, `type="search"`, Search titles placeholder, no submit button, and a single outer focus ring. Reuse `PlatformFilter` for platform choices rather than creating another dropdown; it owns option search, multi-selection, clearing, Escape, and outside-click handling. Use `.library-sort` with a labeled native select for ordering. Button filters expose `aria-pressed` and the established green pressed edge. Event games use a result checkbox dropdown with multiple selection instead; platform, result, and sort labels remain accessible but are visually hidden. Active title, each result, and individual platforms appear as removable chips with Clear filters on the right.
+
+Keep search and platform matching in `filterLibraryGames` and twelve-row pagination in `paginateLibraryGames` (`lib/library-view.ts`). Libraries use `LibrarySortSelect` for newest added, highest rated, and completed first. Event lists use event-specific sort/result options in `lib/event-game-view.ts`; their behavior is documented in [Finding event games](events-design.md#finding-event-games). Keep filters combined, show a live result count, offer Clear filters on no matches, and retain list controls after a mutation. Reset paging when the player changes a control. Paging buttons use `.library-pagination` and focus the result count before scrolling it into view.
+
 ## Testing
 
 - `npm test` runs `node --experimental-strip-types --test tests/*.test.ts`. Tests use `node:test` and `node:assert/strict`, with no extra framework.

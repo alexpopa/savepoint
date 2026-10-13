@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { CalendarDays, CircleCheck, Gamepad2, LoaderCircle, Lock, Medal, Plus, RefreshCw, Settings, Trophy, X } from "lucide-react";
+import { CalendarDays, CircleCheck, Gamepad2, LoaderCircle, Lock, Medal, Plus, RefreshCw, Search, Settings, Trophy, X } from "lucide-react";
+import EventResultFilter from "./event-result-filter";
 import GameDetailsDialog from "../game-details-dialog";
 import GamePicker, { libraryParams, pickerRequest, type PickerSource } from "../game-picker";
-import type { Platform } from "../platform-filter";
+import PlatformFilter, { type Platform } from "../platform-filter";
+import { eventGameFilters, eventGameList, eventGameSorts, type EventGameFilter, type EventGameSort } from "../../lib/event-game-view";
+import { paginateLibraryGames } from "../../lib/library-view";
 import { eventDays, statusLabels } from "../../lib/event-rules";
 import { steamPlatformIds } from "../../lib/steam-types";
 import { xboxPlatformIds } from "../../lib/xbox-types";
@@ -66,8 +69,31 @@ export default function EventView({ initial }: { initial: EventDetail }) {
   const member = viewer.member;
   const joined = member?.status === "joined";
   const [playerId, setPlayerId] = useState<string | null>(joined ? viewer.userId : standings[0]?.userId ?? null);
+  const [query, setQuery] = useState("");
+  const [platformIds, setPlatformIds] = useState<number[]>([]);
+  const [sort, setSort] = useState<EventGameSort>("newest");
+  const [filters, setFilters] = useState<EventGameFilter[]>([]);
+  const [page, setPage] = useState(1);
+  const pageStatus = useRef<HTMLParagraphElement>(null);
   const player = standings.find((row) => row.userId === playerId) ?? null;
   const games = detail.games.filter((game) => game.userId === playerId);
+  const platforms: Platform[] = [...new Map(games.map((game) => [game.platformId, { id: game.platformId, name: game.platformName || "Platform not set" }])).values()]
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const matchingGames = eventGameList(games, query, platformIds, filters, sort);
+  const { items: visibleGames, page: currentPage, pageCount, first, last } = paginateLibraryGames(matchingGames, page);
+  if (page !== currentPage) setPage(currentPage);
+  const filtered = Boolean(query.trim() || platformIds.length || filters.length > 0);
+
+  function clearFilters() { setQuery(""); setPlatformIds([]); setFilters([]); setPage(1); }
+  function selectPlayer(id: string) { if (id === playerId) return; setPlayerId(id); setPlatformIds([]); setPage(1); }
+  function changePage(next: number) {
+    setPage(next);
+    requestAnimationFrame(() => {
+      pageStatus.current?.focus({ preventScroll: true });
+      pageStatus.current?.scrollIntoView({ block: "start" });
+    });
+  }
+
   const ownGames = detail.games.filter((game) => game.userId === viewer.userId);
 
   async function act(body: Record<string, unknown>, progress = "") {
@@ -186,7 +212,7 @@ export default function EventView({ initial }: { initial: EventDetail }) {
       {standings.length ? <table className="event-board"><thead><tr><th scope="col">#</th><th scope="col">Player</th><th scope="col">Score</th><th scope="col">Beaten</th><th scope="col" className="is-wide">100%</th><th scope="col" className="is-wide">Hours</th></tr></thead>
         <tbody>{standings.map((row) => <tr key={row.userId} className={row.userId === playerId ? "is-selected" : undefined}>
           <td>{row.rank}</td>
-          <th scope="row"><button type="button" className="event-player" aria-pressed={row.userId === playerId} onClick={() => setPlayerId(row.userId)}>{row.name}{row.userId === viewer.userId ? " (you)" : ""}</button></th>
+          <th scope="row"><button type="button" className="event-player" aria-pressed={row.userId === playerId} onClick={() => selectPlayer(row.userId)}>{row.name}{row.userId === viewer.userId ? " (you)" : ""}</button></th>
           <td>{points(row.score)}</td><td>{row.beaten}</td><td className="is-wide">{row.completed}</td><td className="is-wide">{hours(row.minutes)}</td>
         </tr>)}</tbody></table> : <p className="muted">No players yet.</p>}
       <p className="event-scoring">Each hour scores {points(event.hourPoints)}. A beaten game adds {points(event.beatenPoints)} per hour{event.completedPoints ? `, and 100% adds ${points(event.completedPoints)} more` : ""}.</p>
@@ -199,9 +225,28 @@ export default function EventView({ initial }: { initial: EventDetail }) {
         {ownView && joined && event.status === "live" && <div className="person-actions"><button className="secondary" disabled={busy} onClick={() => setPicking(true)}><Plus size={16} aria-hidden="true"/> Add a game</button></div>}</div>
       <dl className="event-totals"><div><dt>Score</dt><dd>{points(player.score)}</dd></div><div><dt>Games</dt><dd>{player.games}</dd></div><div><dt>Hours</dt><dd>{points(player.minutes / 60)}</dd></div>
         <div><dt>Beaten</dt><dd>{player.beaten}</dd></div><div><dt>100%</dt><dd>{player.completed}</dd></div><div><dt>Achievements</dt><dd>{totals.achievements}</dd></div></dl>
-      {games.length ? <ul className="event-games event-game-list">{games.map((game) => <EventGameRow key={game.id} game={game} canEdit={editable(game)} busy={busy}
+      {games.length > 0 && <>
+        <div className="library-tools event-game-tools">
+          <label className="library-search"><span>Search event games</span><span className="library-search-field"><Search size={17} aria-hidden="true"/><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search titles" maxLength={100} autoComplete="off" spellCheck={false}/></span></label>
+          <EventResultFilter selected={filters} onChange={(next) => { setFilters(next); setPage(1); }}/>
+          <PlatformFilter platforms={platforms} selected={platformIds} onChange={(ids) => { setPlatformIds(ids); setPage(1); }} className="is-end event-game-control"/>
+          <label className="library-sort event-game-control"><span>Sort</span><select aria-label="Sort" value={sort} onChange={(event) => { setSort(event.target.value as EventGameSort); setPage(1); }}>{eventGameSorts.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+        </div>
+        {filtered && <div className="event-game-filters" role="group" aria-label="Active event game filters">
+          <div className="event-filter-chips">
+            {query.trim() && <button type="button" className="event-filter-chip" aria-label={`Remove title filter ${query.trim()}`} onClick={() => { setQuery(""); setPage(1); }}><span>Title: {query.trim()}</span><X size={14} aria-hidden="true"/></button>}
+            {filters.map((filter) => { const label = eventGameFilters.find(([key]) => key === filter)?.[1]; return <button type="button" className="event-filter-chip" key={filter} aria-label={`Remove result filter ${label}`} onClick={() => { setFilters(filters.filter((selected) => selected !== filter)); setPage(1); }}><span>{label}</span><X size={14} aria-hidden="true"/></button>; })}
+            {platformIds.map((id) => { const name = platforms.find((platform) => platform.id === id)?.name || "Platform not set"; return <button type="button" className="event-filter-chip" key={id} aria-label={`Remove platform filter ${name}`} onClick={() => { setPlatformIds(platformIds.filter((selectedId) => selectedId !== id)); setPage(1); }}><span>{name}</span><X size={14} aria-hidden="true"/></button>; })}
+          </div>
+          <button type="button" className="library-clear" onClick={clearFilters}>Clear filters</button>
+        </div>}
+        <p ref={pageStatus} className="library-results" role="status" tabIndex={-1}>{matchingGames.length ? `Showing ${first}–${last} of ${matchingGames.length} ${filtered ? "matching " : ""}${matchingGames.length === 1 ? "game" : "games"}` : "No matching games"}</p>
+      </>}
+      {matchingGames.length ? <ul className="event-games event-game-list">{visibleGames.map((game) => <EventGameRow key={game.id} game={game} canEdit={editable(game)} busy={busy}
         onOpen={() => void openGame(game)} onAct={(body) => act({ ...body, gameId: game.id })}/>)}</ul>
+        : games.length ? <div className="empty-state"><div className="empty-icon"><Search size={27} aria-hidden="true"/></div><h2>No games match</h2><p>Try another title, platform, or result.</p></div>
         : <p className="muted">{ownView && joined && event.status === "live" ? "Play something, then press Update. Games from your connected libraries appear here." : "No games yet."}</p>}
+      {pageCount > 1 && <nav className="library-pagination" aria-label="Event game pages"><span>Page {currentPage} of {pageCount}</span><div><button type="button" disabled={currentPage === 1} onClick={() => changePage(currentPage - 1)}>Previous</button><button type="button" disabled={currentPage === pageCount} onClick={() => changePage(currentPage + 1)}>Next</button></div></nav>}
     </section>}
 
     {matching && <GamePicker title={`Find ${matching.name}`} searchLabel="Search games" initialQuery={matching.name} source={matchSources[matching.sources[0].split(":")[0]]}

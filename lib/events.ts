@@ -36,7 +36,7 @@ export type EventSettings = { name: string; description: string; rules: string; 
 export type EventPerson = { userId: string; name: string; path: string };
 export type EventGameView = {
   id: number; userId: string; libraryItemId: number | null; igdbId: number; platformId: number; platformName: string | null; name: string; coverUrl: string | null;
-  minutes: number; autoMinutes: number; beaten: boolean; completed: boolean; autoBeaten: boolean; autoCompleted: boolean; achievements: number; points: number;
+  addedAt: number; minutes: number; autoMinutes: number; beaten: boolean; completed: boolean; autoBeaten: boolean; autoCompleted: boolean; achievements: number; points: number;
 };
 export type EventSummary = { id: number; name: string; description: string; visibility: EventVisibility; startDay: string; endDay: string; startsAt: number; endsAt: number;
   status: EventStatus; memberStatus: MemberStatus | null; hosting: boolean; players: number };
@@ -110,7 +110,7 @@ export async function getEventDetail(user: AppUser, id: number): Promise<EventDe
     games: scored.map((game) => {
       const result = gameResult(game);
       return { id: game.id, userId: game.userId, libraryItemId: game.libraryItemId, igdbId: game.igdbId, platformId: game.platformId, platformName: game.platformName, name: game.name,
-        coverUrl: game.coverUrl, minutes: result.minutes, autoMinutes: game.autoMinutes, beaten: result.beaten, completed: result.completed, autoBeaten: game.autoBeatenAt !== null,
+        coverUrl: game.coverUrl, addedAt: game.addedAt, minutes: result.minutes, autoMinutes: game.autoMinutes, beaten: result.beaten, completed: result.completed, autoBeaten: game.autoBeatenAt !== null,
         autoCompleted: game.autoCompletedAt !== null, achievements: game.achievements, points: Math.round(gameScore(pointsFor(event, rules, game), result) * 10) / 10 };
     }).sort((a, b) => b.points - a.points || b.minutes - a.minutes || a.name.localeCompare(b.name)),
   };
