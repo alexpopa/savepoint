@@ -27,6 +27,14 @@ How a connected game service (Steam, Xbox, PlayStation, RetroAchievements, and a
 - The confirmation button waits while a batch is running, because removal takes the same connection lease as every other write.
 - It runs under the connection lease, deletes only this connection's copies, and keeps `imported_at` so removed games are not re-added.
 
+## Time played
+
+Every service reports playtime the same way, so a library copy's time played reads alike whatever added it.
+
+- **Refresh brings playtime.** Steam and PlayStation return totals with the game list. Xbox reads its `MinutesPlayed` stat for up to 100 titles per refresh, newest played first, choosing titles played since their last read or never read; a failed stats read keeps the refresh. RetroAchievements only reports playtime with a game's achievement list, so a refresh that sees a newer last-played time marks that list stale and the background sync rereads it.
+- **The source row keeps the total** (`playtime_minutes`, `play_minutes`, or `play_seconds`); refreshes never write it into the library. A copy shows the sum its linked services report, until the player sets their own time in the game popup.
+- **The player's own time wins.** Refreshes never overwrite it. When a service's total changes after the player set their time, the popup offers it ("Use 20 h from Steam"), and the service's settings page shows "N games have newer time played from …" with **Use all** (`{ action: "use-playtime" }`), which returns those copies to following their services.
+
 ## Checklist for a new integration
 
 1. Copy the Steam, Xbox, PlayStation, or RetroAchievements tables and add `sync_paused boolean not null default false` to the connection table. Add a forward migration and document it.
@@ -34,5 +42,6 @@ How a connected game service (Steam, Xbox, PlayStation, RetroAchievements, and a
 3. In the settings client, derive `const paused = state?.connection?.paused ?? false`, use a `setPaused` helper that bumps the epoch, updates state, and saves, and gate the batch effect on it. Copy `app/settings/steam/steam-settings.tsx`.
 4. Matching never adds games. Add games only through the popup or the single bulk button.
 5. Add **Remove all games** with the behavior above, and test the SQL against real migrations in `tests/`.
-6. Document the service in [architecture](architecture.md), its migration in [development](development.md) and [deployment](deployment.md), and its screen in the [style guide](style-guide.md); keep this file in sync when the shared workflow changes.
-7. Check in a browser: pause, reload, and confirm it stays paused; Resume continues; Remove all games pauses sync and clears games added earlier.
+6. Store the service's playtime total on its source row, refresh it on Refresh, and add the service to `sources` in `lib/playtime-queries.ts`, to `eventPlaytimeSources` in `lib/event-queries.ts`, and to the `use-playtime` action and its **Use all** line (`playtimeOffers` in the connection state).
+7. Document the service in [architecture](architecture.md), its migration in [development](development.md) and [deployment](deployment.md), and its screen in the [style guide](style-guide.md); keep this file in sync when the shared workflow changes.
+8. Check in a browser: pause, reload, and confirm it stays paused; Resume continues; Remove all games pauses sync and clears games added earlier.

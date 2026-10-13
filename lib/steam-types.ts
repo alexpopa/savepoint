@@ -4,7 +4,7 @@ import type { SteamGame } from "./steam-api";
 export type SteamPreview = SteamGame & { game: CatalogGame | null; matchedAt: number | null; ignored: boolean; importedAt: number | null; libraryItemId: number | null; available: boolean; existingPlatforms: number[] };
 export type SteamState = {
   configured: boolean;
-  connection: { steamId: string; syncedAt: number | null; attemptedAt: number | null; activityAt: number | null; syncError: string | null; paused: boolean } | null;
+  connection: { steamId: string; syncedAt: number | null; attemptedAt: number | null; activityAt: number | null; syncError: string | null; paused: boolean; playtimeOffers: number } | null;
   games: SteamPreview[];
   recent: SteamGame[] | null;
   total: number;

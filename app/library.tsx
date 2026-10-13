@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CircleCheck, Gamepad2, Library as LibraryIcon, LoaderCircle, Play, Search, X } from "lucide-react";
+import { CircleCheck, Clock, Gamepad2, Library as LibraryIcon, LoaderCircle, Play, Search, X } from "lucide-react";
 import SiteHeader from "./site-header";
 import { GameChallenges } from "./challenges";
 import GameDetailsDialog from "./game-details-dialog";
@@ -9,6 +9,7 @@ import { ScoreStars } from "./game-rating";
 import PlatformFilter, { type Platform } from "./platform-filter";
 import type { Challenge } from "../lib/challenges";
 import type { CatalogGame, SavedGame } from "../lib/game-types";
+import { formatHours } from "../lib/playtime";
 import { filterLibraryGames, librarySorts, paginateLibraryGames, sortLibraryGames, type LibrarySort } from "../lib/library-view";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -100,21 +101,26 @@ export default function Library({ email, userId, showAdmin }: { email: string; u
       </div><p ref={pageStatus} className="library-results" role="status" tabIndex={-1}>{matching.length ? `Showing ${first}–${last} of ${matching.length} ${filtered ? "matching " : ""}${matching.length === 1 ? "copy" : "copies"}` : "No matching copies"}</p></>}
       {loading ? <div className="empty-state"><LoaderCircle className="spin" size={22}/><p>Loading your library…</p></div> : libraryFailed ? null : games.length === 0 ? <div className="empty-state"><div className="empty-icon"><Gamepad2 size={27}/></div><h2>Your library is ready</h2><p>Use the search bar above to find a game and add it here.</p></div> : matching.length === 0 ? <div className="empty-state"><div className="empty-icon"><Search size={27}/></div><h2>No games match</h2><p>Try another title or platform.</p><button type="button" className="library-clear" onClick={() => { setQuery(""); setPlatformIds([]); setPage(1); }}>Clear filters</button></div> : <div className="game-grid library-grid">{visible.map((game) => {
         const openGame = () => setSelected({ ...game, platformOptions: [] });
-        return <article className="game-card challenge-game-card" key={game.id}><button type="button" className="game-card-open" aria-label={`View details and platform options for ${game.name} on ${game.platformName || "an unspecified platform"}`} onClick={openGame}><GameCover game={game}/><div className="game-info"><h3>{game.name}</h3><p>{game.releaseYear || "Year unknown"}</p><span className="game-platform-label"><Gamepad2 size={14}/>{game.platformName || "Platform not set"}</span>{game.score ? <ScoreStars score={game.score} className="game-card-score"/> : null}</div></button><div className="card-toggles"><button type="button" className="add-button playing-toggle" aria-pressed={Boolean(game.playingSince)} aria-label={`Currently playing ${game.name} on ${game.platformName || "an unspecified platform"}`} title={game.playingSince ? "Stop playing" : "Mark as currently playing"} disabled={busyGame === game.id} onClick={() => void togglePlaying(game)}><Play size={18} fill={game.playingSince ? "currentColor" : "none"} aria-hidden="true"/></button><button type="button" className="add-button playing-toggle completed-toggle" aria-pressed={Boolean(game.completedAt)} aria-label={`Completed ${game.name} on ${game.platformName || "an unspecified platform"}`} title={game.completedAt ? "Mark as not completed" : "Mark as completed"} disabled={busyGame === game.id} onClick={() => void toggleCompleted(game)}><CircleCheck size={18} aria-hidden="true"/></button></div><GameChallenges game={game} recipientId={userId} viewerId={userId} rows={challenges}/></article>;
+        return <article className="game-card challenge-game-card" key={game.id}><button type="button" className="game-card-open" aria-label={`View details and platform options for ${game.name} on ${game.platformName || "an unspecified platform"}`} onClick={openGame}><GameCover game={game}/><div className="game-info"><h3>{game.name}</h3><p>{game.releaseYear || "Year unknown"}</p><span className="game-platform-label"><Gamepad2 size={14}/>{game.platformName || "Platform not set"}</span><PlaytimeLabel game={game}/>{game.score ? <ScoreStars score={game.score} className="game-card-score"/> : null}</div></button><div className="card-toggles"><button type="button" className="add-button playing-toggle" aria-pressed={Boolean(game.playingSince)} aria-label={`Currently playing ${game.name} on ${game.platformName || "an unspecified platform"}`} title={game.playingSince ? "Stop playing" : "Mark as currently playing"} disabled={busyGame === game.id} onClick={() => void togglePlaying(game)}><Play size={18} fill={game.playingSince ? "currentColor" : "none"} aria-hidden="true"/></button><button type="button" className="add-button playing-toggle completed-toggle" aria-pressed={Boolean(game.completedAt)} aria-label={`Completed ${game.name} on ${game.platformName || "an unspecified platform"}`} title={game.completedAt ? "Mark as not completed" : "Mark as completed"} disabled={busyGame === game.id} onClick={() => void toggleCompleted(game)}><CircleCheck size={18} aria-hidden="true"/></button></div><GameChallenges game={game} recipientId={userId} viewerId={userId} rows={challenges}/></article>;
       })}</div>}
       {!loading && pageCount > 1 && <nav className="library-pagination" aria-label="Library pages"><span>Page {currentPage} of {pageCount}</span><div><button type="button" disabled={currentPage === 1} onClick={() => changePage(currentPage - 1)}>Previous</button><button type="button" disabled={currentPage === pageCount} onClick={() => changePage(currentPage + 1)}>Next</button></div></nav>}
-      {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={selectedCopies} signedIn onClose={() => setSelected(null)} onAdd={(platformId) => addGame(selected.igdbId, platformId)} onRemove={removeGame} onPlaying={setPlaying} onRatingChange={() => void refreshGames().catch(() => {})}/>}
+      {selected && <GameDetailsDialog key={selected.igdbId} game={selected} saved={selectedCopies} signedIn onClose={() => setSelected(null)} onAdd={(platformId) => addGame(selected.igdbId, platformId)} onRemove={removeGame} onPlaying={setPlaying} onRatingChange={() => void refreshGames().catch(() => {})} onPlaytimeChange={() => void refreshGames().catch(() => {})}/>}
       <footer className="page-footer"><span>Game information and covers powered by IGDB.</span><span>YOUR LIBRARY · {games.length} COPIES</span></footer>
     </div>
   </main>;
 }
 
 // Other players' libraries have no toggles, so their cards spell out the completed line above the score.
-export function GameProgress({ game }: { game: Pick<SavedGame, "completedAt" | "score"> }) {
+export function GameProgress({ game }: { game: Pick<SavedGame, "completedAt" | "score" | "playtime"> }) {
   return <>
     {game.completedAt ? <span className="game-owned-label playing-label"><CircleCheck size={13} aria-hidden="true"/>Completed</span> : null}
+    <PlaytimeLabel game={game}/>
     {game.score ? <ScoreStars score={game.score} className="game-card-score"/> : null}
   </>;
+}
+
+export function PlaytimeLabel({ game }: { game: Pick<SavedGame, "playtime"> }) {
+  return game.playtime?.minutes ? <span className="game-platform-label game-playtime-label"><Clock size={14} aria-hidden="true"/>{formatHours(game.playtime.minutes)} played</span> : null;
 }
 
 export function LibrarySortSelect({ value, onChange }: { value: LibrarySort; onChange: (sort: LibrarySort) => void }) {

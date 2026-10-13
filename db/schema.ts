@@ -69,6 +69,10 @@ export const libraryItems = sqliteTable("library_items", {
   playingSince: integer("playing_since"),
   // Set once this platform copy is completed; it is independent of currently playing.
   completedAt: integer("completed_at"),
+  // The player's own time played; while empty, the copy shows its connected services' total instead.
+  playMinutes: integer("play_minutes"),
+  // The connected services' total when the player last set their own time, so only newer totals are offered.
+  playSourceMinutes: integer("play_source_minutes"),
 }, (table) => [
   uniqueIndex("idx_library_user_game_platform").on(table.userId, table.igdbId, table.platformId),
   index("idx_library_added_at_game_user").on(table.addedAt, table.igdbId, table.userId),
@@ -245,6 +249,8 @@ export const xboxTitles = sqliteTable("xbox_titles", {
   achievementsSyncedCount: integer("achievements_synced_count"),
   // Time of the final unlock once every achievement is earned.
   completedAt: integer("completed_at"),
+  // Xbox's MinutesPlayed stat, read on refresh for titles played since the last read.
+  playMinutes: integer("play_minutes"),
 }, (table) => [
   uniqueIndex("idx_xbox_titles_connection_title").on(table.connectionId, table.titleId),
   index("idx_xbox_titles_connection_library").on(table.connectionId, table.libraryItemId),

@@ -180,6 +180,7 @@ button:disabled { cursor: default; }
 .game-info p { margin: 0; color: var(--rgb-muted); font-size: 0.8125rem; line-height: 1.5; overflow-wrap: anywhere; }
 .game-platform-label, .game-owned-label { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; margin-top: 8px; color: var(--rgb-action); font-size: 0.8125rem; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
 .game-platform-label { color: var(--rgb-ink); }
+.game-playtime-label { display: flex; width: fit-content; margin-top: 4px; color: var(--rgb-muted); font-weight: 600; }
 .add-button { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-panel-raised); color: var(--rgb-ink); }
 .add-button:hover:not(:disabled) { border-color: var(--rgb-action); color: var(--rgb-action); }
 .add-button:disabled { color: var(--rgb-action); border-color: var(--rgb-rule); }
@@ -503,6 +504,14 @@ button:disabled { cursor: default; }
 .platform-action:hover:not(:disabled) { border-color: var(--rgb-ink); }
 .platform-action:disabled { border-color: var(--rgb-rule); background: var(--rgb-panel); color: var(--rgb-muted); opacity: 0.65; }
 .platform-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+/* Time played under an owned platform: the field, then Save, the services' newer total, or where the time comes from. */
+.platform-row.has-playtime { flex-wrap: wrap; }
+.playtime-row { display: flex; flex: 1 0 100%; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-top: 8px; border-top: 1px solid var(--rgb-rule); }
+.playtime-field { display: inline-flex; align-items: center; gap: 6px; color: var(--rgb-muted); font-size: 0.8125rem; font-weight: 700; }
+.playtime-field input { width: 5.5rem; min-height: 38px; padding: 6px 8px; border: 1px solid var(--rgb-control-edge); border-radius: 3px; background: var(--rgb-panel); color: var(--rgb-ink); font: inherit; font-size: 0.9375rem; text-align: right; }
+.playtime-field input:focus-visible { outline: 2px solid var(--rgb-focus); outline-offset: 2px; }
+.playtime-source { color: var(--rgb-muted); font-size: 0.8125rem; }
+.playtime-error { flex-basis: 100%; margin: 0; color: var(--rgb-danger); font-size: 0.8125rem; }
 .platform-action.is-playing[aria-pressed="true"] { border-color: var(--rgb-action); color: var(--rgb-action); }
 .platform-unowned { color: var(--rgb-muted); font-size: 0.8125rem; }
 .game-dialog-signin { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 16px; padding: 9px 16px; border: 1px solid var(--rgb-action); border-radius: 3px; background: var(--rgb-action); color: var(--rgb-black); font-size: 0.875rem; font-weight: 700; }

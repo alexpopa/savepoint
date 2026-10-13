@@ -6,6 +6,7 @@ import type { CatalogGame, SavedGame } from "../lib/game-types";
 
 import GameFavoriteButton from "./game-favorite-button";
 import GameRating from "./game-rating";
+import PlaytimeEditor from "./playtime-editor";
 import type { GameFavorite } from "../lib/game-favorites";
 
 type Props = {
@@ -19,9 +20,10 @@ type Props = {
   onRemove?: (id: number) => Promise<void>;
   onPlaying?: (id: number, playing: boolean) => Promise<void>;
   onRatingChange?: () => void;
+  onPlaytimeChange?: () => void;
 };
 
-export default function GameDetailsDialog({ game, saved, signedIn, loginPath, onClose, onAdd, onRemove, onPlaying, onFavoritesChange, onRatingChange }: Props) {
+export default function GameDetailsDialog({ game, saved, signedIn, loginPath, onClose, onAdd, onRemove, onPlaying, onFavoritesChange, onRatingChange, onPlaytimeChange }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [details, setDetails] = useState<CatalogGame>(game);
   const [loading, setLoading] = useState(true);
@@ -76,9 +78,9 @@ export default function GameDetailsDialog({ game, saved, signedIn, loginPath, on
         {details.rating !== null && details.rating !== undefined && <div><span>IGDB rating</span><strong>{details.rating} / 100{details.ratingCount ? ` · ${details.ratingCount} ratings` : ""}</strong></div>}
       </div>
       <section className="game-dialog-platforms" aria-labelledby="game-dialog-platforms-title"><div className="game-dialog-section-heading"><div><p className="eyebrow">YOUR COLLECTION</p><h3 id="game-dialog-platforms-title">Platforms</h3></div></div>
-        {!platformsReady ? <p className="game-dialog-loading">{loading ? <><LoaderCircle className="spin" size={16}/> Loading platform choices…</> : "Platform choices are temporarily unavailable."}</p> : <><p className="game-dialog-help">{signedIn ? onPlaying ? "Add each platform you own. Mark the copies you are currently playing, or remove saved copies here." : "Add each platform you own. Saved copies can be removed here." : "Sign in to add a platform to your library."}</p><div className="platform-list">{displayOptions.map((option) => {
+        {!platformsReady ? <p className="game-dialog-loading">{loading ? <><LoaderCircle className="spin" size={16}/> Loading platform choices…</> : "Platform choices are temporarily unavailable."}</p> : <><p className="game-dialog-help">{signedIn ? onPlaying ? "Add each platform you own. Mark the copies you are currently playing, set your time played, or remove saved copies here." : "Add each platform you own. Saved copies can be removed here." : "Sign in to add a platform to your library."}</p><div className="platform-list">{displayOptions.map((option) => {
           const owned = saved.find((item) => item.platformId === option.id);
-          return <div className="platform-row" key={option.id}><span className="platform-row-name">{option.name}{owned && <small><Check size={13}/> In your library</small>}</span>{signedIn ? owned ? <span className="platform-row-actions">{onPlaying && <button type="button" className="platform-action is-playing" aria-pressed={Boolean(owned.playingSince)} aria-label={`Currently playing ${details.name} on ${option.name}`} disabled={busy} onClick={() => void run(() => onPlaying(owned.id, !owned.playingSince))}><Play size={15} fill={owned.playingSince ? "currentColor" : "none"} aria-hidden="true"/> Playing</button>}<button type="button" className="platform-action is-remove" disabled={busy} onClick={() => onRemove && void run(() => onRemove(owned.id))}><Trash2 size={15}/> Remove</button></span> : <button type="button" className="platform-action is-add" disabled={busy} onClick={() => onAdd && void run(() => onAdd(option.id))}><Plus size={15}/> Add</button> : <span className="platform-unowned">Available</span>}</div>;
+          return <div className={`platform-row${owned?.playtime && signedIn ? " has-playtime" : ""}`} key={option.id}><span className="platform-row-name">{option.name}{owned && <small><Check size={13}/> In your library</small>}</span>{signedIn ? owned ? <span className="platform-row-actions">{onPlaying && <button type="button" className="platform-action is-playing" aria-pressed={Boolean(owned.playingSince)} aria-label={`Currently playing ${details.name} on ${option.name}`} disabled={busy} onClick={() => void run(() => onPlaying(owned.id, !owned.playingSince))}><Play size={15} fill={owned.playingSince ? "currentColor" : "none"} aria-hidden="true"/> Playing</button>}<button type="button" className="platform-action is-remove" disabled={busy} onClick={() => onRemove && void run(() => onRemove(owned.id))}><Trash2 size={15}/> Remove</button></span> : <button type="button" className="platform-action is-add" disabled={busy} onClick={() => onAdd && void run(() => onAdd(option.id))}><Plus size={15}/> Add</button> : <span className="platform-unowned">Available</span>}{signedIn && owned?.playtime && <PlaytimeEditor key={owned.id} copyId={owned.id} label={option.name} playtime={owned.playtime} disabled={busy} onChange={onPlaytimeChange}/>}</div>;
         })}</div>{!signedIn && <a className="game-dialog-signin" href={loginPath}><Plus size={16}/> Sign in to build your library</a>}</>}
       </section>
       {actionError && <p className="game-dialog-error" role="alert">{actionError}</p>}

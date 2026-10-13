@@ -17,7 +17,7 @@ export type PsnPreview = {
 };
 export type PsnState = {
   configured: boolean;
-  connection: { onlineId: string; syncedAt: number | null; attemptedAt: number | null; syncError: string | null; paused: boolean; needsReconnect: boolean } | null;
+  connection: { onlineId: string; syncedAt: number | null; attemptedAt: number | null; syncError: string | null; paused: boolean; playtimeOffers: number; needsReconnect: boolean } | null;
   games: PsnPreview[];
   total: number;
   pending: number;

@@ -162,6 +162,13 @@
       "when": 1791838256632,
       "tag": "0022_mixed_fenris",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1791857487993,
+      "tag": "0023_pretty_star_brand",
+      "breakpoints": true
     }
   ]
 }

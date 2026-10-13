@@ -22,6 +22,8 @@ ON CONFLICT(connection_id, title_id) DO UPDATE SET name = excluded.name, image_u
   current_gamerscore = excluded.current_gamerscore, total_gamerscore = excluded.total_gamerscore,
   achievement_version = excluded.achievement_version, observed_at = excluded.observed_at`;
 
+export const saveXboxPlaytime = `UPDATE xbox_titles SET play_minutes = ?4 WHERE connection_id = ?1 AND title_id = ?3 AND ${leased("?1", "?2", "?5")}`;
+
 export const setXboxMatch = `UPDATE xbox_titles SET game_json = ?1, matched_at = ?2
 WHERE connection_id = ?3 AND title_id = ?4 AND ${leased("?3", "?5", "?2")}`;
 

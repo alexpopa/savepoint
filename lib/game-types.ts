@@ -1,3 +1,5 @@
+import type { Playtime } from "./playtime";
+
 export type PlatformOption = { id: number; name: string };
 
 export type CatalogGame = {
@@ -28,4 +30,5 @@ export type SavedGame = Omit<CatalogGame, "platformOptions"> & {
   playingSince?: number | null;
   completedAt?: number | null;
   score?: number | null;
+  playtime?: Playtime;
 };

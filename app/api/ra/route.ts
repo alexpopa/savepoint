@@ -2,7 +2,7 @@ import { getCurrentUser } from "../../auth";
 import { hasPermission } from "../../../lib/permissions";
 import { isSameOriginWrite } from "../../../lib/request-security";
 import { privateResponse } from "../../../lib/social";
-import { addAllRaGames, addRaGame, disconnectRa, getRaState, matchRaGames, refreshRa, removeRaLibrary, setRaSyncPaused, syncRaAchievements } from "../../../lib/ra";
+import { addAllRaGames, addRaGame, disconnectRa, getRaState, matchRaGames, refreshRa, applyRaPlaytime, removeRaLibrary, setRaSyncPaused, syncRaAchievements } from "../../../lib/ra";
 import { RaError } from "../../../lib/ra-api";
 import { raViews, type RaView } from "../../../lib/ra-queries";
 import { raPlatformIds, validRaGameId } from "../../../lib/ra-types";
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     else if (input.action === "add-all" && typeof input.syncedAt === "number" && Number.isSafeInteger(input.syncedAt) && input.syncedAt > 0) await addAllRaGames(user.userId, input.syncedAt);
     else if (input.action === "pause" && typeof input.paused === "boolean") await setRaSyncPaused(user.userId, input.paused);
     else if (input.action === "remove-library") await removeRaLibrary(user.userId);
+    else if (input.action === "use-playtime") await applyRaPlaytime(user.userId);
     else if (input.action === "disconnect") await disconnectRa(user.userId);
     else return response({ error: "Choose a valid RetroAchievements action." }, 400);
     return response(await getRaState(user.userId, page as number, search as string, view));

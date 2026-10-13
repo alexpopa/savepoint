@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { and, eq, gt, inArray, isNull, lt, or } from "drizzle-orm";
 import { getDb } from "../db";
+import { countPlaytimeOffers, applyPlaytimeOffers } from "./playtime-sync";
 import { libraryItems, raConnections, raGames, raLinkCodes, raMappings } from "../db/schema";
 import { getIgdbGame, getRaCatalogMatches } from "./igdb";
 import {
@@ -50,7 +51,7 @@ export async function getRaState(userId: string, page = 0, search = "", view: Ra
   const ids = games.flatMap((row) => row.game ? [row.game.igdbId] : []);
   const existing = ids.length ? await db.select({ igdbId: libraryItems.igdbId, platformId: libraryItems.platformId }).from(libraryItems).where(and(eq(libraryItems.userId, userId), inArray(libraryItems.igdbId, ids))) : [];
   return { configured: raConfigured(), link: null,
-    connection: { username: connection.username, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, syncError: connection.syncError, paused: connection.syncPaused },
+    connection: { username: connection.username, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, syncError: connection.syncError, paused: connection.syncPaused, playtimeOffers: await countPlaytimeOffers(userId, "ra") },
     total, page, pending: counts?.pending ?? 0, ready: counts?.ready ?? 0, unresolved: counts?.unresolved ?? 0, imported: counts?.imported ?? 0, achievementsPending: counts?.achievementsPending ?? 0,
     games: games.map((row) => ({ ...row, existingPlatforms: existing.filter((copy) => copy.igdbId === row.game?.igdbId).map((copy) => copy.platformId) })) };
 }
@@ -281,4 +282,9 @@ export async function getRaShowcase(userId: string): Promise<{ games: RaShowcase
 export async function getRaAchievementList(userId: string, gameRowId: number): Promise<RaAchievement[]> {
   const { results } = await getDb().$client.prepare(raAchievementListQuery).bind(userId, gameRowId).all<Omit<RaAchievement, "hardcore"> & { hardcore: number }>();
   return results.map((row) => ({ ...row, hardcore: Boolean(row.hardcore) }));
+}
+
+// Use all: the library copies RetroAchievements added follow its newer time played again.
+export async function applyRaPlaytime(userId: string) {
+  await applyPlaytimeOffers(userId, "ra");
 }

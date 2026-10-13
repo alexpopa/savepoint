@@ -15,6 +15,7 @@ INSERT INTO ra_connections (user_id, connection_id, ulid, username, linked_at)
 VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT DO NOTHING`;
 
 // Completion keeps its earliest time once set, so a revised set never reopens a beaten game.
+// Playing again marks the achievement list stale, because playtime is only read with it.
 export const saveRaGame = `
 INSERT INTO ra_games (connection_id, game_id, subset_ids_json, name, console_id, console_name, image_url, earned, earned_hardcore, total, last_played_at, observed_at,
   completed_at, completed_hardcore)
@@ -23,6 +24,7 @@ WHERE connection_id = ?1 AND lock_token = ?2 AND lock_until > ?16
 ON CONFLICT(connection_id, game_id) DO UPDATE SET subset_ids_json = excluded.subset_ids_json, name = excluded.name, console_id = excluded.console_id,
   console_name = excluded.console_name, image_url = excluded.image_url, earned = excluded.earned, earned_hardcore = excluded.earned_hardcore, total = excluded.total,
   last_played_at = excluded.last_played_at, observed_at = excluded.observed_at,
+  achievements_synced_count = CASE WHEN excluded.last_played_at > COALESCE(last_played_at, 0) THEN NULL ELSE achievements_synced_count END,
   completed_at = COALESCE(min(completed_at, excluded.completed_at), completed_at, excluded.completed_at),
   completed_hardcore = max(completed_hardcore, excluded.completed_hardcore)`;
 
@@ -55,7 +57,7 @@ export const raPlatformMatch = (column: string) => `EXISTS (SELECT 1 FROM json_e
 const current = "g.observed_at = c.synced_at";
 export const raReady = `g.library_item_id IS NULL AND ${current} AND ${raPlatformMatch("g.game_json")}`;
 export const raUnresolved = `g.library_item_id IS NULL AND ${current} AND g.matched_at IS NOT NULL AND (g.game_json IS NULL OR NOT ${raPlatformMatch("g.game_json")})`;
-// Added games whose unlock counts changed since their achievement lists were last read.
+// Added games played or unlocked since their achievement lists were last read.
 export const raAchievementsStale = `g.library_item_id IS NOT NULL AND ${current} AND g.total > 0
   AND (g.achievements_synced_count IS NULL OR g.achievements_synced_count <> g.earned + g.earned_hardcore)`;
 

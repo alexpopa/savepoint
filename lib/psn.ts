@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { getDb } from "../db";
+import { countPlaytimeOffers, applyPlaytimeOffers } from "./playtime-sync";
 import { libraryItems, psnConnections, psnMappings, psnTitles } from "../db/schema";
 import { getIgdbGame, getPsnCatalogMatches } from "./igdb";
 import {
@@ -42,7 +43,7 @@ export async function getPsnState(userId: string, page = 0, search = "", view: P
   const ids = games.flatMap((row) => row.game ? [row.game.igdbId] : []);
   const existing = ids.length ? await db.select({ igdbId: libraryItems.igdbId, platformId: libraryItems.platformId }).from(libraryItems).where(and(eq(libraryItems.userId, userId), inArray(libraryItems.igdbId, ids))) : [];
   return { configured: psnConfigured(),
-    connection: { onlineId: connection.onlineId, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, syncError: connection.syncError, paused: connection.syncPaused, needsReconnect: connection.needsReconnect },
+    connection: { onlineId: connection.onlineId, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, syncError: connection.syncError, paused: connection.syncPaused, playtimeOffers: await countPlaytimeOffers(userId, "psn"), needsReconnect: connection.needsReconnect },
     total, page, pending: counts?.pending ?? 0, ready: counts?.ready ?? 0, unresolved: counts?.unresolved ?? 0, imported: counts?.imported ?? 0, trophiesPending: counts?.trophiesPending ?? 0,
     games: games.map((row) => ({ ...row, existingPlatforms: existing.filter((copy) => copy.igdbId === row.game?.igdbId).map((copy) => copy.platformId) })) };
 }
@@ -265,4 +266,9 @@ export async function getPsnShowcase(userId: string): Promise<{ games: PsnShowca
 export async function getPsnTrophyList(userId: string, titleRowId: number): Promise<PsnTrophy[]> {
   const { results } = await getDb().$client.prepare(psnTrophyListQuery).bind(userId, titleRowId).all<Omit<PsnTrophy, "isHidden" | "grade"> & { isHidden: number; grade: TrophyGrade }>();
   return results.map((row) => ({ ...row, isHidden: Boolean(row.isHidden) }));
+}
+
+// Use all: the library copies PlayStation added follow its newer time played again.
+export async function applyPsnPlaytime(userId: string) {
+  await applyPlaytimeOffers(userId, "psn");
 }

@@ -278,3 +278,19 @@ test("RetroAchievements unlocks batch per friend and game within 24 hours, and l
   assert.equal(parseTimelineCursor(JSON.stringify({ ...cursor, retroachievements: [] })), null);
   assert.ok(parseTimelineCursor(JSON.stringify({ ...cursor, key: "beaten:4" })));
 });
+
+test("playing a game again rereads its achievement list, which carries the playtime", () => {
+  const db = database(); save(db, { played: 900 }); match(db); add(db);
+  run(db, finishRaAchievements, ["connection", "lease", gameRow(db), 3600, 300]);
+  assert.equal(db.prepare(staleRaAchievements).all("connection").length, 0);
+  save(db, { at: 400, played: 900 });
+  assert.equal(db.prepare(staleRaAchievements).all("connection").length, 0);
+  save(db, { at: 500, played: 1500 });
+  assert.equal(db.prepare(staleRaAchievements).all("connection").length, 0, "rows from an older refresh are not current");
+  db.exec("UPDATE ra_connections SET synced_at = 500");
+  assert.equal(db.prepare(staleRaAchievements).all("connection").length, 1);
+  run(db, finishRaAchievements, ["connection", "lease", gameRow(db), 7200, 600]);
+  assert.deepEqual({ ...db.prepare("SELECT play_seconds FROM ra_games").get() }, { play_seconds: 7200 });
+  assert.equal(db.prepare(staleRaAchievements).all("connection").length, 0);
+  db.close();
+});

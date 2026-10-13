@@ -1,12 +1,13 @@
 import { env } from "cloudflare:workers";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { getDb } from "../db";
+import { countPlaytimeOffers, applyPlaytimeOffers } from "./playtime-sync";
 import { libraryItems, xboxConnections, xboxMappings, xboxTitles } from "../db/schema";
 import { getIgdbGame, getXboxCatalogMatches } from "./igdb";
-import { authorizeXbox, fetchAchievements, fetchTitleHistory, refreshMicrosoftToken, XboxError, type XboxAuth } from "./xbox-api";
+import { authorizeXbox, fetchAchievements, fetchMinutesPlayed, fetchTitleHistory, refreshMicrosoftToken, XboxError, type XboxAuth } from "./xbox-api";
 import { openToken, sealToken } from "./token-crypto";
 import {
-  acquireXboxLock, attachXboxGame, finishXboxAchievements, importXboxGame, playXboxGame, readyXboxGames, removeXboxCopies, saveXboxAchievement, saveXboxTitle, saveXboxToken,
+  acquireXboxLock, attachXboxGame, finishXboxAchievements, importXboxGame, playXboxGame, readyXboxGames, removeXboxCopies, saveXboxAchievement, saveXboxPlaytime, saveXboxTitle, saveXboxToken,
   saveXboxUnlock, setXboxMatch, staleXboxAchievements, xboxAchievementListQuery, xboxCounts, xboxPage, xboxPageCount, xboxShowcaseQuery, xboxShowcaseTotals, type XboxView,
 } from "./xbox-queries";
 import { defaultXboxPlatform, devicePlatformIds, xboxPlatforms } from "./xbox-types";
@@ -18,6 +19,8 @@ export type XboxTokens = { refreshToken: string; xsts: XboxAuth | null };
 export const xboxConfigured = () => Boolean(env.XBOX_CLIENT_ID && env.XBOX_CLIENT_SECRET && env.XBOX_TOKEN_KEY);
 export const xboxPageSize = 30;
 const notConfigured = "Xbox is not configured yet. Ask the site owner to configure Microsoft sign-in.";
+// Playtime is read for titles played since their last read, newest first; four stat requests per refresh at most.
+const playtimeReadsPerRefresh = 100;
 
 export async function getXboxState(userId: string, page = 0, search = "", view: XboxView = "all"): Promise<XboxState> {
   const db = getDb();
@@ -36,7 +39,7 @@ export async function getXboxState(userId: string, page = 0, search = "", view: 
   const games = results.map(({ devicesJson, gameJson, available, ...row }) => ({ ...row, devices: JSON.parse(devicesJson) as string[], game: gameJson ? JSON.parse(gameJson) as CatalogGame : null, available: Boolean(available) }));
   const ids = games.flatMap((row) => row.game ? [row.game.igdbId] : []);
   const existing = ids.length ? await db.select({ igdbId: libraryItems.igdbId, platformId: libraryItems.platformId }).from(libraryItems).where(and(eq(libraryItems.userId, userId), inArray(libraryItems.igdbId, ids))) : [];
-  return { configured: xboxConfigured(), connection: { gamertag: connection.gamertag, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, syncError: connection.syncError, paused: connection.syncPaused },
+  return { configured: xboxConfigured(), connection: { gamertag: connection.gamertag, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, syncError: connection.syncError, paused: connection.syncPaused, playtimeOffers: await countPlaytimeOffers(userId, "xbox") },
     total, page, pending: counts?.pending ?? 0, ready: counts?.ready ?? 0, unresolved: counts?.unresolved ?? 0, imported: counts?.imported ?? 0, achievementsPending: counts?.achievementsPending ?? 0,
     games: games.map((row) => ({ ...row, existingPlatforms: existing.filter((copy) => copy.igdbId === row.game?.igdbId).map((copy) => copy.platformId) })) };
 }
@@ -80,11 +83,18 @@ export async function refreshXbox(userId: string) {
     try {
       const auth = await xboxAuth(connection, token);
       const titles = await fetchTitleHistory(auth);
+      const stored = new Map((await db.select({ titleId: xboxTitles.titleId, lastPlayedAt: xboxTitles.lastPlayedAt, playMinutes: xboxTitles.playMinutes }).from(xboxTitles)
+        .where(eq(xboxTitles.connectionId, connection.connectionId))).map((row) => [row.titleId, row]));
       for (let offset = 0; offset < titles.length; offset += 100) {
         await db.$client.batch(titles.slice(offset, offset + 100).map((title) => db.$client.prepare(saveXboxTitle).bind(connection.connectionId, token, title.titleId, title.name, title.imageUrl,
           title.productId, JSON.stringify(title.devices), title.lastPlayedAt, title.currentAchievements, title.totalAchievements, title.currentGamerscore, title.totalGamerscore,
           title.achievementVersion, now, Date.now())));
       }
+      const stale = titles.filter((title) => { const row = stored.get(title.titleId); return !row || row.playMinutes === null || row.lastPlayedAt !== title.lastPlayedAt; })
+        .sort((a, b) => (b.lastPlayedAt ?? 0) - (a.lastPlayedAt ?? 0)).slice(0, playtimeReadsPerRefresh);
+      // Playtime is extra detail: a failed stats read keeps the refresh and tries again next time.
+      const minutes = stale.length ? await fetchMinutesPlayed(auth, stale.map((title) => title.titleId)).catch(() => new Map<number, number>()) : new Map<number, number>();
+      if (minutes.size) await db.$client.batch([...minutes].map(([titleId, played]) => db.$client.prepare(saveXboxPlaytime).bind(connection.connectionId, token, titleId, played, Date.now())));
       const saved = await db.update(xboxConnections).set({ syncedAt: now, syncError: null, syncPaused: false })
         .where(and(eq(xboxConnections.connectionId, connection.connectionId), eq(xboxConnections.lockToken, token))).returning({ id: xboxConnections.connectionId });
       if (!saved.length) throw new XboxError("The refresh expired or the connection changed. Please refresh again.", 409);
@@ -221,4 +231,9 @@ export async function getXboxShowcase(userId: string) {
 export async function getXboxAchievementList(userId: string, titleRowId: number): Promise<XboxAchievement[]> {
   const { results } = await getDb().$client.prepare(xboxAchievementListQuery).bind(userId, titleRowId).all<Omit<XboxAchievement, "isSecret"> & { isSecret: number }>();
   return results.map((row) => ({ ...row, isSecret: Boolean(row.isSecret) }));
+}
+
+// Use all: the library copies Xbox added follow its newer time played again.
+export async function applyXboxPlaytime(userId: string) {
+  await applyPlaytimeOffers(userId, "xbox");
 }

@@ -15,7 +15,7 @@ export type RaLink = { username: string; code: string; expiresAt: number };
 export type RaState = {
   configured: boolean;
   link: RaLink | null;
-  connection: { username: string; syncedAt: number | null; attemptedAt: number | null; syncError: string | null; paused: boolean } | null;
+  connection: { username: string; syncedAt: number | null; attemptedAt: number | null; syncError: string | null; paused: boolean; playtimeOffers: number } | null;
   games: RaPreview[];
   total: number;
   pending: number;

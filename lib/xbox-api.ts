@@ -94,8 +94,10 @@ export async function authorizeXbox(accessToken: string, send: Send = fetch): Pr
   return { token, uhs, xuid, gamertag, expiresAt };
 }
 
-async function xboxRequest(url: string, auth: XboxAuth, version: number, send: Send) {
-  const response = await send(url, { headers: { authorization: `XBL3.0 x=${auth.uhs};${auth.token}`, "x-xbl-contract-version": String(version), "accept-language": "en-US", accept: "application/json" },
+async function xboxRequest(url: string, auth: XboxAuth, version: number, send: Send, body?: unknown) {
+  const response = await send(url, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body),
+    headers: { authorization: `XBL3.0 x=${auth.uhs};${auth.token}`, "x-xbl-contract-version": String(version), "accept-language": "en-US", accept: "application/json",
+      ...(body === undefined ? {} : { "content-type": "application/json" }) },
     signal: AbortSignal.timeout(15000), redirect: "manual" });
   if (response.status === 429) throw new XboxError("Xbox is busy. Please wait a few minutes before trying again.", 429);
   if (response.status === 401) throw new XboxError("Your Xbox sign-in expired. Please refresh again.", 401);
@@ -181,4 +183,26 @@ export async function fetchAchievements(auth: XboxAuth, titleId: number, version
     if (!continuation) break;
   }
   return parseModernAchievements(pages);
+}
+
+// Minutes played per title from the user stats service; titles without the stat are left out.
+export function parseMinutesPlayed(payload: unknown) {
+  const minutes = new Map<number, number>();
+  for (const list of (record(payload).statlistscollection as unknown[] | undefined) ?? []) for (const value of (record(list).stats as unknown[] | undefined) ?? []) {
+    const stat = record(value);
+    const titleId = Number(stat.titleid ?? stat.titleId), played = Number(stat.value);
+    if (stat.name === "MinutesPlayed" && Number.isSafeInteger(titleId) && titleId > 0 && Number.isSafeInteger(played) && played >= 0) minutes.set(titleId, played);
+  }
+  return minutes;
+}
+
+export const minutesPlayedBatch = 25;
+export async function fetchMinutesPlayed(auth: XboxAuth, titleIds: number[], send: Send = fetch) {
+  const minutes = new Map<number, number>();
+  for (let offset = 0; offset < titleIds.length; offset += minutesPlayedBatch) {
+    const stats = titleIds.slice(offset, offset + minutesPlayedBatch).map((titleId) => ({ name: "MinutesPlayed", titleid: String(titleId) }));
+    for (const [titleId, played] of parseMinutesPlayed(await xboxRequest("https://userstats.xboxlive.com/batch", auth, 2, send, { arrangebyfield: "xuid", xuids: [auth.xuid], stats })))
+      minutes.set(titleId, played);
+  }
+  return minutes;
 }

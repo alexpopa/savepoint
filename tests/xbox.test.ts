@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-import { authorizeXbox, exchangeXboxCode, fetchAchievements, parseLegacyAchievements, parseModernAchievements, parseTitleHistory, pkceChallenge, xboxLoginUrl, type XboxAuth } from "../lib/xbox-api.ts";
+import { authorizeXbox, exchangeXboxCode, fetchAchievements, fetchMinutesPlayed, parseLegacyAchievements, parseMinutesPlayed, parseModernAchievements, parseTitleHistory, pkceChallenge, xboxLoginUrl, type XboxAuth } from "../lib/xbox-api.ts";
 import { openToken, sealToken } from "../lib/token-crypto.ts";
 import { defaultXboxPlatform, devicePlatformIds, xbox360MarketplaceIds, xboxPlatforms } from "../lib/xbox-types.ts";
 import {
@@ -252,4 +252,29 @@ test("removing the library deletes only this connection's copies, keeps ratings,
   assert.equal(counts(db).ready, 1);
   assert.equal(counts(db).imported, 0);
   db.close();
+});
+
+test("minutes played come from the user stats batch, 25 titles per request, skipping missing or invalid stats", async () => {
+  const payload = { statlistscollection: [{ arrangebyfield: "xuid", stats: [
+    { xuid: "2533", titleid: "1144039928", name: "MinutesPlayed", type: "Integer", value: "4321" },
+    { xuid: "2533", titleid: "219630713", name: "MinutesPlayed", type: "Integer" },
+    { xuid: "2533", titleid: "bad", name: "MinutesPlayed", value: "5" },
+    { xuid: "2533", titleid: "1915865634", name: "OtherStat", value: "9" },
+  ] }] };
+  assert.deepEqual([...parseMinutesPlayed(payload)], [[1144039928, 4321]]);
+  assert.deepEqual([...parseMinutesPlayed(null)], []);
+  const requests: { url: string; body: { xuids: string[]; stats: { titleid: string }[] }; version: string | null }[] = [];
+  const auth = { token: "t", uhs: "u", xuid: "2533", gamertag: "Tester", expiresAt: Date.now() + 3600000 };
+  const minutes = await fetchMinutesPlayed(auth, Array.from({ length: 30 }, (_, index) => index + 1), async (url, init) => {
+    const body = JSON.parse(String(init?.body));
+    requests.push({ url: String(url), body, version: new Headers(init?.headers).get("x-xbl-contract-version") });
+    return Response.json({ statlistscollection: [{ stats: body.stats.map((stat: { titleid: string }) => ({ titleid: stat.titleid, name: "MinutesPlayed", value: String(Number(stat.titleid) * 10) })) }] });
+  });
+  assert.equal(requests.length, 2);
+  assert.equal(requests[0].url, "https://userstats.xboxlive.com/batch");
+  assert.deepEqual(requests[0].body.xuids, ["2533"]);
+  assert.equal(requests[0].body.stats.length, 25);
+  assert.equal(requests[0].version, "2");
+  assert.equal(minutes.size, 30);
+  assert.equal(minutes.get(30), 300);
 });

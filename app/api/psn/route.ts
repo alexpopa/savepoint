@@ -2,7 +2,7 @@ import { getCurrentUser } from "../../auth";
 import { hasPermission } from "../../../lib/permissions";
 import { isSameOriginWrite } from "../../../lib/request-security";
 import { privateResponse } from "../../../lib/social";
-import { addAllPsnGames, addPsnGame, disconnectPsn, getPsnState, matchPsnGames, refreshPsn, removePsnLibrary, setPsnSyncPaused, syncPsnTrophies } from "../../../lib/psn";
+import { addAllPsnGames, addPsnGame, disconnectPsn, getPsnState, matchPsnGames, refreshPsn, applyPsnPlaytime, removePsnLibrary, setPsnSyncPaused, syncPsnTrophies } from "../../../lib/psn";
 import { PsnError } from "../../../lib/psn-api";
 import { psnViews, type PsnView } from "../../../lib/psn-queries";
 import { psnPlatformIds, validPsnTitleKey } from "../../../lib/psn-types";
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     else if (input.action === "add-all" && typeof input.syncedAt === "number" && Number.isSafeInteger(input.syncedAt) && input.syncedAt > 0) await addAllPsnGames(user.userId, input.syncedAt);
     else if (input.action === "pause" && typeof input.paused === "boolean") await setPsnSyncPaused(user.userId, input.paused);
     else if (input.action === "remove-library") await removePsnLibrary(user.userId);
+    else if (input.action === "use-playtime") await applyPsnPlaytime(user.userId);
     else if (input.action === "disconnect") await disconnectPsn(user.userId);
     else return response({ error: "Choose a valid PlayStation action." }, 400);
     return response(await getPsnState(user.userId, page as number, search as string, view));

@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db";
+import { countPlaytimeOffers, applyPlaytimeOffers } from "./playtime-sync";
 import { libraryItems, steamConnections, steamGames, steamMappings } from "../db/schema";
 import { getIgdbGame, getSteamCatalogMatches } from "./igdb";
 import { steamRequest, SteamError } from "./steam-api";
@@ -38,7 +39,7 @@ export async function getSteamState(userId: string, page = 0, search = "", view 
   const games = rows.map((row) => ({ ...row, game: row.gameJson ? JSON.parse(row.gameJson) as CatalogGame : null }));
   const ids = games.flatMap((row) => row.game ? [row.game.igdbId] : []);
   const existing = ids.length ? await db.select({ igdbId: libraryItems.igdbId, platformId: libraryItems.platformId }).from(libraryItems).where(and(eq(libraryItems.userId, userId), inArray(libraryItems.igdbId, ids))) : [];
-  return { configured: steamConfigured(), connection: { steamId: connection.steamId, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, activityAt: connection.activityAt, syncError: connection.syncError, paused: connection.syncPaused },
+  return { configured: steamConfigured(), connection: { steamId: connection.steamId, syncedAt: connection.syncedAt, attemptedAt: connection.attemptedAt, activityAt: connection.activityAt, syncError: connection.syncError, paused: connection.syncPaused, playtimeOffers: await countPlaytimeOffers(userId, "steam") },
     recent: connection.recentJson ? JSON.parse(connection.recentJson) : null, total, pending: pendingRows[0].total, ready: matchCounts?.ready ?? 0, review: matchCounts?.review ?? 0, imported: matchCounts?.imported ?? 0, page,
     games: games.map((row) => ({ appId: row.appId, name: row.name, playtimeMinutes: row.playtimeMinutes, recentMinutes: row.recentMinutes, lastPlayedAt: row.lastPlayedAt,
       game: row.game, matchedAt: row.matchedAt, ignored: row.ignored, importedAt: row.importedAt, libraryItemId: row.libraryItemId,
@@ -215,4 +216,9 @@ export async function disconnectSteam(userId: string) {
     db.$client.prepare("DELETE FROM steam_link_states WHERE user_id = ?").bind(userId),
     db.$client.prepare("DELETE FROM steam_connections WHERE user_id = ?").bind(userId),
   ]);
+}
+
+// Use all: the library copies Steam added follow its newer time played again.
+export async function applySteamPlaytime(userId: string) {
+  await applyPlaytimeOffers(userId, "steam");
 }
